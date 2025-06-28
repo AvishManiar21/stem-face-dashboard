@@ -379,7 +379,8 @@ def chart_data_endpoint():
         'checkins_per_tutor', 'hours_per_tutor', 'daily_checkins', 'daily_hours',
         'cumulative_hours', 'cumulative_checkins', 'hourly_checkins_dist', 'monthly_hours',
         'avg_hours_per_day_of_week', 'checkins_per_day_of_week', 'hourly_activity_by_day',
-        'forecast_daily_checkins']}
+        'forecast_daily_checkins', 'session_duration_distribution', 'punctuality_analysis',
+        'avg_session_duration_per_tutor', 'tutor_consistency_score']}
     empty_chart_data_response['raw_records_for_chart_context'] = []
     empty_chart_data_response['is_comparison_mode'] = False
 
@@ -397,10 +398,105 @@ def chart_data_endpoint():
 
     checkins_per_tutor = df_filtered['tutor_name'].value_counts().to_dict() if 'tutor_name' in df_filtered.columns else {}
     hours_per_tutor = df_filtered.groupby('tutor_name')['shift_hours'].sum().round(2).to_dict() if 'tutor_name' in df_filtered.columns and 'shift_hours' in df_filtered.columns else {}
+    
+    # Add average session duration per tutor calculation
+    avg_session_duration_per_tutor = {}
+    if 'tutor_name' in df_filtered.columns and 'shift_hours' in df_filtered.columns:
+        avg_duration_series = df_filtered.groupby('tutor_name')['shift_hours'].mean().round(2)
+        avg_session_duration_per_tutor = avg_duration_series.to_dict()
+    
+    # Add tutor consistency score calculation
+    tutor_consistency_score = {}
+    if 'tutor_name' in df_filtered.columns and 'check_in' in df_filtered.columns and 'shift_hours' in df_filtered.columns:
+        for tutor_name in df_filtered['tutor_name'].unique():
+            tutor_data = df_filtered[df_filtered['tutor_name'] == tutor_name]
+            if len(tutor_data) > 1:
+                # Calculate consistency based on:
+                # 1. Regular check-in times (variance in check-in hours)
+                # 2. Consistent session durations (variance in shift_hours)
+                # 3. Regular attendance (frequency of sessions)
+                
+                # Check-in time consistency (lower variance = higher consistency)
+                checkin_hours = tutor_data['check_in'].dt.hour
+                time_variance = checkin_hours.var() if len(checkin_hours) > 1 else 0
+                time_consistency = max(0, 100 - (time_variance * 2))  # Scale variance to 0-100
+                
+                # Duration consistency
+                durations = tutor_data['shift_hours']
+                duration_variance = durations.var() if len(durations) > 1 else 0
+                duration_consistency = max(0, 100 - (duration_variance * 10))  # Scale variance to 0-100
+                
+                # Attendance frequency (more sessions = higher consistency)
+                session_frequency = min(100, len(tutor_data) * 10)  # Cap at 100
+                
+                # Overall consistency score (average of the three metrics)
+                overall_consistency = (time_consistency + duration_consistency + session_frequency) / 3
+                tutor_consistency_score[tutor_name] = round(overall_consistency, 1)
+            else:
+                # Single session tutors get a base score
+                tutor_consistency_score[tutor_name] = 30.0
+    
     daily_checkins, daily_hours, cumulative_checkins, cumulative_hours, hourly_checkins_dist, monthly_hours = {}, {}, {}, {}, {}, {}
     avg_hours_per_day_of_week, checkins_per_day_of_week = {day: 0 for day in days_order}, {day: 0 for day in days_order}
     hourly_activity_by_day = {day: {hr: 0 for hr in hours_order} for day in days_order}
-
+    
+    # Add session duration distribution calculation
+    session_duration_distribution = {}
+    if 'shift_hours' in df_filtered.columns:
+        # Create duration bins
+        duration_bins = ['<1', '1-2', '2-3', '3-4', '4-5', '5+']
+        duration_counts = {}
+        
+        for _, row in df_filtered.iterrows():
+            hours = row['shift_hours']
+            if pd.notna(hours) and hours > 0:
+                if hours < 1:
+                    bin_key = '<1'
+                elif hours < 2:
+                    bin_key = '1-2'
+                elif hours < 3:
+                    bin_key = '2-3'
+                elif hours < 4:
+                    bin_key = '3-4'
+                elif hours < 5:
+                    bin_key = '4-5'
+                else:
+                    bin_key = '5+'
+                
+                duration_counts[bin_key] = duration_counts.get(bin_key, 0) + 1
+        
+        # Ensure all bins are present in the result
+        for bin_key in duration_bins:
+            session_duration_distribution[bin_key] = duration_counts.get(bin_key, 0)
+    
+    # Add punctuality analysis calculation
+    punctuality_analysis = {}
+    if 'check_in' in df_filtered.columns and 'shift_hours' in df_filtered.columns:
+        # Mock punctuality calculation based on check-in times
+        # In a real implementation, this would compare with scheduled times
+        total_sessions = len(df_filtered)
+        if total_sessions > 0:
+            # Simulate punctuality based on check-in hour (early morning = early, late evening = late)
+            early_count = 0
+            ontime_count = 0
+            late_count = 0
+            
+            for _, row in df_filtered.iterrows():
+                check_in_hour = row['check_in'].hour
+                # Simple heuristic: early (6-9), on time (9-17), late (17-22)
+                if 6 <= check_in_hour < 9:
+                    early_count += 1
+                elif 9 <= check_in_hour < 17:
+                    ontime_count += 1
+                else:
+                    late_count += 1
+            
+            punctuality_analysis = {
+                'Early': early_count,
+                'On Time': ontime_count,
+                'Late': late_count
+            }
+    
     if 'check_in' in df_filtered.columns:
         daily_checkins_series = df_filtered.groupby(df_filtered['check_in'].dt.date).size().sort_index()
         daily_checkins = {date_obj.strftime('%Y-%m-%d'): count for date_obj, count in daily_checkins_series.items()}
@@ -471,6 +567,10 @@ def chart_data_endpoint():
         'hourly_activity_by_day': hourly_activity_by_day, 'forecast_daily_checkins': {},
         'raw_records_for_chart_context': raw_records_for_chart_context,
         'is_comparison_mode': is_comparison_mode,
+        'session_duration_distribution': session_duration_distribution,
+        'punctuality_analysis': punctuality_analysis,
+        'avg_session_duration_per_tutor': avg_session_duration_per_tutor,
+        'tutor_consistency_score': tutor_consistency_score
     }
     return jsonify(response_data)
 

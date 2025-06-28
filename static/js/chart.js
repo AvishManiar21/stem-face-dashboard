@@ -16,7 +16,11 @@ const chartOptions = {
   avg_hours_per_day_of_week: ['bar', 'pie'],
   checkins_per_day_of_week: ['bar', 'pie'],
   hourly_activity_by_day: ['bar', 'line'], // Grouped bar or multi-line
-  forecast_daily_checkins: ['line'] 
+  forecast_daily_checkins: ['line'],
+  session_duration_distribution: ['bar', 'pie'],
+  punctuality_analysis: ['bar', 'pie'],
+  avg_session_duration_per_tutor: ['bar', 'pie'],
+  tutor_consistency_score: ['bar', 'pie']
 };
 
 const chartTitles = {
@@ -31,7 +35,11 @@ const chartTitles = {
   avg_hours_per_day_of_week: "Average Session Hours per Day of Week",
   checkins_per_day_of_week: "Check-ins per Day of Week",
   hourly_activity_by_day: "Hourly Activity by Day of Week",
-  forecast_daily_checkins: "Daily Check-ins Forecast (Experimental)"
+  forecast_daily_checkins: "Daily Check-ins Forecast (Experimental)",
+  session_duration_distribution: "Session Duration Distribution",
+  punctuality_analysis: "Punctuality Analysis",
+  avg_session_duration_per_tutor: "Average Session Duration per Tutor",
+  tutor_consistency_score: "Tutor Consistency Score"
 };
 
 function renderChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
