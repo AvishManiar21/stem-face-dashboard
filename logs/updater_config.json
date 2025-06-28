@@ -1,0 +1,135 @@
+{
+  "min_daily_sessions": 3,
+  "max_daily_sessions": 12,
+  "min_session_hours": 1.0,
+  "max_session_hours": 4.5,
+  "peak_hours": [
+    9,
+    10,
+    11,
+    14,
+    15,
+    16,
+    17
+  ],
+  "working_hours_start": 8,
+  "working_hours_end": 20,
+  "weekend_probability": 0.3,
+  "tutor_activity_weights": {
+    "2115580": {
+      "name": "Saanvi Joshi",
+      "weight": 0.058333333333333334,
+      "avg_hours": 1.86
+    },
+    "2192067": {
+      "name": "James Martin",
+      "weight": 0.016666666666666666,
+      "avg_hours": 2.25
+    },
+    "2425166": {
+      "name": "Aarav Shah",
+      "weight": 0.08333333333333333,
+      "avg_hours": 2.45
+    },
+    "2598056": {
+      "name": "Liam Johnson",
+      "weight": 0.09166666666666666,
+      "avg_hours": 2.36
+    },
+    "2630571": {
+      "name": "Avni Desai",
+      "weight": 0.05,
+      "avg_hours": 2.33
+    },
+    "2701634": {
+      "name": "Emily Brown",
+      "weight": 0.058333333333333334,
+      "avg_hours": 2.21
+    },
+    "2750869": {
+      "name": "Neha Patel",
+      "weight": 0.058333333333333334,
+      "avg_hours": 2.21
+    },
+    "3534553": {
+      "name": "Benjamin Lewis",
+      "weight": 0.041666666666666664,
+      "avg_hours": 2.0
+    },
+    "4146623": {
+      "name": "Noah Wilson",
+      "weight": 0.08333333333333333,
+      "avg_hours": 2.3
+    },
+    "6362733": {
+      "name": "Meera Nair",
+      "weight": 0.075,
+      "avg_hours": 2.11
+    },
+    "6403246": {
+      "name": "Isabella Davis",
+      "weight": 0.05,
+      "avg_hours": 2.75
+    },
+    "6474141": {
+      "name": "Anaya Sharma",
+      "weight": 0.03333333333333333,
+      "avg_hours": 2.62
+    },
+    "6664205": {
+      "name": "Mason Lee",
+      "weight": 0.041666666666666664,
+      "avg_hours": 2.0
+    },
+    "6887917": {
+      "name": "Lucas Moore",
+      "weight": 0.025,
+      "avg_hours": 2.0
+    },
+    "7134699": {
+      "name": "Vivaan Kumar",
+      "weight": 0.025,
+      "avg_hours": 2.5
+    },
+    "7264805": {
+      "name": "Isha Reddy",
+      "weight": 0.03333333333333333,
+      "avg_hours": 2.25
+    },
+    "7644166": {
+      "name": "Ryan Scott",
+      "weight": 0.08333333333333333,
+      "avg_hours": 2.2
+    },
+    "7916493": {
+      "name": "Arjun Kapoor",
+      "weight": 0.025,
+      "avg_hours": 2.17
+    },
+    "8853681": {
+      "name": "Aanya Mehta",
+      "weight": 0.05,
+      "avg_hours": 2.17
+    },
+    "9323660": {
+      "name": "Zoya Singh",
+      "weight": 0.016666666666666666,
+      "avg_hours": 2.5
+    },
+    "9876543": {
+      "name": "Olivia Turner",
+      "weight": 0.04,
+      "avg_hours": 2.3
+    },
+    "9988776": {
+      "name": "Ethan Carter",
+      "weight": 0.035,
+      "avg_hours": 2.1
+    },
+    "9123456": {
+      "name": "Chloe Kim",
+      "weight": 0.045,
+      "avg_hours": 2.4
+    }
+  }
+}
