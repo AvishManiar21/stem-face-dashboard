@@ -97,7 +97,7 @@ if __name__ == "__main__":
     # Initialize Flask session for testing
     from flask import Flask
     app = Flask(__name__)
-    app.secret_key = 'test-key'
+    app.secret_key = os.getenv('SECRET_KEY', 'test-key')
     
     with app.test_request_context():
         success = test_hybrid_auth()

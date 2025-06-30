@@ -79,7 +79,7 @@ class TutorAnalytics:
     Analytics and forecasting for tutor face recognition data.
     All KPIs and analytics are computed up to 'max_date' (default: today), but forecasting methods can use the full dataset for future trend prediction.
     """
-    def __init__(self, face_log_file='logs/face_log.csv', max_date=None):
+    def __init__(self, face_log_file='logs/face_log_with_expected.csv', max_date=None):
         self.face_log_file = face_log_file
         self.max_date = max_date or pd.Timestamp.now().normalize()
         self.data = self.load_data()
@@ -1558,9 +1558,85 @@ class TutorAnalytics:
                 duration_counts = duration_ranges.value_counts()
                 return {str(range_name): int(count) for range_name, count in duration_counts.items()}
             elif dataset == 'punctuality_analysis':
-                # Simple punctuality analysis (assuming on-time if within 15 minutes of expected)
-                # For now, return a basic distribution
-                return {'Early': 30, 'On Time': 150, 'Late': 20}
+                # Enhanced punctuality analysis using real data
+                df = self.data.copy()
+                if df.empty or 'check_in' not in df or 'expected_check_in' not in df:
+                    return {
+                        'breakdown': {'Early': 0, 'On Time': 0, 'Late': 0},
+                        'trends': {},
+                        'day_time': {},
+                        'outliers': {'most_punctual': [], 'least_punctual': []},
+                        'deviation_distribution': {}
+                    }
+                # Calculate deviation in minutes
+                df['deviation'] = (pd.to_datetime(df['check_in']) - pd.to_datetime(df['expected_check_in'])).dt.total_seconds() / 60
+                # Categorize
+                def categorize(dev):
+                    if pd.isna(dev):
+                        return 'On Time'
+                    if dev < -5:
+                        return 'Early'
+                    elif dev > 5:
+                        return 'Late'
+                    else:
+                        return 'On Time'
+                df['punctuality'] = df['deviation'].apply(categorize)
+                # Breakdown
+                breakdown_counts = df['punctuality'].value_counts().to_dict()
+                total = len(df)
+                breakdown = {}
+                for cat in ['Early', 'On Time', 'Late']:
+                    count = breakdown_counts.get(cat, 0)
+                    percent = round(count / total * 100, 1) if total else 0
+                    avg_dev = df[df['punctuality'] == cat]['deviation'].mean()
+                    if pd.isna(avg_dev):
+                        avg_dev_str = '-'
+                    else:
+                        avg_dev_str = f"{avg_dev:+.0f} min" if cat != 'On Time' else f"±{abs(avg_dev):.0f} min"
+                    breakdown[cat] = {
+                        'count': count,
+                        'percent': percent,
+                        'avg_deviation': avg_dev_str
+                    }
+                # Trends (by day)
+                df['day'] = pd.to_datetime(df['check_in']).dt.day_name()
+                trends = {}
+                for cat in ['Early', 'On Time', 'Late']:
+                    trends[cat] = df[df['punctuality'] == cat].groupby('day').size().reindex([
+                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                    ], fill_value=0).tolist()
+                # Day-of-week & time-of-day
+                df['hour'] = pd.to_datetime(df['check_in']).dt.hour
+                def time_slot(h):
+                    if 5 <= h < 12: return 'Morning'
+                    if 12 <= h < 17: return 'Afternoon'
+                    return 'Evening'
+                df['time_slot'] = df['hour'].apply(time_slot)
+                day_time = {}
+                for slot in ['Morning', 'Afternoon', 'Evening']:
+                    slot_counts = df[df['time_slot'] == slot].groupby('day').size().reindex([
+                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                    ], fill_value=0).tolist()
+                    day_time[slot] = slot_counts
+                # Outliers (top/least punctual by avg deviation)
+                tutor_dev = df.groupby('tutor_name')['deviation'].mean().sort_values()
+                most_punctual = tutor_dev.abs().sort_values().head(3).index.tolist()
+                least_punctual = tutor_dev.abs().sort_values(ascending=False).head(3).index.tolist()
+                # Deviation distribution
+                bins = [-float('inf'), -15, -5, 5, 15, float('inf')]
+                labels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min']
+                df['dev_bucket'] = pd.cut(df['deviation'], bins=bins, labels=labels)
+                dev_dist = df['dev_bucket'].value_counts().reindex(labels, fill_value=0).to_dict()
+                return {
+                    'breakdown': breakdown,
+                    'trends': trends,
+                    'day_time': day_time,
+                    'outliers': {
+                        'most_punctual': most_punctual,
+                        'least_punctual': least_punctual
+                    },
+                    'deviation_distribution': dev_dist
+                }
             elif dataset == 'avg_session_duration_per_tutor':
                 # Average session duration per tutor
                 avg_duration = self.data.groupby('tutor_name')['shift_hours'].mean()

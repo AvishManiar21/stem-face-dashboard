@@ -183,7 +183,7 @@
                 <option value="cumulative_checkins">Cumulative Check-ins</option>
                 <option value="cumulative_hours">Cumulative Hours</option>
                 <option value="hourly_activity_by_day">Hourly Activity Heatmap</option>
-                <option value="punctuality_analysis">Punctuality Analysis</option>
+                <!-- <option value="punctuality_analysis">Punctuality Analysis</option> -->
                 <option value="session_duration_distribution">Session Duration Distribution</option>
               </optgroup>
             </select>
@@ -763,8 +763,41 @@
         <div class="row">
           <div class="col-12">
             <h6>Recent Punctuality Trends</h6>
+            <div class="mb-2">
+              <span class="badge bg-success">Early</span>
+              <span class="badge bg-info">On Time</span>
+              <span class="badge bg-danger">Late</span>
+            </div>
             <div id="punctualityTrendChart" style="height: 200px;">
               <canvas id="punctualityTrendCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- After the Recent Punctuality Trends section in the modal body -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <h6>Punctuality by Day & Time</h6>
+            <div id="punctualityDayTimeChartContainer" style="height: 240px;">
+              <canvas id="punctualityDayTimeChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- Add Outlier/Top Performer Section below Day/Time Chart -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <h6>Top Performers & Outliers</h6>
+            <div id="punctualityOutliers">
+              <div><strong>Most Punctual:</strong> <span id="mostPunctualList">-</span></div>
+              <div><strong>Least Punctual:</strong> <span id="leastPunctualList">-</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Add Deviation Distribution Chart -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <h6>Deviation Distribution</h6>
+            <div id="punctualityDeviationChartContainer" style="height: 200px;">
+              <canvas id="punctualityDeviationChart"></canvas>
             </div>
           </div>
         </div>
@@ -779,6 +812,8 @@
   </div>
 </div>
 
+<!-- Move Bootstrap JS to the top of the script includes -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
 <script src="/static/js/chart.js"></script>
@@ -796,6 +831,22 @@
 
   // Analysis Mode Toggle
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded event fired: starting punctuality KPI fetch');
+    // Always update punctuality KPI cards with real data on page load
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: 'punctuality_analysis' })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Punctuality Analysis fetch result:', data);
+      updatePunctualityAnalysis(data.punctuality_analysis);
+    })
+    .catch(error => {
+      console.error('Error fetching punctuality analysis:', error);
+    });
+
     // Setup analysis mode toggle
     document.querySelectorAll('input[name="analysisMode"]').forEach(radio => {
       radio.addEventListener('change', function() {
@@ -1426,21 +1477,18 @@
   // Metrics Update Functions (for charts context)
   function updateChartMetrics(data) {
     if (!data || !data.raw_records_for_chart_context) return;
-    
     const records = data.raw_records_for_chart_context;
     const totalCheckins = records.length;
     const totalHours = records.reduce((sum, record) => sum + (parseFloat(record.shift_hours) || 0), 0);
     const avgSession = totalCheckins > 0 ? (totalHours / totalCheckins) : 0;
     const activeTutors = new Set(records.map(r => r.tutor_id)).size;
-    
-    // Update punctuality analysis for charts
-    updatePunctualityAnalysis(records);
-    
+    // Do NOT update punctuality KPI cards here; they are updated only on page load
     currentMetrics = { totalCheckins, totalHours, avgSession, activeTutors, records };
   }
 
-  function updatePunctualityAnalysis(records) {
-    if (!records || records.length === 0) {
+  function updatePunctualityAnalysis(punctualityAnalysis) {
+    // Use the new backend structure: {breakdown: {Early: {...}, 'On Time': {...}, Late: {...}}}
+    if (!punctualityAnalysis || !punctualityAnalysis.breakdown) {
       ['earlyPercentage', 'ontimePercentage', 'latePercentage'].forEach(id => {
         document.getElementById(id).textContent = '-';
       });
@@ -1449,24 +1497,19 @@
       });
       return;
     }
-
-    // Mock punctuality calculation - in real implementation, compare with expected times
-    const total = records.length;
-    const early = Math.floor(total * 0.25); // 25% early
-    const ontime = Math.floor(total * 0.60); // 60% on time
-    const late = total - early - ontime; // remainder late
-
-    const earlyPercent = ((early / total) * 100).toFixed(0);
-    const ontimePercent = ((ontime / total) * 100).toFixed(0);
-    const latePercent = ((late / total) * 100).toFixed(0);
-
-    document.getElementById('earlyPercentage').textContent = earlyPercent + '%';
-    document.getElementById('ontimePercentage').textContent = ontimePercent + '%';
-    document.getElementById('latePercentage').textContent = latePercent + '%';
-
-    document.getElementById('earlyCount').textContent = early + ' sessions';
-    document.getElementById('ontimeCount').textContent = ontime + ' sessions';
-    document.getElementById('lateCount').textContent = late + ' sessions';
+    const breakdown = punctualityAnalysis.breakdown;
+    // Early
+    const early = breakdown['Early'] || {};
+    document.getElementById('earlyCount').textContent = (early.count !== undefined ? early.count : '-') + ' sessions';
+    document.getElementById('earlyPercentage').textContent = (early.percent !== undefined ? early.percent + '%' : '-');
+    // On Time
+    const ontime = breakdown['On Time'] || {};
+    document.getElementById('ontimeCount').textContent = (ontime.count !== undefined ? ontime.count : '-') + ' sessions';
+    document.getElementById('ontimePercentage').textContent = (ontime.percent !== undefined ? ontime.percent + '%' : '-');
+    // Late
+    const late = breakdown['Late'] || {};
+    document.getElementById('lateCount').textContent = (late.count !== undefined ? late.count : '-') + ' sessions';
+    document.getElementById('latePercentage').textContent = (late.percent !== undefined ? late.percent + '%' : '-');
   }
 
   // Chart Enhancement Functions
@@ -1523,112 +1566,117 @@
     .then(response => response.json())
     .then(data => {
       const punctualityData = data.punctuality_analysis || {};
-      // List of required element IDs
-      const requiredIds = [
-        'earlyDetailCount', 'ontimeDetailCount', 'lateDetailCount',
-        'earlyDetailPercent', 'ontimeDetailPercent', 'lateDetailPercent',
-        'earlyDetailAvg', 'ontimeDetailAvg', 'lateDetailAvg',
-        'punctualityChart', 'punctualityTrendCanvas'
-      ];
-      for (const id of requiredIds) {
-        if (!document.getElementById(id)) {
-          console.error('Missing element for punctuality modal:', id);
-          alert('Error: Missing element in modal: ' + id);
-          return;
-        }
-      }
-      // Update the existing modal content
-      document.getElementById('earlyDetailCount').textContent = punctualityData.Early || 0;
-      document.getElementById('ontimeDetailCount').textContent = punctualityData['On Time'] || 0;
-      document.getElementById('lateDetailCount').textContent = punctualityData.Late || 0;
-      // Calculate percentages
-      const total = Object.values(punctualityData).reduce((sum, val) => sum + (val || 0), 0);
-      const earlyPercent = total > 0 ? Math.round((punctualityData.Early || 0) / total * 100) : 0;
-      const ontimePercent = total > 0 ? Math.round((punctualityData['On Time'] || 0) / total * 100) : 0;
-      const latePercent = total > 0 ? Math.round((punctualityData.Late || 0) / total * 100) : 0;
-      document.getElementById('earlyDetailPercent').textContent = earlyPercent + '%';
-      document.getElementById('ontimeDetailPercent').textContent = ontimePercent + '%';
-      document.getElementById('lateDetailPercent').textContent = latePercent + '%';
-      // Mock average deviation data (in real implementation, this would be calculated from actual data)
-      document.getElementById('earlyDetailAvg').textContent = '-15 min';
-      document.getElementById('ontimeDetailAvg').textContent = '±2 min';
-      document.getElementById('lateDetailAvg').textContent = '+25 min';
-      // Create punctuality pie chart
+      const breakdown = punctualityData.breakdown || {};
+      // Update modal content with real data
+      const cats = ['Early', 'On Time', 'Late'];
+      cats.forEach(cat => {
+        const idPrefix = cat.toLowerCase().replace(' ', '');
+        document.getElementById(idPrefix + 'DetailCount').textContent = (breakdown[cat]?.count ?? '-');
+        document.getElementById(idPrefix + 'DetailPercent').textContent = (breakdown[cat]?.percent ?? '-') + '%';
+        document.getElementById(idPrefix + 'DetailAvg').textContent = (breakdown[cat]?.avg_deviation ?? '-');
+      });
+      // Donut chart
       const ctx = document.getElementById('punctualityChart');
       if (ctx) {
-        if (window.punctualityChartInstance) {
-          window.punctualityChartInstance.destroy();
-        }
+        if (window.punctualityChartInstance) window.punctualityChartInstance.destroy();
         window.punctualityChartInstance = new Chart(ctx, {
           type: 'doughnut',
           data: {
-            labels: ['Early', 'On Time', 'Late'],
+            labels: cats,
             datasets: [{
-              data: [punctualityData.Early || 0, punctualityData['On Time'] || 0, punctualityData.Late || 0],
+              data: cats.map(cat => breakdown[cat]?.count ?? 0),
               backgroundColor: ['#28a745', '#17a2b8', '#dc3545'],
               borderWidth: 2,
               borderColor: '#fff'
             }]
           },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+      // Trends chart
+      const trendCtx = document.getElementById('punctualityTrendCanvas');
+      if (trendCtx) {
+        if (window.punctualityTrendChartInstance) window.punctualityTrendChartInstance.destroy();
+        const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        window.punctualityTrendChartInstance = new Chart(trendCtx, {
+          type: 'line',
+          data: {
+            labels: days.map(d => d.slice(0,3)),
+            datasets: cats.map((cat, idx) => ({
+              label: cat + ' %',
+              data: (punctualityData.trends && punctualityData.trends[cat]) ? punctualityData.trends[cat] : Array(7).fill(0),
+              borderColor: ['#28a745', '#17a2b8', '#dc3545'][idx],
+              backgroundColor: ['rgba(40,167,69,0.1)','rgba(23,162,184,0.1)','rgba(220,53,69,0.1)'][idx],
+              tension: 0.4
+            }))
+          },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
+            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+            plugins: { legend: { display: true, position: 'bottom' } }
           }
         });
       }
-      // Create trend chart (mock data for now)
-      const trendCtx = document.getElementById('punctualityTrendCanvas');
-      if (trendCtx) {
-        if (window.punctualityTrendChartInstance) {
-          window.punctualityTrendChartInstance.destroy();
-        }
-        const trendData = {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            label: 'On Time %',
-            data: [85, 90, 88, 92, 87, 95, 89],
-            borderColor: '#17a2b8',
-            backgroundColor: 'rgba(23, 162, 184, 0.1)',
-            tension: 0.4
-          }]
-        };
-        window.punctualityTrendChartInstance = new Chart(trendCtx, {
-          type: 'line',
-          data: trendData,
+      // Day/Time grouped bar chart
+      const dayTimeCtx = document.getElementById('punctualityDayTimeChart');
+      if (dayTimeCtx) {
+        if (window.punctualityDayTimeChartInstance) window.punctualityDayTimeChartInstance.destroy();
+        const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const slots = ['Morning','Afternoon','Evening'];
+        window.punctualityDayTimeChartInstance = new Chart(dayTimeCtx, {
+          type: 'bar',
+          data: {
+            labels: dayLabels,
+            datasets: slots.map((slot, idx) => ({
+              label: slot,
+              data: (punctualityData.day_time && punctualityData.day_time[slot]) ? punctualityData.day_time[slot] : Array(7).fill(0),
+              backgroundColor: ['rgba(40,167,69,0.7)','rgba(23,162,184,0.7)','rgba(220,53,69,0.7)'][idx],
+              borderRadius: 4,
+              barPercentage: 0.7,
+              categoryPercentage: 0.5
+            }))
+          },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 100,
-                ticks: {
-                  callback: function(value) {
-                    return value + '%';
-                  }
-                }
-              }
-            },
-            plugins: {
-              legend: {
-                display: false
-              }
-            }
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
           }
+        });
+      }
+      // Outliers/top performers
+      const mostPunctual = (punctualityData.outliers && punctualityData.outliers.most_punctual) || [];
+      const leastPunctual = (punctualityData.outliers && punctualityData.outliers.least_punctual) || [];
+      document.getElementById('mostPunctualList').textContent = mostPunctual.length ? mostPunctual.join(', ') : '-';
+      document.getElementById('leastPunctualList').textContent = leastPunctual.length ? leastPunctual.join(', ') : '-';
+      // Deviation distribution bar chart
+      const devDistCtx = document.getElementById('punctualityDeviationChart');
+      if (devDistCtx) {
+        if (window.punctualityDeviationChartInstance) window.punctualityDeviationChartInstance.destroy();
+        const devLabels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min'];
+        const devData = devLabels.map(l => (punctualityData.deviation_distribution && punctualityData.deviation_distribution[l]) || 0);
+        window.punctualityDeviationChartInstance = new Chart(devDistCtx, {
+          type: 'bar',
+          data: {
+            labels: devLabels,
+            datasets: [{
+              label: 'Sessions',
+              data: devData,
+              backgroundColor: [
+                'rgba(40,167,69,0.7)', 'rgba(40,167,69,0.4)',
+                'rgba(23,162,184,0.7)',
+                'rgba(220,53,69,0.4)', 'rgba(220,53,69,0.7)'
+              ],
+              borderRadius: 4
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
       }
       // Show the modal
       const modal = new bootstrap.Modal(document.getElementById('punctualityModal'));
       modal.show();
-    })
-    .catch(error => {
-      console.error('Error fetching punctuality details:', error);
-      alert('Error loading punctuality details. Please try again.');
     });
   }
   

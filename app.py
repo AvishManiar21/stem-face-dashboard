@@ -13,14 +13,11 @@ import logging
 from auto_logger import start_auto_logger, add_today_logs
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this in production
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Initialize analytics
-analytics = TutorAnalytics()
 
 # Global flag to track if app has been initialized
 _app_initialized = False
@@ -274,21 +271,20 @@ def api_user_info():
 def api_dashboard_data():
     """Get dashboard data"""
     try:
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
         # Get logs for collapsible view
         logs_for_collapsible_view = analytics.get_logs_for_collapsible_view()
-        
         # Get summary data
         summary = analytics.get_dashboard_summary()
-        
         # Get alerts
         alerts = analytics.generate_alerts()
-        
         return jsonify({
             'logs_for_collapsible_view': logs_for_collapsible_view,
             'summary': summary,
             'alerts': alerts
         })
     except Exception as e:
+        print("DASHBOARD ERROR:", e)
         logger.error(f"Error getting dashboard data: {e}")
         return jsonify({'error': 'Failed to load dashboard data'}), 500
 
@@ -498,9 +494,22 @@ def chart_data():
             req = request.json or {}
             dataset = req.get('dataset') or req.get('chartKey') or 'checkins_per_tutor'
             grid_mode = req.get('grid') or req.get('mode') == 'grid'
+            max_date = req.get('max_date')
         else:
             dataset = request.args.get('dataset') or request.args.get('chartKey') or 'checkins_per_tutor'
             grid_mode = request.args.get('grid') or request.args.get('mode') == 'grid'
+            max_date = request.args.get('max_date')
+
+        # Parse max_date if provided
+        if max_date:
+            try:
+                max_date_parsed = pd.to_datetime(max_date)
+            except Exception:
+                max_date_parsed = None
+        else:
+            max_date_parsed = None
+
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv', max_date=max_date_parsed)
 
         if grid_mode:
             # Return all datasets needed for grid mode
@@ -541,6 +550,7 @@ def download_log():
     """Download log file"""
     try:
         # Get logs and create CSV
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
         logs = analytics.get_all_logs()
         df = pd.DataFrame(logs)
         
@@ -587,7 +597,8 @@ def get_tutors():
     """Get all tutors for frontend"""
     try:
         # Get unique tutors from face_log data
-        df = load_data()
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        df = analytics.data
         if df.empty:
             return jsonify([])
         
