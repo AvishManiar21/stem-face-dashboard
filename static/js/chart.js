@@ -632,10 +632,8 @@ function exportFiltersLink() { /* ... same as before ... */
 // --- Punctuality Analysis Fetch and Update ---
 async function loadPunctualityAnalysis(params = '') {
   try {
-    // Build the request body with filters if needed
     let body = { dataset: 'punctuality_analysis' };
     if (params && typeof params === 'string' && params.length > 0) {
-      // Parse params string into an object
       params.split('&').forEach(pair => {
         const [key, value] = pair.split('=');
         if (key && value) body[key] = decodeURIComponent(value);
@@ -648,21 +646,294 @@ async function loadPunctualityAnalysis(params = '') {
     });
     const data = await res.json();
     const pa = data.punctuality_analysis || {};
-    // Update the cards
-    document.getElementById('earlyPercentage').textContent = pa.Early !== undefined ? pa.Early : '-';
-    document.getElementById('ontimePercentage').textContent = pa['On Time'] !== undefined ? pa['On Time'] : '-';
-    document.getElementById('latePercentage').textContent = pa.Late !== undefined ? pa.Late : '-';
-    document.getElementById('earlyCount').textContent = (pa.Early !== undefined ? pa.Early : '-') + ' sessions';
-    document.getElementById('ontimeCount').textContent = (pa['On Time'] !== undefined ? pa['On Time'] : '-') + ' sessions';
-    document.getElementById('lateCount').textContent = (pa.Late !== undefined ? pa.Late : '-') + ' sessions';
+    // Update the cards (only if elements exist)
+    const earlyPercentage = document.getElementById('earlyPercentage');
+    const ontimePercentage = document.getElementById('ontimePercentage');
+    const latePercentage = document.getElementById('latePercentage');
+    const earlyCount = document.getElementById('earlyCount');
+    const ontimeCount = document.getElementById('ontimeCount');
+    const lateCount = document.getElementById('lateCount');
+    if (earlyPercentage) earlyPercentage.textContent = pa.Early !== undefined ? pa.Early : '-';
+    if (ontimePercentage) ontimePercentage.textContent = pa['On Time'] !== undefined ? pa['On Time'] : '-';
+    if (latePercentage) latePercentage.textContent = pa.Late !== undefined ? pa.Late : '-';
+    if (earlyCount) earlyCount.textContent = (pa.Early !== undefined ? pa.Early : '-') + ' sessions';
+    if (ontimeCount) ontimeCount.textContent = (pa['On Time'] !== undefined ? pa['On Time'] : '-') + ' sessions';
+    if (lateCount) lateCount.textContent = (pa.Late !== undefined ? pa.Late : '-') + ' sessions';
   } catch (error) {
-    document.getElementById('earlyPercentage').textContent = '-';
-    document.getElementById('ontimePercentage').textContent = '-';
-    document.getElementById('latePercentage').textContent = '-';
-    document.getElementById('earlyCount').textContent = '- sessions';
-    document.getElementById('ontimeCount').textContent = '- sessions';
-    document.getElementById('lateCount').textContent = '- sessions';
+    const earlyPercentage = document.getElementById('earlyPercentage');
+    const ontimePercentage = document.getElementById('ontimePercentage');
+    const latePercentage = document.getElementById('latePercentage');
+    const earlyCount = document.getElementById('earlyCount');
+    const ontimeCount = document.getElementById('ontimeCount');
+    const lateCount = document.getElementById('lateCount');
+    if (earlyPercentage) earlyPercentage.textContent = '-';
+    if (ontimePercentage) ontimePercentage.textContent = '-';
+    if (latePercentage) latePercentage.textContent = '-';
+    if (earlyCount) earlyCount.textContent = '- sessions';
+    if (ontimeCount) ontimeCount.textContent = '- sessions';
+    if (lateCount) lateCount.textContent = '- sessions';
   }
+}
+
+function updatePunctualityAnalysis(punctualityAnalysis) {
+  if (!punctualityAnalysis || !punctualityAnalysis.breakdown) {
+    ['earlyPercentage', 'ontimePercentage', 'latePercentage'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '-';
+    });
+    ['earlyCount', 'ontimeCount', 'lateCount'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '- sessions';
+    });
+    return;
+  }
+  const breakdown = punctualityAnalysis.breakdown;
+  // Early
+  const early = breakdown['Early'] || {};
+  const earlyCount = document.getElementById('earlyCount');
+  const earlyPercentage = document.getElementById('earlyPercentage');
+  if (earlyCount) earlyCount.textContent = (early.count !== undefined ? early.count : '-') + ' sessions';
+  if (earlyPercentage) earlyPercentage.textContent = (early.percent !== undefined ? early.percent + '%' : '-');
+  // On Time
+  const ontime = breakdown['On Time'] || {};
+  const ontimeCount = document.getElementById('ontimeCount');
+  const ontimePercentage = document.getElementById('ontimePercentage');
+  if (ontimeCount) ontimeCount.textContent = (ontime.count !== undefined ? ontime.count : '-') + ' sessions';
+  if (ontimePercentage) ontimePercentage.textContent = (ontime.percent !== undefined ? ontime.percent + '%' : '-');
+  // Late
+  const late = breakdown['Late'] || {};
+  const lateCount = document.getElementById('lateCount');
+  const latePercentage = document.getElementById('latePercentage');
+  if (lateCount) lateCount.textContent = (late.count !== undefined ? late.count : '-') + ' sessions';
+  if (latePercentage) latePercentage.textContent = (late.percent !== undefined ? late.percent + '%' : '-');
+}
+
+function showPunctualityDetails(section) {
+  fetch('/chart-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset: 'punctuality_analysis' })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const punctualityData = data.punctuality_analysis || {};
+    const breakdown = punctualityData.breakdown || {};
+    const cats = ['Early', 'On Time', 'Late'];
+    cats.forEach(cat => {
+      const idPrefix = cat.toLowerCase().replace(' ', '');
+      document.getElementById(idPrefix + 'DetailCount').textContent = (breakdown[cat]?.count ?? '-');
+      document.getElementById(idPrefix + 'DetailPercent').textContent = (breakdown[cat]?.percent ?? '-') + '%';
+      document.getElementById(idPrefix + 'DetailAvg').textContent = (breakdown[cat]?.avg_deviation ?? '-');
+    });
+    // Donut chart
+    const ctx = document.getElementById('punctualityChart');
+    if (ctx) {
+      if (window.punctualityChartInstance) window.punctualityChartInstance.destroy();
+      window.punctualityChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: cats,
+          datasets: [{
+            data: cats.map(cat => breakdown[cat]?.count ?? 0),
+            backgroundColor: ['#28a745', '#17a2b8', '#dc3545'],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+    // Trends chart
+    const trendCtx = document.getElementById('punctualityTrendCanvas');
+    if (trendCtx) {
+      if (window.punctualityTrendChartInstance) window.punctualityTrendChartInstance.destroy();
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      window.punctualityTrendChartInstance = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: days.map(d => d.slice(0,3)),
+          datasets: cats.map((cat, idx) => ({
+            label: cat + ' %',
+            data: (punctualityData.trends && punctualityData.trends[cat]) ? punctualityData.trends[cat] : Array(7).fill(0),
+            borderColor: ['#28a745', '#17a2b8', '#dc3545'][idx],
+            backgroundColor: ['rgba(40,167,69,0.1)','rgba(23,162,184,0.1)','rgba(220,53,69,0.1)'][idx],
+            tension: 0.4
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+          plugins: { legend: { display: true, position: 'bottom' } }
+        }
+      });
+    }
+    // Day/Time grouped bar chart
+    const dayTimeCtx = document.getElementById('punctualityDayTimeChart');
+    if (dayTimeCtx) {
+      if (window.punctualityDayTimeChartInstance) window.punctualityDayTimeChartInstance.destroy();
+      const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const slots = ['Morning','Afternoon','Evening'];
+      window.punctualityDayTimeChartInstance = new Chart(dayTimeCtx, {
+        type: 'bar',
+        data: {
+          labels: dayLabels,
+          datasets: slots.map((slot, idx) => ({
+            label: slot,
+            data: (punctualityData.day_time && punctualityData.day_time[slot]) ? punctualityData.day_time[slot] : Array(7).fill(0),
+            backgroundColor: ['rgba(40,167,69,0.7)','rgba(23,162,184,0.7)','rgba(220,53,69,0.7)'][idx],
+            borderRadius: 4,
+            barPercentage: 0.7,
+            categoryPercentage: 0.5
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom' } },
+          scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+        }
+      });
+    }
+    // Outliers/top performers
+    const mostPunctual = (punctualityData.outliers && punctualityData.outliers.most_punctual) || [];
+    const leastPunctual = (punctualityData.outliers && punctualityData.outliers.least_punctual) || [];
+    document.getElementById('mostPunctualList').textContent = mostPunctual.length ? mostPunctual.join(', ') : '-';
+    document.getElementById('leastPunctualList').textContent = leastPunctual.length ? leastPunctual.join(', ') : '-';
+    // Deviation distribution bar chart
+    const devDistCtx = document.getElementById('punctualityDeviationChart');
+    if (devDistCtx) {
+      if (window.punctualityDeviationChartInstance) window.punctualityDeviationChartInstance.destroy();
+      const devLabels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min'];
+      const devData = devLabels.map(l => (punctualityData.deviation_distribution && punctualityData.deviation_distribution[l]) || 0);
+      window.punctualityDeviationChartInstance = new Chart(devDistCtx, {
+        type: 'bar',
+        data: {
+          labels: devLabels,
+          datasets: [{
+            label: 'Sessions',
+            data: devData,
+            backgroundColor: [
+              'rgba(40,167,69,0.7)', 'rgba(40,167,69,0.4)',
+              'rgba(23,162,184,0.7)',
+              'rgba(220,53,69,0.4)', 'rgba(220,53,69,0.7)'
+            ],
+            borderRadius: 4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('punctualityModal'));
+    modal.show();
+    // Activate the correct tab
+    setTimeout(() => {
+      let tabId = 'tab-breakdown';
+      if (section === 'trends') tabId = 'tab-trends';
+      else if (section === 'daytime') tabId = 'tab-daytime';
+      else if (section === 'outliers') tabId = 'tab-outliers';
+      else if (section === 'deviation') tabId = 'tab-deviation';
+      const tabEl = document.getElementById(tabId);
+      if (tabEl) {
+        const tab = new bootstrap.Tab(tabEl);
+        tab.show();
+      }
+    }, 400);
+  });
+}
+
+function exportPunctualityData(tab) {
+  // If no tab argument, detect the active tab
+  if (!tab) {
+    const activeTab = document.querySelector('#punctualityTabNav .nav-link.active');
+    if (activeTab) {
+      if (activeTab.id === 'tab-breakdown') tab = 'breakdown';
+      else if (activeTab.id === 'tab-trends') tab = 'trends';
+      else if (activeTab.id === 'tab-daytime') tab = 'daytime';
+      else if (activeTab.id === 'tab-outliers') tab = 'outliers';
+      else if (activeTab.id === 'tab-deviation') tab = 'deviation';
+    }
+  }
+  console.log('Exporting punctuality tab:', tab);
+  fetch('/chart-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset: 'punctuality_analysis' })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const pa = data.punctuality_analysis || {};
+    let csv = '';
+    let filename = 'punctuality_export';
+    if (tab === 'breakdown') {
+      csv = 'Category,Count,Percentage,Avg Deviation\n';
+      const cats = ['Early', 'On Time', 'Late'];
+      cats.forEach(cat => {
+        const b = pa.breakdown?.[cat] || {};
+        csv += `${cat},${b.count ?? '-'},${b.percent ?? '-'},${b.avg_deviation ?? '-'}\n`;
+      });
+      filename = 'punctuality_breakdown';
+    } else if (tab === 'trends') {
+      csv = 'Day,Early,On Time,Late\n';
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      for (let i = 0; i < days.length; i++) {
+        csv += `${days[i]},${pa.trends?.Early?.[i] ?? 0},${pa.trends?.['On Time']?.[i] ?? 0},${pa.trends?.Late?.[i] ?? 0}\n`;
+      }
+      filename = 'punctuality_trends';
+    } else if (tab === 'daytime') {
+      csv = 'Day,Slot,Sessions\n';
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const slots = ['Morning','Afternoon','Evening'];
+      slots.forEach(slot => {
+        (pa.day_time?.[slot] || []).forEach((val, i) => {
+          csv += `${days[i]},${slot},${val}\n`;
+        });
+      });
+      filename = 'punctuality_by_day_time';
+    } else if (tab === 'outliers') {
+      csv = 'Type,Tutors\n';
+      csv += `Most Punctual,"${(pa.outliers?.most_punctual || []).join(', ')}"\n`;
+      csv += `Least Punctual,"${(pa.outliers?.least_punctual || []).join(', ')}"\n`;
+      filename = 'punctuality_top_performers';
+    } else if (tab === 'deviation') {
+      csv = 'Deviation Bucket,Sessions\n';
+      const labels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min'];
+      labels.forEach(label => {
+        csv += `${label},${pa.deviation_distribution?.[label] ?? 0}\n`;
+      });
+      filename = 'punctuality_deviation';
+    } else {
+      alert('Unknown export type.');
+      return;
+    }
+    try {
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      // Fallback: check if download was blocked
+      setTimeout(() => {
+        if (!document.hidden) {
+          // If the file dialog did not open, show a manual copy dialog
+          if (!window.__lastDownload || window.__lastDownload !== filename) {
+            window.__lastDownload = filename;
+            const msg = `If the download did not start, copy the CSV below and save it manually.\n\n` + csv;
+            if (window.prompt) window.prompt('Copy CSV content:', csv);
+          }
+        }
+      }, 1000);
+    } catch (e) {
+      alert('Download failed. Here is the CSV:\n' + csv);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -713,7 +984,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   datasetSelect.addEventListener('change', () => {
       updateChartTypeOptions(datasetSelect.value);
+      // Build params from current form values
+      const params = new URLSearchParams();
+      // Handle tutor_ids from the multi-select functionality
+      const tutorIdsInput = form.querySelector('input[name="tutor_ids"]');
+      if (tutorIdsInput && tutorIdsInput.value.trim()) {
+        params.append('tutor_ids', tutorIdsInput.value.trim());
+      }
+      if (form.start_date.value.trim()) params.append('start_date', form.start_date.value.trim());
+      if (form.end_date.value.trim()) params.append('end_date', form.end_date.value.trim());
+      if (form.duration.value.trim()) params.append('duration', form.duration.value.trim());
+      if (form.day_type.value.trim()) params.append('day_type', form.day_type.value.trim());
+      if (form.shift_start_hour.value !== '0') params.append('shift_start_hour', form.shift_start_hour.value);
+      if (form.shift_end_hour.value !== '23') params.append('shift_end_hour', form.shift_end_hour.value);
       form.dispatchEvent(new Event('submit', { bubbles: true }));
+      loadPunctualityAnalysis(params.toString());
   });
   chartTypeSelect.addEventListener('change', () => form.dispatchEvent(new Event('submit', { bubbles: true })));
 

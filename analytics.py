@@ -150,6 +150,10 @@ class TutorAnalytics:
             
             # Add derived columns
             df['date'] = df['check_in'].dt.date
+            # Ensure 'date' is always a datetime.date object
+            df['date'] = df['date'].apply(lambda d: d if isinstance(d, date) else pd.to_datetime(d).date() if pd.notna(d) else None)
+            # Remove or comment out debug print of unique dates
+            # print(f"[DEBUG] Unique dates after loading: {sorted(df['date'].unique())}")
             df['day_of_week'] = df['check_in'].dt.day_name()
             df['hour'] = df['check_in'].dt.hour
             df['week'] = df['check_in'].dt.isocalendar().week
@@ -935,94 +939,6 @@ class TutorAnalytics:
         }
     
     # ==================== CALENDAR VIEW ====================
-    
-    def get_calendar_data(self, year=None, month=None):
-        """Get calendar view data for a specific month"""
-        if year is None:
-            year = dt.now().year
-        if month is None:
-            month = dt.now().month
-        
-        if self.data.empty:
-            return {
-                'year': year,
-                'month': month,
-                'month_name': calendar.month_name[month],
-                'calendar_data': {},
-                'summary': {'total_days': 0, 'active_days': 0, 'total_hours': 0}
-            }
-        
-        # Filter data for the specific month
-        month_data = self.data[
-            (self.data['check_in'].dt.year == year) & 
-            (self.data['check_in'].dt.month == month)
-        ]
-        
-        # Generate calendar data
-        calendar_data = {}
-        cal = calendar.monthcalendar(year, month)
-        
-        for week in cal:
-            for day in week:
-                if day == 0:  # Empty day
-                    continue
-                
-                day_date = date(year, month, day)
-                day_data = month_data[month_data['date'] == day_date]
-                
-                if not day_data.empty:
-                    sessions = []
-                    for _, session in day_data.iterrows():
-                        sessions.append({
-                            'tutor_id': session['tutor_id'],
-                            'tutor_name': session['tutor_name'],
-                            'check_in': session['check_in'].strftime('%H:%M'),
-                            'check_out': session['check_out'].strftime('%H:%M') if not pd.isna(session['check_out']) else 'N/A',
-                            'hours': session['shift_hours'],
-                            'status': self.get_session_status(session)
-                        })
-                    
-                    total_hours = day_data['shift_hours'].sum()
-                    unique_tutors = day_data['tutor_id'].nunique()
-                    
-                    calendar_data[day] = {
-                        'date': day_date.strftime('%Y-%m-%d'),
-                        'sessions': sessions,
-                        'total_hours': round(total_hours, 1),
-                        'tutor_count': unique_tutors,
-                        'status': self.get_day_status(day_data),
-                        'has_issues': self.day_has_issues(day_data)
-                    }
-                else:
-                    calendar_data[day] = {
-                        'date': day_date.strftime('%Y-%m-%d'),
-                        'sessions': [],
-                        'total_hours': 0,
-                        'tutor_count': 0,
-                        'status': 'inactive',
-                        'has_issues': False
-                    }
-        
-        # Calculate summary
-        total_days = len([d for d in calendar_data.keys() if d != 0])
-        active_days = len([d for d in calendar_data.values() if d['tutor_count'] > 0])
-        total_hours = sum(d['total_hours'] for d in calendar_data.values())
-        
-        calendar_result = {
-            'year': year,
-            'month': month,
-            'month_name': calendar.month_name[month],
-            'calendar_data': calendar_data,
-            'calendar_weeks': cal,
-            'summary': {
-                'total_days': total_days,
-                'active_days': active_days,
-                'total_hours': round(total_hours, 1)
-            }
-        }
-        
-        # Convert numpy types to native Python types for JSON serialization
-        return self._convert_numpy_types(calendar_result)
     
     def get_session_status(self, session):
         """Determine the status of a session"""

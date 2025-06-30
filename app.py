@@ -220,11 +220,6 @@ def charts_page():
     """Serve the charts page"""
     return send_from_directory('templates', 'charts.html')
 
-@app.route('/calendar')
-def calendar_view():
-    """Serve the calendar page"""
-    return send_from_directory('templates', 'calendar.html')
-
 @app.route('/admin/users')
 def admin_users():
     """Serve the admin users page"""
@@ -292,19 +287,6 @@ def api_dashboard_data():
 def dashboard_data():
     """Alias for /api/dashboard-data for frontend compatibility"""
     return api_dashboard_data()
-
-@app.route('/api/calendar-data')
-def api_calendar_data():
-    """Get calendar data"""
-    try:
-        year = int(request.args.get('year', datetime.now().year))
-        month = int(request.args.get('month', datetime.now().month))
-        
-        calendar_data = analytics.get_calendar_data(year, month)
-        return jsonify(calendar_data)
-    except Exception as e:
-        logger.error(f"Error getting calendar data: {e}")
-        return jsonify({'error': 'Failed to load calendar data'}), 500
 
 @app.route('/api/upcoming-shifts')
 def api_upcoming_shifts():

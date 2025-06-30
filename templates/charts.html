@@ -482,43 +482,22 @@
       <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Punctuality Analysis</h6>
     </div>
     <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="punctuality-card punctuality-early p-3 text-center">
-            <div class="punctuality-percentage text-success" id="earlyPercentage">-</div>
-            <div class="fw-bold">Early Arrivals</div>
-            <div class="punctuality-count" id="earlyCount">- sessions</div>
-            <small class="text-muted">Arrived >15min early</small>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="punctuality-card punctuality-ontime p-3 text-center">
-            <div class="punctuality-percentage text-info" id="ontimePercentage">-</div>
-            <div class="fw-bold">On Time</div>
-            <div class="punctuality-count" id="ontimeCount">- sessions</div>
-            <small class="text-muted">Within ±15min window</small>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="punctuality-card punctuality-late p-3 text-center">
-            <div class="punctuality-percentage text-danger" id="latePercentage">-</div>
-            <div class="fw-bold">Late Arrivals</div>
-            <div class="punctuality-count" id="lateCount">- sessions</div>
-            <small class="text-muted">Arrived >15min late</small>
-          </div>
-        </div>
-      </div>
-      <div class="row mt-3">
-        <div class="col-12">
-          <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">
-              <i class="fas fa-info-circle me-1"></i>
-              Punctuality calculated based on expected vs actual check-in times
-            </small>
-            <button class="btn btn-outline-primary btn-sm" onclick="showPunctualityDetails()">
-              <i class="fas fa-chart-pie me-1"></i>View Details
-            </button>
-          </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Punctuality calculated based on expected vs actual check-in times
+        </small>
+        <div class="dropdown">
+          <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="punctualityDetailsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-chart-pie me-1"></i>View Details
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="punctualityDetailsDropdown">
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('breakdown')"><i class="fas fa-list me-1"></i>Breakdown</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('trends')"><i class="fas fa-chart-line me-1"></i>Trends</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('daytime')"><i class="fas fa-clock me-1"></i>By Day & Time</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('outliers')"><i class="fas fa-star me-1"></i>Top Performers</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('deviation')"><i class="fas fa-sliders-h me-1"></i>Deviation Distribution</a></li>
+          </ul>
         </div>
       </div>
     </div>
@@ -720,48 +699,71 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="row mb-3">
-          <div class="col-md-4 text-center">
-            <canvas id="punctualityChart" width="200" height="200"></canvas>
-          </div>
-          <div class="col-md-8">
-            <h6>Punctuality Breakdown</h6>
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Count</th>
-                    <th>Percentage</th>
-                    <th>Avg Deviation</th>
-                  </tr>
-                </thead>
-                <tbody id="punctualityTableBody">
-                  <tr>
-                    <td><span class="badge bg-success">Early</span></td>
-                    <td id="earlyDetailCount">-</td>
-                    <td id="earlyDetailPercent">-</td>
-                    <td id="earlyDetailAvg">-</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge bg-info">On Time</span></td>
-                    <td id="ontimeDetailCount">-</td>
-                    <td id="ontimeDetailPercent">-</td>
-                    <td id="ontimeDetailAvg">-</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge bg-danger">Late</span></td>
-                    <td id="lateDetailCount">-</td>
-                    <td id="lateDetailPercent">-</td>
-                    <td id="lateDetailAvg">-</td>
-                  </tr>
-                </tbody>
-              </table>
+        <!-- Tab navigation -->
+        <ul class="nav nav-tabs mb-3" id="punctualityTabNav" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-breakdown" data-bs-toggle="tab" data-bs-target="#pane-breakdown" type="button" role="tab" aria-controls="pane-breakdown" aria-selected="true"><i class="fas fa-list me-1"></i>Breakdown</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-trends" data-bs-toggle="tab" data-bs-target="#pane-trends" type="button" role="tab" aria-controls="pane-trends" aria-selected="false"><i class="fas fa-chart-line me-1"></i>Trends</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-daytime" data-bs-toggle="tab" data-bs-target="#pane-daytime" type="button" role="tab" aria-controls="pane-daytime" aria-selected="false"><i class="fas fa-clock me-1"></i>By Day & Time</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-outliers" data-bs-toggle="tab" data-bs-target="#pane-outliers" type="button" role="tab" aria-controls="pane-outliers" aria-selected="false"><i class="fas fa-star me-1"></i>Top Performers</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-deviation" data-bs-toggle="tab" data-bs-target="#pane-deviation" type="button" role="tab" aria-controls="pane-deviation" aria-selected="false"><i class="fas fa-sliders-h me-1"></i>Deviation Distribution</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="punctualityTabContent">
+          <!-- Breakdown Tab -->
+          <div class="tab-pane fade show active" id="pane-breakdown" role="tabpanel" aria-labelledby="tab-breakdown">
+            <div class="row mb-3">
+              <div class="col-md-4 text-center">
+                <canvas id="punctualityChart" width="200" height="200"></canvas>
+              </div>
+              <div class="col-md-8">
+                <h6>Punctuality Breakdown</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                        <th>Avg Deviation</th>
+                      </tr>
+                    </thead>
+                    <tbody id="punctualityTableBody">
+                      <tr>
+                        <td><span class="badge bg-success">Early</span></td>
+                        <td id="earlyDetailCount">-</td>
+                        <td id="earlyDetailPercent">-</td>
+                        <td id="earlyDetailAvg">-</td>
+                      </tr>
+                      <tr>
+                        <td><span class="badge bg-info">On Time</span></td>
+                        <td id="ontimeDetailCount">-</td>
+                        <td id="ontimeDetailPercent">-</td>
+                        <td id="ontimeDetailAvg">-</td>
+                      </tr>
+                      <tr>
+                        <td><span class="badge bg-danger">Late</span></td>
+                        <td id="lateDetailCount">-</td>
+                        <td id="lateDetailPercent">-</td>
+                        <td id="lateDetailAvg">-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('breakdown')"><i class="fas fa-download me-1"></i>Export Breakdown</button>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="row">
-          <div class="col-12">
+          <!-- Trends Tab -->
+          <div class="tab-pane fade" id="pane-trends" role="tabpanel" aria-labelledby="tab-trends">
             <h6>Recent Punctuality Trends</h6>
             <div class="mb-2">
               <span class="badge bg-success">Early</span>
@@ -771,42 +773,38 @@
             <div id="punctualityTrendChart" style="height: 200px;">
               <canvas id="punctualityTrendCanvas"></canvas>
             </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('trends')"><i class="fas fa-download me-1"></i>Export Trends</button>
           </div>
-        </div>
-        <!-- After the Recent Punctuality Trends section in the modal body -->
-        <div class="row mt-4">
-          <div class="col-12">
+          <!-- By Day & Time Tab -->
+          <div class="tab-pane fade" id="pane-daytime" role="tabpanel" aria-labelledby="tab-daytime">
             <h6>Punctuality by Day & Time</h6>
             <div id="punctualityDayTimeChartContainer" style="height: 240px;">
               <canvas id="punctualityDayTimeChart"></canvas>
             </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('daytime')"><i class="fas fa-download me-1"></i>Export By Day & Time</button>
           </div>
-        </div>
-        <!-- Add Outlier/Top Performer Section below Day/Time Chart -->
-        <div class="row mt-4">
-          <div class="col-12">
+          <!-- Top Performers Tab -->
+          <div class="tab-pane fade" id="pane-outliers" role="tabpanel" aria-labelledby="tab-outliers">
             <h6>Top Performers & Outliers</h6>
             <div id="punctualityOutliers">
               <div><strong>Most Punctual:</strong> <span id="mostPunctualList">-</span></div>
               <div><strong>Least Punctual:</strong> <span id="leastPunctualList">-</span></div>
             </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('outliers')"><i class="fas fa-download me-1"></i>Export Top Performers</button>
           </div>
-        </div>
-        <!-- Add Deviation Distribution Chart -->
-        <div class="row mt-4">
-          <div class="col-12">
+          <!-- Deviation Distribution Tab -->
+          <div class="tab-pane fade" id="pane-deviation" role="tabpanel" aria-labelledby="tab-deviation">
             <h6>Deviation Distribution</h6>
             <div id="punctualityDeviationChartContainer" style="height: 200px;">
               <canvas id="punctualityDeviationChart"></canvas>
             </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('deviation')"><i class="fas fa-download me-1"></i>Export Deviation</button>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="exportPunctualityData()">
-          <i class="fas fa-download me-1"></i>Export Data
-        </button>
+        <!-- Removed the old export button -->
       </div>
     </div>
   </div>
@@ -841,7 +839,6 @@
     .then(response => response.json())
     .then(data => {
       console.log('Punctuality Analysis fetch result:', data);
-      updatePunctualityAnalysis(data.punctuality_analysis);
     })
     .catch(error => {
       console.error('Error fetching punctuality analysis:', error);
