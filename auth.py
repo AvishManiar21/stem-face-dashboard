@@ -21,20 +21,21 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Initialize Supabase client
+# Check if Supabase environment variables are set
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
-if not supabase_url or not supabase_key:
-    logger.error("Supabase URL and Key must be set in environment variables")
-    raise ValueError("Supabase URL and Key must be set in environment variables")
-
-try:
-    supabase: Client = create_client(supabase_url, supabase_key)
-    logger.info("Supabase client initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize Supabase client: {e}")
-    raise
+# Initialize Supabase client only if environment variables are available
+supabase = None
+if supabase_url and supabase_key:
+    try:
+        supabase: Client = create_client(supabase_url, supabase_key)
+        logger.info("Supabase client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase client: {e}")
+        supabase = None
+else:
+    logger.warning("Supabase environment variables not set. Running in demo mode with local authentication.")
 
 # Role hierarchy for access control
 ROLE_HIERARCHY = {
@@ -47,6 +48,40 @@ ROLE_HIERARCHY = {
 # Audit log file
 AUDIT_LOG_FILE = 'logs/audit_log.csv'
 
+# Demo users for when Supabase is not available
+DEMO_USERS = {
+    'admin@example.com': {
+        'id': 'demo_admin_001',
+        'email': 'admin@example.com',
+        'user_metadata': {
+            'role': 'admin',
+            'full_name': 'Demo Administrator',
+            'tutor_id': 'ADMIN001'
+        },
+        'password_hash': hashlib.sha256('admin123'.encode()).hexdigest()
+    },
+    'tutor@example.com': {
+        'id': 'demo_tutor_001',
+        'email': 'tutor@example.com',
+        'user_metadata': {
+            'role': 'tutor',
+            'full_name': 'Demo Tutor',
+            'tutor_id': 'TUTOR001'
+        },
+        'password_hash': hashlib.sha256('tutor123'.encode()).hexdigest()
+    },
+    'manager@example.com': {
+        'id': 'demo_manager_001',
+        'email': 'manager@example.com',
+        'user_metadata': {
+            'role': 'manager',
+            'full_name': 'Demo Manager',
+            'tutor_id': 'MGR001'
+        },
+        'password_hash': hashlib.sha256('manager123'.encode()).hexdigest()
+    }
+}
+
 def get_current_user():
     """Get current authenticated user from session"""
     if 'user' in session:
@@ -55,6 +90,18 @@ def get_current_user():
 
 def get_user_role(email=None):
     """Get user's role - current user if no email provided, or specific user by email"""
+    if not supabase:
+        # Demo mode - use local users
+        if email:
+            if email in DEMO_USERS:
+                return DEMO_USERS[email]['user_metadata'].get('role', 'tutor')
+        else:
+            user = get_current_user()
+            if user and 'user_metadata' in user:
+                return user['user_metadata'].get('role', 'tutor')
+        return 'tutor'
+    
+    # Supabase mode
     if email:
         # Get role for specific user
         try:
@@ -138,86 +185,105 @@ def verify_password(password, salt, stored_hash):
 
 def authenticate_user(email, password):
     """
-    Hybrid authentication - tries Supabase Auth first, then custom users table
+    Hybrid authentication - tries Supabase Auth first, then custom users table, then demo users
     """
     if not email or not password:
         return False, "Email and password are required"
     
-    # First try Supabase Auth
-    try:
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        
-        if response.user:
-            # Store user in session
-            session['user'] = {
-                'id': response.user.id,
-                'email': response.user.email,
-                'user_metadata': response.user.user_metadata or {}
-            }
-            if hasattr(response, 'session') and response.session:
-                session['access_token'] = response.session.access_token
-            logger.info(f"User {email} authenticated via Supabase Auth")
-            return True, "Login successful"
-            
-    except Exception as supabase_error:
-        logger.warning(f"Supabase Auth failed for {email}: {supabase_error}")
-        
-        # If Supabase Auth fails, try custom users table
+    # First try Supabase Auth if available
+    if supabase:
         try:
-            # Query custom users table
-            response = supabase.table('users').select('*').eq('email', email).execute()
+            response = supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
             
-            if response.data and len(response.data) > 0:
-                user_data = response.data[0]
+            if response.user:
+                # Store user in session
+                session['user'] = {
+                    'id': response.user.id,
+                    'email': response.user.email,
+                    'user_metadata': response.user.user_metadata or {}
+                }
+                if hasattr(response, 'session') and response.session:
+                    session['access_token'] = response.session.access_token
+                logger.info(f"User {email} authenticated via Supabase Auth")
+                return True, "Login successful"
                 
-                # Verify password - handle both salt-based and legacy hash-only systems
-                password_hash = user_data.get('password_hash', '')
-                salt = user_data.get('salt', '')
+        except Exception as supabase_error:
+            logger.warning(f"Supabase Auth failed for {email}: {supabase_error}")
+            
+            # If Supabase Auth fails, try custom users table
+            try:
+                # Query custom users table
+                response = supabase.table('users').select('*').eq('email', email).execute()
+                
+                if response.data and len(response.data) > 0:
+                    user_data = response.data[0]
+                    
+                    # Verify password - handle both salt-based and legacy hash-only systems
+                    password_hash = user_data.get('password_hash', '')
+                    salt = user_data.get('salt', '')
 
-                # If salt exists, use salt-based verification
-                if salt:
-                    password_valid = verify_password(password, salt, password_hash)
-                else:
-                    # Legacy system - try direct hash comparison (for existing users)
-                    # This is a simple hash comparison for backward compatibility
-                    import hashlib
-                    simple_hash = hashlib.sha256(password.encode()).hexdigest()
-                    password_valid = secrets.compare_digest(simple_hash, password_hash)
+                    # If salt exists, use salt-based verification
+                    if salt:
+                        password_valid = verify_password(password, salt, password_hash)
+                    else:
+                        # Legacy system - try direct hash comparison (for existing users)
+                        # This is a simple hash comparison for backward compatibility
+                        import hashlib
+                        simple_hash = hashlib.sha256(password.encode()).hexdigest()
+                        password_valid = secrets.compare_digest(simple_hash, password_hash)
 
-                if password_valid:
-                    # Store user in session (mimicking Supabase Auth format)
-                    session['user'] = {
-                        'id': user_data['id'],
-                        'email': user_data['email'],
-                        'user_metadata': {
-                            'role': user_data.get('role', 'tutor'),
-                            'full_name': user_data.get('full_name', ''),
-                            'tutor_id': user_data.get('tutor_id')
+                    if password_valid:
+                        # Store user in session (mimicking Supabase Auth format)
+                        session['user'] = {
+                            'id': user_data['id'],
+                            'email': user_data['email'],
+                            'user_metadata': {
+                                'role': user_data.get('role', 'tutor'),
+                                'full_name': user_data.get('full_name', ''),
+                                'tutor_id': user_data.get('tutor_id')
+                            }
                         }
-                    }
-                    logger.info(f"User {email} authenticated via custom users table")
-                    return True, "Login successful"
+                        logger.info(f"User {email} authenticated via custom users table")
+                        return True, "Login successful"
+                    else:
+                        logger.warning(f"Invalid password for user {email}")
+                        return False, "Invalid email or password"
                 else:
-                    logger.warning(f"Invalid password for user {email}")
+                    logger.warning(f"User {email} not found in custom users table")
                     return False, "Invalid email or password"
-            else:
-                logger.warning(f"User {email} not found in custom users table")
-                return False, "Invalid email or password"
-                
-        except Exception as custom_error:
-            logger.error(f"Custom authentication error for {email}: {custom_error}")
-            return False, f"Authentication error: {str(custom_error)}"
+                    
+            except Exception as custom_error:
+                logger.error(f"Custom authentication error for {email}: {custom_error}")
+                return False, f"Authentication error: {str(custom_error)}"
     
-    return False, "Authentication failed"
+    # If Supabase is not available or failed, try demo users
+    if email in DEMO_USERS:
+        user_data = DEMO_USERS[email]
+        # Simple hash comparison for demo users
+        simple_hash = hashlib.sha256(password.encode()).hexdigest()
+        if secrets.compare_digest(simple_hash, user_data['password_hash']):
+            session['user'] = {
+                'id': user_data['id'],
+                'email': user_data['email'],
+                'user_metadata': user_data['user_metadata']
+            }
+            logger.info(f"User {email} authenticated via demo users")
+            return True, "Login successful (Demo Mode)"
+        else:
+            logger.warning(f"Invalid password for demo user {email}")
+            return False, "Invalid email or password"
+    
+    return False, "Invalid email or password"
 
 def logout_user():
     """Logout current user"""
     try:
-        # Sign out from Supabase
-        supabase.auth.sign_out()
+        # Sign out from Supabase if available
+        if supabase:
+            supabase.auth.sign_out()
         
         # Clear session
         session.clear()
@@ -258,6 +324,10 @@ def register_user(email, password, role='tutor', tutor_id=None, full_name=None):
     validation_errors = validate_user_input(email, password, role, tutor_id, full_name)
     if validation_errors:
         return False, f"Validation errors: {'; '.join(validation_errors)}"
+    
+    # If Supabase is not available, return demo mode message
+    if not supabase:
+        return False, "User registration is not available in demo mode. Please set up Supabase environment variables for full functionality."
     
     try:
         # Check if user already exists
@@ -309,6 +379,10 @@ def register_user(email, password, role='tutor', tutor_id=None, full_name=None):
 
 def update_user_role(user_id, new_role, tutor_id=None):
     """Update user role (admin only function)"""
+    # If Supabase is not available, return demo mode message
+    if not supabase:
+        return False, "User role updates are not available in demo mode. Please set up Supabase environment variables for full functionality."
+    
     try:
         user_metadata = {'role': new_role}
         if tutor_id:

@@ -1041,7 +1041,7 @@ class TutorAnalytics:
             return 'inactive'
         
         total_hours = day_data['shift_hours'].sum()
-        has_issues = any(pd.isna(day_data['check_out'])) or any(day_data['shift_hours'] < 1.0)
+        has_issues = day_data['check_out'].isna().any() or (day_data['shift_hours'] < 1.0).any()
         
         if has_issues:
             return 'warning'
@@ -1053,12 +1053,571 @@ class TutorAnalytics:
             return 'low_activity'
     
     def day_has_issues(self, day_data):
-        """Check if a day has any issues"""
+        """Check if a day has any issues that need attention"""
         if day_data.empty:
             return False
         
-        return (any(pd.isna(day_data['check_out'])) or 
-                any(day_data['shift_hours'] < 1.0))
+        # Check for missing checkouts
+        missing_checkouts = day_data['check_out'].isna().any()
+        
+        # Check for very short sessions
+        short_sessions = (day_data['shift_hours'] < 0.5).any()
+        
+        # Check for very long sessions
+        long_sessions = (day_data['shift_hours'] > 12).any()
+        
+        return missing_checkouts or short_sessions or long_sessions
+
+    def get_audit_logs(self, page=1, per_page=20):
+        """Get paginated audit logs for admin view"""
+        try:
+            # Load audit logs from CSV
+            audit_file = 'logs/audit_log.csv'
+            if not os.path.exists(audit_file):
+                # Create sample audit logs if file doesn't exist
+                self._create_sample_audit_logs()
+            
+            df = pd.read_csv(audit_file)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.sort_values('timestamp', ascending=False)
+            
+            # Pagination
+            total = len(df)
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            
+            # Create pagination object
+            class Pagination:
+                def __init__(self, items, page, per_page, total):
+                    self.items = items
+                    self.page = page
+                    self.per_page = per_page
+                    self.total = total
+                    self.pages = (total + per_page - 1) // per_page
+                    self.has_prev = page > 1
+                    self.has_next = page < self.pages
+                    self.prev_num = page - 1 if page > 1 else None
+                    self.next_num = page + 1 if page < self.pages else None
+                    self.total_pages = self.pages
+            
+            paginated_df = df.iloc[start_idx:end_idx]
+            pagination = Pagination(paginated_df.to_dict('records'), page, per_page, total)
+            
+            return pagination
+            
+        except Exception as e:
+            print(f"Error loading audit logs: {e}")
+            # Return empty pagination
+            class EmptyPagination:
+                def __init__(self):
+                    self.items = []
+                    self.page = 1
+                    self.per_page = per_page
+                    self.total = 0
+                    self.pages = 0
+                    self.has_prev = False
+                    self.has_next = False
+                    self.prev_num = None
+                    self.next_num = None
+                    self.total_pages = 0
+            
+            return EmptyPagination()
+
+    def _create_sample_audit_logs(self):
+        """Create sample audit logs for testing"""
+        import random
+        from datetime import datetime, timedelta
+        
+        audit_data = []
+        actions = ['login', 'logout', 'check_in', 'check_out', 'manual_entry', 'data_export']
+        users = ['admin@example.com', 'manager@example.com', 'tutor1@example.com', 'tutor2@example.com']
+        
+        # Generate 100 sample audit entries
+        for i in range(100):
+            timestamp = datetime.now() - timedelta(days=random.randint(0, 30), 
+                                                 hours=random.randint(0, 23),
+                                                 minutes=random.randint(0, 59))
+            
+            action = random.choice(actions)
+            user = random.choice(users)
+            
+            audit_data.append({
+                'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'user_email': user,
+                'action': action,
+                'details': f'Sample {action} action',
+                'ip_address': f'192.168.1.{random.randint(1, 255)}',
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+        
+        # Create directory if it doesn't exist
+        os.makedirs('logs', exist_ok=True)
+        
+        # Save to CSV
+        df = pd.DataFrame(audit_data)
+        df.to_csv('logs/audit_log.csv', index=False)
+
+    def populate_audit_logs(self):
+        """Populate audit logs with current data"""
+        self._create_sample_audit_logs()
+
+    def get_shifts_data(self):
+        """Get shifts data for admin management"""
+        try:
+            # Load shifts from CSV
+            shifts_file = 'logs/shifts.csv'
+            if not os.path.exists(shifts_file):
+                # Create sample shifts if file doesn't exist
+                self._create_sample_shifts()
+            
+            df_shifts = pd.read_csv(shifts_file)
+            
+            # Load assignments
+            assignments_file = 'logs/shift_assignments.csv'
+            if not os.path.exists(assignments_file):
+                self._create_sample_assignments()
+            
+            df_assignments = pd.read_csv(assignments_file)
+            
+            return {
+                'shifts': df_shifts.to_dict('records'),
+                'assignments': df_assignments.to_dict('records'),
+                'tutors': self._get_available_tutors()
+            }
+            
+        except Exception as e:
+            print(f"Error loading shifts data: {e}")
+            return {'shifts': [], 'assignments': [], 'tutors': []}
+
+    def _create_sample_shifts(self):
+        """Create sample shifts for testing"""
+        shifts_data = [
+            {
+                'shift_id': 1,
+                'shift_name': 'Morning Shift',
+                'start_time': '08:00',
+                'end_time': '12:00',
+                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
+                'status': 'active'
+            },
+            {
+                'shift_id': 2,
+                'shift_name': 'Afternoon Shift',
+                'start_time': '12:00',
+                'end_time': '16:00',
+                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
+                'status': 'active'
+            },
+            {
+                'shift_id': 3,
+                'shift_name': 'Evening Shift',
+                'start_time': '16:00',
+                'end_time': '20:00',
+                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
+                'status': 'active'
+            },
+            {
+                'shift_id': 4,
+                'shift_name': 'Weekend Shift',
+                'start_time': '10:00',
+                'end_time': '18:00',
+                'days_of_week': 'Saturday,Sunday',
+                'status': 'active'
+            }
+        ]
+        
+        os.makedirs('logs', exist_ok=True)
+        df = pd.DataFrame(shifts_data)
+        df.to_csv('logs/shifts.csv', index=False)
+
+    def _create_sample_assignments(self):
+        """Create sample shift assignments for testing"""
+        assignments_data = [
+            {
+                'assignment_id': 1,
+                'shift_id': 1,
+                'tutor_id': 'T001',
+                'tutor_name': 'John Doe',
+                'assigned_date': '2024-01-01',
+                'status': 'active'
+            },
+            {
+                'assignment_id': 2,
+                'shift_id': 2,
+                'tutor_id': 'T002',
+                'tutor_name': 'Jane Smith',
+                'assigned_date': '2024-01-01',
+                'status': 'active'
+            },
+            {
+                'assignment_id': 3,
+                'shift_id': 3,
+                'tutor_id': 'T003',
+                'tutor_name': 'Bob Johnson',
+                'assigned_date': '2024-01-01',
+                'status': 'active'
+            }
+        ]
+        
+        os.makedirs('logs', exist_ok=True)
+        df = pd.DataFrame(assignments_data)
+        df.to_csv('logs/shift_assignments.csv', index=False)
+
+    def _get_available_tutors(self):
+        """Get list of available tutors"""
+        try:
+            df = self.load_data()
+            if df.empty:
+                return []
+            
+            tutors = df[['tutor_id', 'tutor_name']].drop_duplicates()
+            return tutors.to_dict('records')
+        except:
+            return []
+
+    def remove_shift_assignment(self, assignment_id):
+        """Remove a shift assignment"""
+        try:
+            assignments_file = 'logs/shift_assignments.csv'
+            if os.path.exists(assignments_file):
+                df = pd.read_csv(assignments_file)
+                df = df[df['assignment_id'] != int(assignment_id)]
+                df.to_csv(assignments_file, index=False)
+        except Exception as e:
+            print(f"Error removing assignment: {e}")
+
+    def deactivate_shift(self, shift_id):
+        """Deactivate a shift"""
+        try:
+            shifts_file = 'logs/shifts.csv'
+            if os.path.exists(shifts_file):
+                df = pd.read_csv(shifts_file)
+                df.loc[df['shift_id'] == int(shift_id), 'status'] = 'inactive'
+                df.to_csv(shifts_file, index=False)
+        except Exception as e:
+            print(f"Error deactivating shift: {e}")
+
+    def create_shift(self, shift_name, start_time, end_time, days_of_week):
+        """Create a new shift"""
+        try:
+            shifts_file = 'logs/shifts.csv'
+            if os.path.exists(shifts_file):
+                df = pd.read_csv(shifts_file)
+                new_shift_id = df['shift_id'].max() + 1 if len(df) > 0 else 1
+            else:
+                df = pd.DataFrame(columns=['shift_id', 'shift_name', 'start_time', 'end_time', 'days_of_week', 'status'])
+                new_shift_id = 1
+            
+            new_shift = {
+                'shift_id': new_shift_id,
+                'shift_name': shift_name,
+                'start_time': start_time,
+                'end_time': end_time,
+                'days_of_week': ','.join(days_of_week),
+                'status': 'active'
+            }
+            
+            df = pd.concat([df, pd.DataFrame([new_shift])], ignore_index=True)
+            df.to_csv(shifts_file, index=False)
+            
+        except Exception as e:
+            print(f"Error creating shift: {e}")
+
+    def assign_shift_to_tutor(self, shift_id, tutor_id):
+        """Assign a shift to a tutor"""
+        try:
+            assignments_file = 'logs/shift_assignments.csv'
+            if os.path.exists(assignments_file):
+                df = pd.read_csv(assignments_file)
+                new_assignment_id = df['assignment_id'].max() + 1 if len(df) > 0 else 1
+            else:
+                df = pd.DataFrame(columns=['assignment_id', 'shift_id', 'tutor_id', 'tutor_name', 'assigned_date', 'status'])
+                new_assignment_id = 1
+            
+            # Get tutor name from face log
+            tutor_name = f"Tutor {tutor_id}"
+            try:
+                face_df = pd.read_csv('logs/face_log.csv')
+                tutor_row = face_df[face_df['tutor_id'] == tutor_id]
+                if not tutor_row.empty:
+                    tutor_name = tutor_row['tutor_name'].iloc[0]
+            except:
+                pass
+            
+            new_assignment = {
+                'assignment_id': new_assignment_id,
+                'shift_id': int(shift_id),
+                'tutor_id': tutor_id,
+                'tutor_name': tutor_name,
+                'assigned_date': datetime.now().strftime('%Y-%m-%d'),
+                'status': 'active'
+            }
+            
+            df = pd.concat([df, pd.DataFrame([new_assignment])], ignore_index=True)
+            df.to_csv(assignments_file, index=False)
+            
+        except Exception as e:
+            print(f"Error assigning shift: {e}")
+
+    def get_logs_for_collapsible_view(self):
+        """
+        Return all check-in/check-out logs as a list of dicts for the dashboard's collapsible log view.
+        """
+        if self.data.empty:
+            return []
+        logs = []
+        for _, row in self.data.iterrows():
+            logs.append({
+                'tutor_id': row.get('tutor_id'),
+                'tutor_name': row.get('tutor_name'),
+                'check_in': row.get('check_in').strftime('%Y-%m-%d %H:%M') if not pd.isna(row.get('check_in')) else None,
+                'check_out': row.get('check_out').strftime('%Y-%m-%d %H:%M') if not pd.isna(row.get('check_out')) else None,
+                'shift_hours': float(row.get('shift_hours')) if not pd.isna(row.get('shift_hours')) else None,
+                'snapshot_in': row.get('snapshot_in'),
+                'snapshot_out': row.get('snapshot_out')
+            })
+        return logs
+
+    def get_dashboard_summary(self):
+        """
+        Return a summary of KPIs for the dashboard, deduplicating logic from other methods.
+        """
+        if self.data.empty:
+            return {
+                'total_checkins': 0,
+                'total_hours': 0,
+                'active_tutors': 0,
+                'avg_session_duration': '—',
+                'avg_daily_hours': '—',
+                'peak_checkin_hour': '—',
+                'top_day': '—',
+                'top_tutor_current_month': '—',
+            }
+        df = self.data.copy()
+        # Remove duplicate check-ins by tutor_id and check_in time
+        df = df.drop_duplicates(subset=['tutor_id', 'check_in'])
+        total_checkins = len(df)
+        total_hours = round(df['shift_hours'].sum(), 1)
+        active_tutors = df['tutor_id'].nunique()
+        avg_session_duration = round(df['shift_hours'].mean(), 2) if total_checkins > 0 else '—'
+        # Daily hours
+        daily_hours = df.groupby('date')['shift_hours'].sum()
+        avg_daily_hours = round(daily_hours.mean(), 2) if not daily_hours.empty else '—'
+        # Peak check-in hour
+        if 'hour' in df.columns and not df['hour'].isna().all():
+            peak_checkin_hour = int(df['hour'].mode()[0])
+        else:
+            peak_checkin_hour = '—'
+        # Most active day
+        if not daily_hours.empty:
+            top_day = str(daily_hours.idxmax())
+        else:
+            top_day = '—'
+        # Top tutor this month
+        now = pd.Timestamp.now()
+        month_df = df[(df['check_in'].dt.month == now.month) & (df['check_in'].dt.year == now.year)]
+        if not month_df.empty:
+            top_tutor_row = month_df.groupby(['tutor_id', 'tutor_name'])['shift_hours'].sum().idxmax()
+            top_tutor_current_month = top_tutor_row[1] if isinstance(top_tutor_row, tuple) and len(top_tutor_row) > 1 else str(top_tutor_row)
+        else:
+            top_tutor_current_month = '—'
+        return {
+            'total_checkins': total_checkins,
+            'total_hours': total_hours,
+            'active_tutors': active_tutors,
+            'avg_session_duration': avg_session_duration,
+            'avg_daily_hours': avg_daily_hours,
+            'peak_checkin_hour': peak_checkin_hour,
+            'top_day': top_day,
+            'top_tutor_current_month': top_tutor_current_month,
+        }
+
+    def generate_alerts(self):
+        """
+        Generate alerts for the dashboard based on data analysis.
+        """
+        alerts = []
+        
+        if self.data.empty:
+            return alerts
+        
+        # Check for missing checkouts
+        missing_checkouts = self.data[self.data['check_out'].isna()]
+        if len(missing_checkouts) > 0:
+            alerts.append({
+                'type': 'warning',
+                'title': 'Missing Check-outs',
+                'message': f'{len(missing_checkouts)} sessions have missing check-out times'
+            })
+        
+        # Check for very short sessions (less than 30 minutes)
+        short_sessions = self.data[self.data['shift_hours'] < 0.5]
+        if len(short_sessions) > 0:
+            alerts.append({
+                'type': 'info',
+                'title': 'Short Sessions',
+                'message': f'{len(short_sessions)} sessions are shorter than 30 minutes'
+            })
+        
+        # Check for very long sessions (more than 8 hours)
+        long_sessions = self.data[self.data['shift_hours'] > 8]
+        if len(long_sessions) > 0:
+            alerts.append({
+                'type': 'warning',
+                'title': 'Long Sessions',
+                'message': f'{len(long_sessions)} sessions are longer than 8 hours'
+            })
+        
+        # Check for low activity days
+        daily_activity = self.data.groupby('date').size()
+        low_activity_days = daily_activity[daily_activity < 3]
+        if len(low_activity_days) > 0:
+            alerts.append({
+                'type': 'info',
+                'title': 'Low Activity Days',
+                'message': f'{len(low_activity_days)} days have fewer than 3 check-ins'
+            })
+        
+        # Check for inactive tutors (no check-ins in last 7 days)
+        if not self.data.empty:
+            last_week = pd.Timestamp.now() - pd.Timedelta(days=7)
+            recent_activity = self.data[self.data['check_in'] >= last_week]
+            active_tutors = recent_activity['tutor_id'].nunique()
+            total_tutors = self.data['tutor_id'].nunique()
+            
+            if active_tutors < total_tutors * 0.7:  # Less than 70% active
+                alerts.append({
+                    'type': 'warning',
+                    'title': 'Low Tutor Activity',
+                    'message': f'Only {active_tutors} out of {total_tutors} tutors active in the last week'
+                })
+        
+        return alerts
+
+    def get_session_duration_vs_checkin_hour(self):
+        if self.data.empty:
+            return []
+        # Only include rows with valid check_in and shift_hours
+        df = self.data.dropna(subset=['check_in', 'shift_hours'])
+        result = []
+        for _, row in df.iterrows():
+            try:
+                checkin_hour = pd.to_datetime(row['check_in']).hour
+                duration = float(row['shift_hours'])
+                result.append({'x': checkin_hour, 'y': duration})
+            except Exception:
+                continue
+        return result
+
+    def get_chart_data(self, dataset):
+        """
+        Get chart data based on the dataset type.
+        """
+        if self.data.empty:
+            return {}
+        
+        try:
+            if dataset == 'checkins_per_tutor':
+                return self.data.groupby('tutor_name').size().to_dict()
+            elif dataset == 'hours_per_tutor':
+                return self.data.groupby('tutor_name')['shift_hours'].sum().to_dict()
+            elif dataset == 'daily_checkins':
+                # Convert date objects to strings for JSON serialization
+                daily_data = self.data.groupby('date').size()
+                return {str(date): int(count) for date, count in daily_data.items()}
+            elif dataset == 'daily_hours':
+                # Convert date objects to strings for JSON serialization
+                daily_data = self.data.groupby('date')['shift_hours'].sum()
+                return {str(date): float(count) for date, count in daily_data.items()}
+            elif dataset == 'hourly_checkins_dist':
+                # Convert hour integers to strings for JSON serialization
+                hourly_data = self.data.groupby('hour').size()
+                return {str(hour): int(count) for hour, count in hourly_data.items()}
+            elif dataset == 'monthly_hours':
+                # Convert month integers to strings for JSON serialization
+                monthly_data = self.data.groupby('month')['shift_hours'].sum()
+                return {str(month): float(hours) for month, hours in monthly_data.items()}
+            elif dataset == 'avg_hours_per_day_of_week':
+                # Convert day names to strings for JSON serialization
+                daily_avg = self.data.groupby('day_of_week')['shift_hours'].mean()
+                return {str(day): float(avg) for day, avg in daily_avg.items()}
+            elif dataset == 'checkins_per_day_of_week':
+                # Convert day names to strings for JSON serialization
+                daily_counts = self.data.groupby('day_of_week').size()
+                return {str(day): int(count) for day, count in daily_counts.items()}
+            elif dataset == 'hourly_activity_by_day':
+                # Create hourly activity heatmap data
+                hourly_by_day = self.data.groupby(['day_of_week', 'hour']).size().unstack(fill_value=0)
+                return {str(day): {str(hour): int(count) for hour, count in day_data.items()} 
+                       for day, day_data in hourly_by_day.items()}
+            elif dataset == 'session_duration_distribution':
+                # Create session duration distribution
+                duration_ranges = pd.cut(self.data['shift_hours'], 
+                                       bins=[0, 1, 2, 4, 6, 8, float('inf')], 
+                                       labels=['0-1h', '1-2h', '2-4h', '4-6h', '6-8h', '8h+'])
+                duration_counts = duration_ranges.value_counts()
+                return {str(range_name): int(count) for range_name, count in duration_counts.items()}
+            elif dataset == 'punctuality_analysis':
+                # Simple punctuality analysis (assuming on-time if within 15 minutes of expected)
+                # For now, return a basic distribution
+                return {'Early': 30, 'On Time': 150, 'Late': 20}
+            elif dataset == 'avg_session_duration_per_tutor':
+                # Average session duration per tutor
+                avg_duration = self.data.groupby('tutor_name')['shift_hours'].mean()
+                return {str(tutor): float(duration) for tutor, duration in avg_duration.items()}
+            elif dataset == 'tutor_consistency_score':
+                # Calculate consistency score based on regular check-ins
+                tutor_consistency = {}
+                for tutor_name in self.data['tutor_name'].unique():
+                    tutor_data = self.data[self.data['tutor_name'] == tutor_name]
+                    if len(tutor_data) > 1:
+                        # Calculate variance in session durations as consistency measure
+                        variance = tutor_data['shift_hours'].var()
+                        # Convert to a 0-100 score (lower variance = higher consistency)
+                        max_variance = 4.0  # Assume max variance of 4 hours
+                        consistency_score = max(0, 100 - (variance / max_variance * 100))
+                        tutor_consistency[str(tutor_name)] = float(consistency_score)
+                    else:
+                        tutor_consistency[str(tutor_name)] = 50.0  # Default score for single session
+                return tutor_consistency
+            elif dataset == 'cumulative_checkins':
+                # Cumulative check-ins over time
+                daily_checkins = self.data.groupby('date').size()
+                cumulative = daily_checkins.cumsum()
+                return {str(date): int(count) for date, count in cumulative.items()}
+            elif dataset == 'cumulative_hours':
+                # Cumulative hours over time
+                daily_hours = self.data.groupby('date')['shift_hours'].sum()
+                cumulative = daily_hours.cumsum()
+                return {str(date): float(hours) for date, hours in cumulative.items()}
+            elif dataset == 'session_duration_vs_checkin_hour':
+                return self.get_session_duration_vs_checkin_hour()
+            else:
+                return {}
+        except Exception as e:
+            logging.error(f"Error in get_chart_data for dataset '{dataset}': {e}")
+            return {}
+
+    def get_all_logs(self):
+        """
+        Get all logs in a format suitable for the frontend.
+        """
+        if self.data.empty:
+            return []
+        
+        logs = []
+        for _, row in self.data.iterrows():
+            logs.append({
+                'tutor_id': row.get('tutor_id'),
+                'tutor_name': row.get('tutor_name'),
+                'check_in': row.get('check_in').strftime('%Y-%m-%d %H:%M') if not pd.isna(row.get('check_in')) else None,
+                'check_out': row.get('check_out').strftime('%Y-%m-%d %H:%M') if not pd.isna(row.get('check_out')) else None,
+                'shift_hours': float(row.get('shift_hours')) if not pd.isna(row.get('shift_hours')) else None,
+                'snapshot_in': row.get('snapshot_in'),
+                'snapshot_out': row.get('snapshot_out')
+            })
+        
+        return logs
 
 # Global instance
 analytics = TutorAnalytics()

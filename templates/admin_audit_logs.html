@@ -3,346 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📋 Audit Logs - Tutor Dashboard</title>
+    <title>📋 Audit Logs - Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        .audit-table-container {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border-radius: 0.375rem;
+        .log-entry {
+            transition: all 0.3s ease;
+            border-radius: 8px;
         }
-        
-        .audit-table th {
-            font-weight: 600;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .log-entry:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        
-        .audit-table td {
-            vertical-align: middle;
-            font-size: 0.875rem;
-        }
-        
-        .audit-table tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.05);
-        }
-        
-        .badge {
+        .action-badge {
             font-size: 0.75rem;
-            font-weight: 500;
+            padding: 0.4rem 0.6rem;
+            border-radius: 12px;
         }
-        
-        .pagination-container {
-            background-color: #f8f9fa;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .page-link {
-            border-radius: 0.25rem;
-            margin: 0 0.125rem;
-            border: 1px solid #dee2e6;
-        }
-        
-        .page-link:hover {
-            background-color: #e9ecef;
-            border-color: #adb5bd;
-        }
-        
-        .page-item.active .page-link {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        
-        .entries-info {
-            font-size: 0.875rem;
-            color: #6c757d;
-        }
-        
-        .per-page-selector {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .timestamp-cell {
-            min-width: 140px;
-        }
-        
-        .action-cell {
-            min-width: 120px;
-        }
-        
-        .user-cell {
-            min-width: 180px;
-        }
+        .action-CREATE_USER { background: linear-gradient(135deg, #28a745, #20c997); }
+        .action-UPDATE_USER_ROLE { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+        .action-DELETE_USER { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+        .action-TUTOR_CHECK_IN { background: linear-gradient(135deg, #007bff, #6610f2); }
+        .action-TUTOR_CHECK_OUT { background: linear-gradient(135deg, #6c757d, #495057); }
+        .admin-only { display: none; }
     </style>
 </head>
-<body>
+<body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="/">
                 <i class="fas fa-user-graduate"></i> Tutor Dashboard
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('index') }}">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-                <a class="nav-link" href="{{ url_for('charts_page') }}">
-                    <i class="fas fa-chart-bar"></i> Charts
-                </a>
-                <a class="nav-link" href="{{ url_for('admin_users') }}">
-                    <i class="fas fa-users-cog"></i> Users
-                </a>
-                <a class="nav-link active" href="{{ url_for('admin_audit_logs') }}">
-                    <i class="fas fa-clipboard-list"></i> Audit Logs
-                </a>
-                <a class="nav-link" href="{{ url_for('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/charts">
+                            <i class="fas fa-chart-bar"></i> Charts
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-users-cog"></i> Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/audit-logs">
+                            <i class="fas fa-history"></i> Audit Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/shifts">
+                            <i class="fas fa-calendar-alt"></i> Shifts
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- User Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle"></i> 
+                        <span id="userDisplayName">Loading...</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header" id="userEmail">Loading...</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1><i class="fas fa-clipboard-list"></i> Admin Audit Logs</h1>
-                    <div>
-                        <button class="btn btn-outline-primary" onclick="refreshLogs()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                        <form method="POST" action="{{ url_for('admin_populate_audit_logs') }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline-info">
-                                <i class="fas fa-database"></i> Populate from Face Data
-                            </button>
-                        </form>
-                        <button class="btn btn-outline-success" onclick="exportLogs()">
-                            <i class="fas fa-download"></i> Export CSV
-                        </button>
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold text-primary mb-1">📋 Audit Logs</h2>
+                <p class="text-muted mb-0">Track all system activities and user actions</p>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="exportLogs()">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <button class="btn btn-warning" onclick="populateSampleLogs()">
+                    <i class="fas fa-plus"></i> Add Sample Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        <div id="flashMessages">
+            <!-- Flash messages will be populated here -->
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="filterAction" class="form-label">Action Type</label>
+                        <select class="form-select" id="filterAction">
+                            <option value="">All Actions</option>
+                            <option value="CREATE_USER">Create User</option>
+                            <option value="UPDATE_USER_ROLE">Update Role</option>
+                            <option value="DELETE_USER">Delete User</option>
+                            <option value="TUTOR_CHECK_IN">Check In</option>
+                            <option value="TUTOR_CHECK_OUT">Check Out</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterUser" class="form-label">User</label>
+                        <input type="text" class="form-control" id="filterUser" placeholder="Filter by user...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterStartDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="filterStartDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterEndDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="filterEndDate">
                     </div>
                 </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                <!-- Audit Logs Table -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-history"></i> Admin Actions History</h5>
-                        {% if pagination and pagination.total > 0 %}
-                            <small class="text-muted">
-                                Showing {{ pagination.start_entry }}-{{ pagination.end_entry }} of {{ pagination.total }} entries
-                            </small>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-                        {% if logs %}
-                            <div class="table-responsive audit-table-container">
-                                <table class="table table-striped table-hover audit-table" id="auditTable">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th class="timestamp-cell">Timestamp</th>
-                                            <th class="user-cell">Admin User</th>
-                                            <th class="action-cell">Action</th>
-                                            <th>Target User</th>
-                                            <th>Details</th>
-                                            <th>IP Address</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for log in logs %}
-                                            <tr>
-                                                <td>
-                                                    <small class="text-muted">
-                                                        {{ log.timestamp if log.timestamp else '-' }}
-                                                    </small>
-                                                </td>
-                                                <td>
-                                                    <strong>{{ log.admin_email or 'Unknown' }}</strong>
-                                                    <br><small class="text-muted">{{ (log.admin_user_id[:8] + '...') if log.admin_user_id and log.admin_user_id|length > 8 else (log.admin_user_id or '-') }}</small>
-                                                </td>
-                                                <td>
-                                                    {% set badge_class = 'info' %}
-                                                    {% if log.action == 'CREATE_USER' %}
-                                                        {% set badge_class = 'success' %}
-                                                    {% elif log.action == 'UPDATE_USER_ROLE' %}
-                                                        {% set badge_class = 'warning' %}
-                                                    {% elif log.action == 'DELETE_USER' %}
-                                                        {% set badge_class = 'danger' %}
-                                                    {% elif log.action == 'TUTOR_CHECK_IN' %}
-                                                        {% set badge_class = 'primary' %}
-                                                    {% elif log.action == 'TUTOR_CHECK_OUT' %}
-                                                        {% set badge_class = 'secondary' %}
-                                                    {% endif %}
-                                                    <span class="badge bg-{{ badge_class }}">
-                                                        {{ log.action.replace('_', ' ').title() }}
-                                                    </span>
-                                                </td>
-                                                <td>{{ log.target_user_email or '-' }}</td>
-                                                <td>
-                                                    <small>{{ log.details or '-' }}</small>
-                                                </td>
-                                                <td>
-                                                    <small class="text-muted">{{ log.ip_address or '-' }}</small>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Pagination Controls -->
-                            {% if pagination and pagination.total_pages > 1 %}
-                                <div class="pagination-container">
-                                    <nav aria-label="Audit logs pagination">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="per-page-selector">
-                                                <label for="perPageSelect" class="form-label me-2 mb-0">Show:</label>
-                                                <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePerPage(this.value)">
-                                                    <option value="10" {{ 'selected' if pagination.per_page == 10 else '' }}>10</option>
-                                                    <option value="20" {{ 'selected' if pagination.per_page == 20 else '' }}>20</option>
-                                                    <option value="50" {{ 'selected' if pagination.per_page == 50 else '' }}>50</option>
-                                                    <option value="100" {{ 'selected' if pagination.per_page == 100 else '' }}>100</option>
-                                                </select>
-                                                <span class="ms-2 text-muted">entries per page</span>
-                                            </div>
-                                        
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <!-- First Page -->
-                                            <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
-                                                <a class="page-link" href="{{ url_for('admin_audit_logs', page=1, per_page=pagination.per_page) if pagination.has_prev else '#' }}">
-                                                    <i class="fas fa-angle-double-left"></i>
-                                                </a>
-                                            </li>
-                                            
-                                            <!-- Previous Page -->
-                                            <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
-                                                <a class="page-link" href="{{ url_for('admin_audit_logs', page=pagination.prev_num, per_page=pagination.per_page) if pagination.has_prev else '#' }}">
-                                                    <i class="fas fa-angle-left"></i>
-                                                </a>
-                                            </li>
-                                            
-                                            <!-- Page Numbers -->
-                                            {% set start_page = [1, pagination.page - 2]|max %}
-                                            {% set end_page = [pagination.total_pages, pagination.page + 2]|min %}
-                                            
-                                            {% if start_page > 1 %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="{{ url_for('admin_audit_logs', page=1, per_page=pagination.per_page) }}">1</a>
-                                                </li>
-                                                {% if start_page > 2 %}
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                {% endif %}
-                                            {% endif %}
-                                            
-                                            {% for page_num in range(start_page, end_page + 1) %}
-                                                <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
-                                                    <a class="page-link" href="{{ url_for('admin_audit_logs', page=page_num, per_page=pagination.per_page) }}">{{ page_num }}</a>
-                                                </li>
-                                            {% endfor %}
-                                            
-                                            {% if end_page < pagination.total_pages %}
-                                                {% if end_page < pagination.total_pages - 1 %}
-                                                    <li class="page-item disabled">
-                                                        <span class="page-link">...</span>
-                                                    </li>
-                                                {% endif %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="{{ url_for('admin_audit_logs', page=pagination.total_pages, per_page=pagination.per_page) }}">{{ pagination.total_pages }}</a>
-                                                </li>
-                                            {% endif %}
-                                            
-                                            <!-- Next Page -->
-                                            <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
-                                                <a class="page-link" href="{{ url_for('admin_audit_logs', page=pagination.next_num, per_page=pagination.per_page) if pagination.has_next else '#' }}">
-                                                    <i class="fas fa-angle-right"></i>
-                                                </a>
-                                            </li>
-                                            
-                                            <!-- Last Page -->
-                                            <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
-                                                <a class="page-link" href="{{ url_for('admin_audit_logs', page=pagination.total_pages, per_page=pagination.per_page) if pagination.has_next else '#' }}">
-                                                    <i class="fas fa-angle-double-right"></i>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                        </div>
-                                    </nav>
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">No audit logs found. Admin actions will appear here.</p>
-                            </div>
-                        {% endif %}
+        <!-- Logs Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-list me-2"></i>Audit Log Entries</h6>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-3" id="logCount">Loading...</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changePageSize(10)">10</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changePageSize(25)">25</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="changePageSize(50)">50</button>
                     </div>
                 </div>
             </div>
+            <div class="card-body">
+                <div id="logsContainer">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading audit logs...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center mt-4">
+            <nav id="paginationContainer">
+                <!-- Pagination will be populated here -->
+            </nav>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function refreshLogs() {
-            location.reload();
-        }
+        let logs = [];
+        let currentPage = 1;
+        let pageSize = 25;
+        let totalPages = 1;
+        let totalLogs = 0;
+        let currentFilters = {};
 
-        function changePerPage(perPage) {
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('per_page', perPage);
-            urlParams.set('page', '1'); // Reset to first page when changing per_page
-            window.location.search = urlParams.toString();
-        }
-
-        function exportLogs() {
-            // Create CSV content
-            const table = document.getElementById('auditTable');
-            if (!table) return;
-            
-            let csv = [];
-            const rows = table.querySelectorAll('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const row = [];
-                const cols = rows[i].querySelectorAll('td, th');
-                
-                for (let j = 0; j < cols.length; j++) {
-                    let cellText = cols[j].innerText.replace(/"/g, '""');
-                    row.push('"' + cellText + '"');
+        // Load user data and set up UI
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/user-info');
+                if (response.ok) {
+                    const userData = await response.json();
+                    
+                    // Update user display
+                    document.getElementById('userDisplayName').textContent = userData.full_name || userData.email.split('@')[0];
+                    document.getElementById('userEmail').textContent = userData.email;
+                    
+                    // Check if user has admin privileges
+                    if (userData.role !== 'admin' && userData.role !== 'manager') {
+                        window.location.href = '/';
+                        return;
+                    }
                 }
-                csv.push(row.join(','));
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                window.location.href = '/';
+            }
+        }
+
+        async function loadLogs() {
+            try {
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    per_page: pageSize,
+                    ...currentFilters
+                });
+                
+                const response = await fetch(`/api/admin/audit-logs?${params}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    logs = data.logs || [];
+                    totalLogs = data.pagination?.total || 0;
+                    totalPages = data.pagination?.total_pages || 1;
+                    displayLogs();
+                    displayPagination();
+                    updateLogCount();
+                } else {
+                    showFlashMessage('Error loading audit logs', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading audit logs:', error);
+                showFlashMessage('Error loading audit logs', 'error');
+            }
+        }
+
+        function displayLogs() {
+            const container = document.getElementById('logsContainer');
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4">No audit logs found.</div>';
+                return;
             }
             
-            // Download CSV
-            const csvContent = csv.join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('hidden', '');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'audit_logs_' + new Date().toISOString().split('T')[0] + '.csv');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += '<thead><tr><th>Timestamp</th><th>Action</th><th>User</th><th>Details</th><th>IP Address</th></tr></thead><tbody>';
+            
+            logs.forEach(log => {
+                const timestamp = new Date(log.timestamp).toLocaleString();
+                const actionClass = `action-${log.action}`;
+                const actionText = log.action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                html += `
+                    <tr class="log-entry">
+                        <td><small class="text-muted">${timestamp}</small></td>
+                        <td><span class="badge ${actionClass} action-badge">${actionText}</span></td>
+                        <td><strong>${log.user_name || 'System'}</strong><br><small class="text-muted">${log.user_email || 'N/A'}</small></td>
+                        <td>${log.details || 'No details'}</td>
+                        <td><code>${log.ip_address || 'N/A'}</code></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
         }
 
-        // Add some visual feedback for pagination
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add loading state for pagination links
-            const paginationLinks = document.querySelectorAll('.pagination .page-link');
-            paginationLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    if (!this.closest('.page-item').classList.contains('disabled') && 
-                        !this.closest('.page-item').classList.contains('active')) {
-                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    }
-                });
+        function displayPagination() {
+            const container = document.getElementById('paginationContainer');
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<ul class="pagination">';
+            
+            // Previous button
+            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+            </li>`;
+            
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += '<li class="page-item"><a class="page-link" href="#" onclick="changePage(1)">1</a></li>';
+                if (startPage > 2) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${totalPages})">${totalPages}</a></li>`;
+            }
+            
+            // Next button
+            html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+            </li>`;
+            
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        function updateLogCount() {
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalLogs);
+            document.getElementById('logCount').textContent = `Showing ${start}-${end} of ${totalLogs} entries`;
+        }
+
+        function showFlashMessage(message, type = 'info') {
+            const container = document.getElementById('flashMessages');
+            const alertClass = type === 'error' ? 'danger' : type;
+            const icon = type === 'error' ? 'exclamation-triangle' : 'check-circle';
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alertClass} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            container.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadLogs();
+        }
+
+        function changePageSize(size) {
+            pageSize = size;
+            currentPage = 1;
+            loadLogs();
+        }
+
+        function applyFilters() {
+            currentFilters = {
+                action: document.getElementById('filterAction').value,
+                user: document.getElementById('filterUser').value,
+                start_date: document.getElementById('filterStartDate').value,
+                end_date: document.getElementById('filterEndDate').value
+            };
+            
+            // Remove empty filters
+            Object.keys(currentFilters).forEach(key => {
+                if (!currentFilters[key]) {
+                    delete currentFilters[key];
+                }
             });
+            
+            currentPage = 1;
+            loadLogs();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterAction').value = '';
+            document.getElementById('filterUser').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            
+            currentFilters = {};
+            currentPage = 1;
+            loadLogs();
+        }
+
+        async function exportLogs() {
+            try {
+                const params = new URLSearchParams({
+                    export: 'csv',
+                    ...currentFilters
+                });
+                
+                const response = await fetch(`/api/admin/audit-logs?${params}`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showFlashMessage('Audit logs exported successfully', 'success');
+                } else {
+                    showFlashMessage('Error exporting audit logs', 'error');
+                }
+            } catch (error) {
+                console.error('Error exporting audit logs:', error);
+                showFlashMessage('Error exporting audit logs', 'error');
+            }
+        }
+
+        async function populateSampleLogs() {
+            if (!confirm('This will add sample audit log entries. Continue?')) return;
+            
+            try {
+                const response = await fetch('/api/admin/populate-audit-logs', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showFlashMessage('Sample audit logs added successfully', 'success');
+                    loadLogs();
+                } else {
+                    showFlashMessage('Error adding sample logs', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding sample logs:', error);
+                showFlashMessage('Error adding sample logs', 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+            loadLogs();
         });
     </script>
 </body>

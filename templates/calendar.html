@@ -3,650 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📅 Calendar View - Tutor Dashboard</title>
+    <title>📅 Attendance Calendar - Tutor Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* Modern Calendar Container */
         .calendar-container {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            border-radius: 20px;
-            box-shadow: 
-                0 20px 40px rgba(0, 0, 0, 0.1),
-                0 8px 16px rgba(0, 0, 0, 0.06),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
         }
-        
-        /* Stunning Header with Glassmorphism */
+
         .calendar-header {
-            background: linear-gradient(135deg, 
-                rgba(0, 123, 255, 0.9), 
-                rgba(0, 86, 179, 0.9),
-                rgba(108, 99, 255, 0.9));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 2rem;
             text-align: center;
-            position: relative;
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .calendar-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.05)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        
+
         .calendar-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            position: relative;
-            z-index: 2;
+            margin-bottom: 2rem;
         }
-        
+
         .calendar-nav button {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
             color: white;
             padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-weight: 500;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
             backdrop-filter: blur(10px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
+
         .calendar-nav button:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         }
-        
+
         .calendar-nav h3 {
             font-size: 2rem;
             font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            letter-spacing: -0.5px;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
-        
-        /* Modern Grid System */
+
+        .summary-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
-            background: linear-gradient(145deg, #e9ecef, #f8f9fa);
-            padding: 2px;
-            border-radius: 0 0 20px 20px;
+            gap: 1px;
+            background: #e9ecef;
         }
-        
-        /* Beautiful Day Headers */
+
         .calendar-day-header {
-            background: linear-gradient(135deg, #6c757d, #495057);
-            padding: 1.2rem;
+            background: #f8f9fa;
+            padding: 1rem;
             text-align: center;
             font-weight: 700;
-            color: white;
+            color: #495057;
             text-transform: uppercase;
             letter-spacing: 1px;
-            font-size: 0.85rem;
-            border-radius: 8px 8px 0 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            position: relative;
+            font-size: 0.9rem;
         }
-        
-        .calendar-day-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 1px;
-        }
-        
-        /* Stunning Calendar Days */
+
         .calendar-day {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            min-height: 140px;
-            padding: 1rem;
-            position: relative;
+            background: white;
+            min-height: 120px;
+            padding: 0.75rem;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 1px solid #f8f9fa;
         }
-        
-        .calendar-day::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        
+
         .calendar-day:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 
-                0 20px 40px rgba(0, 0, 0, 0.15),
-                0 8px 16px rgba(0, 0, 0, 0.1);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             z-index: 10;
         }
-        
-        .calendar-day:hover::before {
-            opacity: 1;
-        }
-        
+
         .calendar-day.inactive {
-            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
-            color: #adb5bd;
-            opacity: 0.6;
+            background: #f8f9fa;
+            cursor: default;
         }
-        
+
         .calendar-day.inactive:hover {
             transform: none;
             box-shadow: none;
         }
-        
-        /* Activity Status with Beautiful Gradients */
-        .calendar-day.high-activity {
-            background: linear-gradient(135deg, 
-                rgba(40, 167, 69, 0.15), 
-                rgba(40, 167, 69, 0.05));
-            border: 2px solid transparent;
-            background-clip: padding-box;
-            position: relative;
-        }
-        
-        .calendar-day.high-activity::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #28a745, #20c997);
-            border-radius: 0 2px 2px 0;
-        }
-        
-        .calendar-day.normal {
-            background: linear-gradient(135deg, 
-                rgba(23, 162, 184, 0.15), 
-                rgba(23, 162, 184, 0.05));
-            position: relative;
-        }
-        
-        .calendar-day.normal::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #17a2b8, #20c997);
-            border-radius: 0 2px 2px 0;
-        }
-        
-        .calendar-day.low-activity {
-            background: linear-gradient(135deg, 
-                rgba(255, 193, 7, 0.15), 
-                rgba(255, 193, 7, 0.05));
-            position: relative;
-        }
-        
-        .calendar-day.low-activity::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #ffc107, #fd7e14);
-            border-radius: 0 2px 2px 0;
-        }
-        
-        .calendar-day.warning {
-            background: linear-gradient(135deg, 
-                rgba(220, 53, 69, 0.15), 
-                rgba(220, 53, 69, 0.05));
-            position: relative;
-            animation: pulse-warning 2s infinite;
-        }
-        
-        .calendar-day.warning::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #dc3545, #e83e8c);
-            border-radius: 0 2px 2px 0;
-        }
-        
-        @keyframes pulse-warning {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.3); }
-            50% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
-        }
-        
-        /* Modern Day Content */
+
         .day-number {
+            font-size: 1.2rem;
             font-weight: 700;
-            font-size: 1.4rem;
-            margin-bottom: 0.75rem;
-            color: #2c3e50;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .day-stats {
-            font-size: 0.8rem;
-            color: #6c757d;
+            color: #495057;
             margin-bottom: 0.5rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
         }
-        
-        .day-stats i {
-            width: 12px;
-            opacity: 0.7;
-        }
-        
-        .day-sessions {
+
+        .day-stats {
             font-size: 0.75rem;
-            max-height: 70px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
         }
-        
-        .day-sessions::-webkit-scrollbar {
-            width: 3px;
+
+        .day-sessions {
+            margin-top: 0.5rem;
         }
-        
-        .day-sessions::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        .day-sessions::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 3px;
-        }
-        
-        /* Beautiful Session Badges */
+
         .session-badge {
             display: inline-block;
-            background: linear-gradient(135deg, rgba(0, 123, 255, 0.15), rgba(0, 123, 255, 0.05));
-            color: #007bff;
-            padding: 0.25rem 0.5rem;
-            border-radius: 8px;
-            margin: 0.15rem 0.1rem;
-            font-size: 0.7rem;
-            font-weight: 500;
-            border: 1px solid rgba(0, 123, 255, 0.2);
-            transition: all 0.2s ease;
-            backdrop-filter: blur(5px);
-        }
-        
-        .session-badge:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-        }
-        
-        .session-badge.short-shift {
-            background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.05));
-            color: #856404;
-            border-color: rgba(255, 193, 7, 0.3);
-        }
-        
-        .session-badge.missing-checkout {
-            background: linear-gradient(135deg, rgba(220, 53, 69, 0.2), rgba(220, 53, 69, 0.05));
-            color: #721c24;
-            border-color: rgba(220, 53, 69, 0.3);
-            animation: pulse-badge 1.5s infinite;
-        }
-        
-        @keyframes pulse-badge {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        /* Beautiful Summary Section */
-        .calendar-summary {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            padding: 2rem;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-        
-        .calendar-summary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, #007bff, #6f42c1);
-            border-radius: 0 0 3px 3px;
-        }
-        
-        .summary-stat {
-            text-align: center;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .summary-value {
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #007bff, #6f42c1);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 0.5rem;
-        }
-        
-        .summary-label {
-            font-size: 0.9rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-        
-        /* Stunning Modal Styles */
-        .modal-content {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
-        }
-        
-        .modal-header {
-            background: linear-gradient(135deg, #007bff, #6f42c1);
+            padding: 0.2rem 0.4rem;
+            margin: 0.1rem;
+            background: #007bff;
             color: white;
-            border-radius: 20px 20px 0 0;
-            padding: 1.5rem 2rem;
-            border: none;
-        }
-        
-        .modal-title {
-            font-weight: 700;
-            font-size: 1.25rem;
-        }
-        
-        .btn-close {
-            filter: brightness(0) invert(1);
-            opacity: 0.8;
-        }
-        
-        .btn-close:hover {
-            opacity: 1;
-        }
-        
-        .day-detail-modal .modal-body {
-            max-height: 500px;
-            overflow-y: auto;
-            padding: 2rem;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-        }
-        
-        .day-detail-modal .modal-body::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .day-detail-modal .modal-body::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 3px;
-        }
-        
-        .day-detail-modal .modal-body::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 3px;
-        }
-        
-        /* Beautiful Session Details */
-        .session-detail {
-            background: linear-gradient(135deg, #f8f9fa, #ffffff);
             border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            position: relative;
-            transition: all 0.3s ease;
-            overflow: hidden;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
         }
-        
-        .session-detail::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #007bff, #6f42c1);
-            border-radius: 0 2px 2px 0;
+
+        .session-badge:hover {
+            transform: scale(1.1);
         }
-        
-        .session-detail:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .session-detail.short-shift::before {
-            background: linear-gradient(180deg, #ffc107, #fd7e14);
-        }
-        
-        .session-detail.missing-checkout::before {
-            background: linear-gradient(180deg, #dc3545, #e83e8c);
-        }
-        
-        .session-detail h6 {
-            color: #2c3e50;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-        }
-        
-        .session-detail .badge {
-            font-size: 0.75rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-        }
-        
-        /* Enhanced Dark Mode Support */
-        .dark-mode .calendar-container {
-            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .dark-mode .calendar-header {
-            background: linear-gradient(135deg, 
-                rgba(0, 123, 255, 0.8), 
-                rgba(0, 86, 179, 0.8),
-                rgba(108, 99, 255, 0.8));
-        }
-        
-        .dark-mode .calendar-day {
-            background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
-            color: #e0e0e0;
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .dark-mode .calendar-day:hover {
-            background: linear-gradient(145deg, #4a4a4a, #3a3a3a);
-        }
-        
-        .dark-mode .calendar-day-header {
-            background: linear-gradient(135deg, #4a4a4a, #3a3a3a);
-            color: #e0e0e0;
-        }
-        
-        .dark-mode .calendar-summary {
-            background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
-            border-top-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .dark-mode .day-number {
-            color: #e0e0e0;
-        }
-        
-        .dark-mode .session-detail {
-            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .dark-mode .modal-content {
-            background: rgba(42, 42, 42, 0.95);
-            color: #e0e0e0;
-        }
-        
-        /* Enhanced Responsive Design */
-        @media (max-width: 1200px) {
-            .calendar-day {
-                min-height: 120px;
-                padding: 0.75rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .calendar-container {
-                border-radius: 15px;
-                margin: 0 0.5rem;
-            }
-            
-            .calendar-header {
-                padding: 1.5rem;
-            }
-            
-            .calendar-nav h3 {
-                font-size: 1.5rem;
-            }
-            
-            .calendar-nav button {
-                padding: 0.5rem 1rem;
-                font-size: 0.9rem;
-            }
-            
-            .calendar-day {
-                min-height: 100px;
-                padding: 0.5rem;
-            }
-            
-            .day-number {
-                font-size: 1.2rem;
-                margin-bottom: 0.5rem;
-            }
-            
-            .day-stats {
-                font-size: 0.75rem;
-                margin-bottom: 0.25rem;
-            }
-            
-            .session-badge {
-                font-size: 0.65rem;
-                padding: 0.15rem 0.3rem;
-                margin: 0.1rem;
-            }
-            
-            .summary-value {
-                font-size: 1.5rem;
-            }
-            
-            .summary-label {
-                font-size: 0.8rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .calendar-day {
-                min-height: 80px;
-                padding: 0.4rem;
-            }
-            
-            .day-number {
-                font-size: 1rem;
-            }
-            
-            .day-stats {
-                font-size: 0.7rem;
-            }
-            
-            .session-badge {
-                font-size: 0.6rem;
-                padding: 0.1rem 0.25rem;
-            }
-            
-            .calendar-header {
-                padding: 1rem;
-            }
-            
-            .calendar-nav h3 {
-                font-size: 1.25rem;
-            }
-        }
-        
-        /* Loading Animation */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .calendar-container {
-            animation: fadeInUp 0.6s ease-out;
-        }
-        
-        .calendar-day {
-            animation: fadeInUp 0.4s ease-out;
-            animation-fill-mode: both;
-        }
-        
-        /* Stagger animation for calendar days */
-        .calendar-day:nth-child(1) { animation-delay: 0.05s; }
-        .calendar-day:nth-child(2) { animation-delay: 0.1s; }
-        .calendar-day:nth-child(3) { animation-delay: 0.15s; }
-        .calendar-day:nth-child(4) { animation-delay: 0.2s; }
-        .calendar-day:nth-child(5) { animation-delay: 0.25s; }
-        .calendar-day:nth-child(6) { animation-delay: 0.3s; }
-        .calendar-day:nth-child(7) { animation-delay: 0.35s; }
-        
-        /* Hover effects for better interactivity */
-        .calendar-nav button:active {
-            transform: translateY(-1px) scale(0.98);
-        }
-        
+
         .session-badge:active {
             transform: translateY(0) scale(0.95);
         }
@@ -655,7 +153,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="/">
                 <i class="fas fa-user-graduate"></i> Tutor Dashboard
             </a>
             
@@ -666,42 +164,38 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
+                        <a class="nav-link" href="/">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('charts_page') }}">
+                        <a class="nav-link" href="/charts">
                             <i class="fas fa-chart-bar"></i> Charts
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('calendar_view') }}">
+                        <a class="nav-link active" href="/calendar">
                             <i class="fas fa-calendar-alt"></i> Calendar
                         </a>
                     </li>
-                    {% if user_role in ['manager', 'admin'] %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin_users') }}">
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="/admin/users">
                             <i class="fas fa-users-cog"></i> Users
                         </a>
                     </li>
-                    {% endif %}
                 </ul>
                 
                 <!-- User Dropdown -->
                 <div class="dropdown">
                     <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle"></i> 
-                        {{ user.user_metadata.get('full_name', user.email.split('@')[0]) }}
-                        <span class="badge bg-{{ 'danger' if user_role == 'manager' else 'warning' if user_role == 'lead_tutor' else 'info' }} ms-1">
-                            {{ user_role.title().replace('_', ' ') }}
-                        </span>
+                        <span id="userDisplayName">Loading...</span>
+                        <span class="badge bg-info ms-1" id="userRole">Loading...</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">{{ user.email }}</h6></li>
+                        <li><h6 class="dropdown-header" id="userEmail">Loading...</h6></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                        <li><a class="dropdown-item" href="/logout">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a></li>
                     </ul>
@@ -723,7 +217,7 @@
                     <button onclick="navigateMonth(-1)">
                         <i class="fas fa-chevron-left"></i> Previous
                     </button>
-                    <h3 class="mb-0">{{ calendar_data.month_name }} {{ calendar_data.year }}</h3>
+                    <h3 class="mb-0" id="calendarTitle">Loading...</h3>
                     <button onclick="navigateMonth(1)">
                         Next <i class="fas fa-chevron-right"></i>
                     </button>
@@ -732,15 +226,15 @@
                 <!-- Quick Stats -->
                 <div class="row text-center">
                     <div class="col-4">
-                        <div class="summary-value">{{ calendar_data.summary.active_days }}</div>
+                        <div class="summary-value" id="activeDays">-</div>
                         <div class="summary-label">Active Days</div>
                     </div>
                     <div class="col-4">
-                        <div class="summary-value">{{ calendar_data.summary.total_hours }}</div>
+                        <div class="summary-value" id="totalHours">-</div>
                         <div class="summary-label">Total Hours</div>
                     </div>
                     <div class="col-4">
-                        <div class="summary-value">{{ "%.1f"|format(calendar_data.summary.total_hours / calendar_data.summary.active_days if calendar_data.summary.active_days > 0 else 0) }}</div>
+                        <div class="summary-value" id="avgHoursPerDay">-</div>
                         <div class="summary-label">Avg Hours/Day</div>
                     </div>
                 </div>
@@ -758,47 +252,9 @@
                 <div class="calendar-day-header">Sat</div>
 
                 <!-- Calendar Days -->
-                {% for week in calendar_data.calendar_weeks %}
-                    {% for day in week %}
-                        {% if day == 0 %}
-                            <div class="calendar-day inactive"></div>
-                        {% else %}
-                            {% set day_data = calendar_data.calendar_data[day] %}
-                            <div class="calendar-day {{ day_data.status }}" 
-                                 onclick="showDayDetails({{ day }}, '{{ day_data.date }}')"
-                                 data-day="{{ day }}"
-                                 data-date="{{ day_data.date }}">
-                                <div class="day-number">{{ day }}</div>
-                                
-                                {% if day_data.tutor_count > 0 %}
-                                    <div class="day-stats">
-                                        <i class="fas fa-users"></i> {{ day_data.tutor_count }} tutors
-                                    </div>
-                                    <div class="day-stats">
-                                        <i class="fas fa-clock"></i> {{ day_data.total_hours }}h
-                                    </div>
-                                    
-                                    <div class="day-sessions">
-                                        {% for session in day_data.sessions[:3] %}
-                                            <span class="session-badge {{ session.status }}">
-                                                {{ session.tutor_name.split()[0] }}
-                                            </span>
-                                        {% endfor %}
-                                        {% if day_data.sessions|length > 3 %}
-                                            <span class="session-badge">+{{ day_data.sessions|length - 3 }}</span>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    {% if day_data.has_issues %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-exclamation-triangle text-warning" title="Has issues"></i>
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                {% endfor %}
+                <div id="calendarDays">
+                    <!-- Calendar days will be populated by JavaScript -->
+                </div>
             </div>
         </div>
 
@@ -849,69 +305,20 @@
                                 </div>
                             </div>
                             <div class="col-lg-3 col-md-6">
-                                <div class="d-flex align-items-center p-2 rounded" style="background: rgba(220, 53, 69, 0.05);">
-                                    <div style="width: 24px; height: 24px; background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.05)); border-radius: 6px; position: relative; margin-right: 0.75rem;">
-                                        <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #dc3545, #e83e8c); border-radius: 0 2px 2px 0;"></div>
+                                <div class="d-flex align-items-center p-2 rounded" style="background: rgba(108, 117, 125, 0.05);">
+                                    <div style="width: 24px; height: 24px; background: linear-gradient(135deg, rgba(108, 117, 125, 0.15), rgba(108, 117, 125, 0.05)); border-radius: 6px; position: relative; margin-right: 0.75rem;">
+                                        <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #6c757d, #495057); border-radius: 0 2px 2px 0;"></div>
                                     </div>
                                     <div>
-                                        <small style="font-weight: 600; color: #dc3545;">Has Issues</small>
+                                        <small style="font-weight: 600; color: #6c757d;">No Activity</small>
                                         <br>
-                                        <small style="color: #6c757d;">Missing data/problems</small>
+                                        <small style="color: #6c757d;">No check-ins recorded</small>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Additional Info -->
-                        <div class="mt-3 pt-3" style="border-top: 1px solid rgba(0, 0, 0, 0.1);">
-                            <div class="row text-center">
-                                <div class="col-md-4">
-                                    <small class="text-muted">
-                                        <i class="fas fa-mouse-pointer me-1"></i>
-                                        Click any date to view details
-                                    </small>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">
-                                        <i class="fas fa-keyboard me-1"></i>
-                                        Use arrow keys to navigate
-                                    </small>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        Issues are highlighted with animations
-                                    </small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Floating Action Button for Quick Navigation -->
-        <div class="position-fixed" style="bottom: 2rem; right: 2rem; z-index: 1000;">
-            <div class="dropdown dropup">
-                <button class="btn btn-primary rounded-circle" style="width: 60px; height: 60px; box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-calendar-plus fa-lg"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><h6 class="dropdown-header">Quick Actions</h6></li>
-                    <li><a class="dropdown-item" href="#" onclick="navigateToToday()">
-                        <i class="fas fa-calendar-day me-2"></i>Go to Today
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('index') }}">
-                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('charts_page') }}">
-                        <i class="fas fa-chart-bar me-2"></i>Charts
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#" onclick="toggleCalendarView()">
-                        <i class="fas fa-expand-arrows-alt me-2"></i>Toggle View
-                    </a></li>
-                </ul>
             </div>
         </div>
     </div>
@@ -924,11 +331,8 @@
                     <h5 class="modal-title" id="dayDetailsTitle">Day Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="dayDetailsBody">
-                    <!-- Content will be populated by JavaScript -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="modal-body" id="dayDetailsContent">
+                    <!-- Day details will be populated here -->
                 </div>
             </div>
         </div>
@@ -936,9 +340,102 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentYear = {{ calendar_data.year }};
-        let currentMonth = {{ calendar_data.month }};
-        
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+        let dayData = {};
+
+        // Load user data and set up UI
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/user-info');
+                if (response.ok) {
+                    const userData = await response.json();
+                    
+                    // Update user display
+                    document.getElementById('userDisplayName').textContent = userData.full_name || userData.email.split('@')[0];
+                    document.getElementById('userEmail').textContent = userData.email;
+                    
+                    const roleBadge = document.getElementById('userRole');
+                    roleBadge.textContent = userData.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    // Set badge color based on role
+                    if (userData.role === 'manager' || userData.role === 'admin') {
+                        roleBadge.className = 'badge bg-danger ms-1';
+                        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                    } else if (userData.role === 'lead_tutor') {
+                        roleBadge.className = 'badge bg-warning ms-1';
+                    } else {
+                        roleBadge.className = 'badge bg-info ms-1';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        async function loadCalendarData() {
+            try {
+                const response = await fetch(`/api/calendar-data?year=${currentYear}&month=${currentMonth}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    dayData = data.calendar_data;
+                    updateCalendarDisplay(data);
+                } else {
+                    console.error('Failed to load calendar data');
+                }
+            } catch (error) {
+                console.error('Error loading calendar data:', error);
+            }
+        }
+
+        function updateCalendarDisplay(data) {
+            // Update title
+            document.getElementById('calendarTitle').textContent = `${data.month_name} ${data.year}`;
+            
+            // Update summary stats
+            document.getElementById('activeDays').textContent = data.summary.active_days;
+            document.getElementById('totalHours').textContent = data.summary.total_hours;
+            document.getElementById('avgHoursPerDay').textContent = 
+                data.summary.active_days > 0 ? (data.summary.total_hours / data.summary.active_days).toFixed(1) : '0.0';
+            
+            // Generate calendar grid
+            const calendarDaysContainer = document.getElementById('calendarDays');
+            calendarDaysContainer.innerHTML = '';
+            
+            data.calendar_weeks.forEach(week => {
+                week.forEach(day => {
+                    if (day === 0) {
+                        calendarDaysContainer.innerHTML += '<div class="calendar-day inactive"></div>';
+                    } else {
+                        const dayData = data.calendar_data[day];
+                        let dayHtml = `<div class="calendar-day ${dayData.status}" onclick="showDayDetails(${day}, '${dayData.date}')" data-day="${day}" data-date="${dayData.date}">`;
+                        dayHtml += `<div class="day-number">${day}</div>`;
+                        
+                        if (dayData.tutor_count > 0) {
+                            dayHtml += `<div class="day-stats"><i class="fas fa-users"></i> ${dayData.tutor_count} tutors</div>`;
+                            dayHtml += `<div class="day-stats"><i class="fas fa-clock"></i> ${dayData.total_hours}h</div>`;
+                            
+                            dayHtml += '<div class="day-sessions">';
+                            dayData.sessions.slice(0, 3).forEach(session => {
+                                dayHtml += `<span class="session-badge ${session.status}">${session.tutor_name.split(' ')[0]}</span>`;
+                            });
+                            if (dayData.sessions.length > 3) {
+                                dayHtml += `<span class="session-badge">+${dayData.sessions.length - 3}</span>`;
+                            }
+                            dayHtml += '</div>';
+                            
+                            if (dayData.has_issues) {
+                                dayHtml += '<div class="mt-1"><i class="fas fa-exclamation-triangle text-warning" title="Has issues"></i></div>';
+                            }
+                        }
+                        
+                        dayHtml += '</div>';
+                        calendarDaysContainer.innerHTML += dayHtml;
+                    }
+                });
+            });
+        }
+
         function navigateMonth(direction) {
             currentMonth += direction;
             if (currentMonth > 12) {
@@ -948,131 +445,42 @@
                 currentMonth = 12;
                 currentYear--;
             }
-            
-            window.location.href = `{{ url_for('calendar_view') }}?year=${currentYear}&month=${currentMonth}`;
+            loadCalendarData();
         }
-        
+
         function showDayDetails(day, date) {
-            const dayData = {{ calendar_data.calendar_data | tojson }};
-            const selectedDay = dayData[day];
-            
-            if (!selectedDay || selectedDay.sessions.length === 0) {
+            const dayData = window.dayData[day];
+            if (!dayData || dayData.tutor_count === 0) {
+                alert('No activity recorded for this day.');
                 return;
             }
+
+            const modal = new bootstrap.Modal(document.getElementById('dayDetailsModal'));
+            document.getElementById('dayDetailsTitle').textContent = `Activity Details - ${date}`;
             
-            document.getElementById('dayDetailsTitle').textContent = `${date} - ${selectedDay.sessions.length} Sessions`;
+            let content = `<div class="row"><div class="col-md-6"><h6>Summary</h6><ul class="list-unstyled">`;
+            content += `<li><i class="fas fa-users text-primary"></i> <strong>${dayData.tutor_count}</strong> tutors active</li>`;
+            content += `<li><i class="fas fa-clock text-success"></i> <strong>${dayData.total_hours}</strong> total hours</li>`;
+            content += `<li><i class="fas fa-calendar text-info"></i> <strong>${dayData.sessions.length}</strong> sessions</li>`;
+            content += '</ul></div>';
             
-            let html = '';
-            selectedDay.sessions.forEach(session => {
-                let statusClass = '';
-                let statusIcon = '';
-                let statusText = '';
-                
-                switch(session.status) {
-                    case 'short_shift':
-                        statusClass = 'short-shift';
-                        statusIcon = 'fas fa-hourglass-half text-warning';
-                        statusText = 'Short Shift';
-                        break;
-                    case 'missing_checkout':
-                        statusClass = 'missing-checkout';
-                        statusIcon = 'fas fa-exclamation-triangle text-danger';
-                        statusText = 'Missing Check-out';
-                        break;
-                    case 'long_shift':
-                        statusIcon = 'fas fa-clock text-info';
-                        statusText = 'Long Shift';
-                        break;
-                    default:
-                        statusIcon = 'fas fa-check-circle text-success';
-                        statusText = 'Normal';
-                }
-                
-                html += `
-                    <div class="session-detail ${statusClass}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">${session.tutor_name}</h6>
-                                <p class="mb-1">
-                                    <i class="fas fa-clock"></i> ${session.check_in} - ${session.check_out}
-                                    <span class="badge bg-primary ms-2">${session.hours}h</span>
-                                </p>
-                            </div>
-                            <div class="text-end">
-                                <i class="${statusIcon}"></i>
-                                <small class="d-block">${statusText}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            content += '<div class="col-md-6"><h6>Sessions</h6><div class="table-responsive"><table class="table table-sm">';
+            content += '<thead><tr><th>Tutor</th><th>Time</th><th>Duration</th></tr></thead><tbody>';
+            
+            dayData.sessions.forEach(session => {
+                content += `<tr><td>${session.tutor_name}</td><td>${session.time}</td><td>${session.duration}h</td></tr>`;
             });
             
-            document.getElementById('dayDetailsBody').innerHTML = html;
-            new bootstrap.Modal(document.getElementById('dayDetailsModal')).show();
-        }
-        
-        // Add keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowLeft') {
-                navigateMonth(-1);
-            } else if (e.key === 'ArrowRight') {
-                navigateMonth(1);
-            }
-        });
-        
-        // Floating Action Button Functions
-        function navigateToToday() {
-            const today = new Date();
-            window.location.href = `{{ url_for('calendar_view') }}?year=${today.getFullYear()}&month=${today.getMonth() + 1}`;
-        }
-        
-        function toggleCalendarView() {
-            // Toggle between compact and expanded view
-            const calendarDays = document.querySelectorAll('.calendar-day');
-            calendarDays.forEach(day => {
-                if (day.style.minHeight === '80px') {
-                    day.style.minHeight = '140px';
-                } else {
-                    day.style.minHeight = '80px';
-                }
-            });
-        }
-        
-        // Add smooth scrolling to top when navigating months
-        function smoothScrollToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-        
-        // Enhanced navigation with smooth scrolling
-        const originalNavigateMonth = navigateMonth;
-        navigateMonth = function(direction) {
-            smoothScrollToTop();
-            setTimeout(() => {
-                originalNavigateMonth(direction);
-            }, 300);
-        };
-        
-        // Add loading animation when navigating
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add entrance animation to calendar days
-            const calendarDays = document.querySelectorAll('.calendar-day');
-            calendarDays.forEach((day, index) => {
-                day.style.animationDelay = `${index * 0.05}s`;
-            });
+            content += '</tbody></table></div></div></div>';
             
-            // Add hover sound effect (optional)
-            calendarDays.forEach(day => {
-                day.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-8px) scale(1.02)';
-                });
-                
-                day.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0) scale(1)';
-                });
-            });
+            document.getElementById('dayDetailsContent').innerHTML = content;
+            modal.show();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+            loadCalendarData();
         });
     </script>
 </body>

@@ -150,8 +150,8 @@ def assign_tutor_to_shift(shift_id, tutor_id, tutor_name, start_date, end_date=N
     except Exception as e:
         return False, f"Error assigning tutor to shift: {str(e)}"
 
-def get_upcoming_shifts(days_ahead=7):
-    """Get upcoming shifts for the next N days"""
+def get_upcoming_shifts(days_ahead=7, page=1, per_page=12, exclude_today=True):
+    """Get upcoming shifts for the next N days with pagination"""
     try:
         shifts_df = load_shifts()
         assignments_df = load_shift_assignments()
@@ -168,6 +168,11 @@ def get_upcoming_shifts(days_ahead=7):
         
         for days in range(days_ahead):
             check_date = today + timedelta(days=days)
+            
+            # Skip today if exclude_today is True
+            if exclude_today and check_date == today:
+                continue
+                
             day_name = check_date.strftime('%A')
             
             # Find shifts for this day of week
@@ -175,10 +180,11 @@ def get_upcoming_shifts(days_ahead=7):
             
             for _, shift in day_shifts.iterrows():
                 # Find assignments for this shift that are active on this date
+                # Convert datetime columns to date for comparison
                 shift_assignments = active_assignments[
                     (active_assignments['shift_id'] == shift['shift_id']) &
-                    (active_assignments['start_date'] <= check_date) &
-                    (active_assignments['end_date'] >= check_date)
+                    (active_assignments['start_date'].dt.date <= check_date) &
+                    (active_assignments['end_date'].dt.date >= check_date)
                 ]
                 
                 for _, assignment in shift_assignments.iterrows():
@@ -194,11 +200,33 @@ def get_upcoming_shifts(days_ahead=7):
                         'assignment_id': assignment['assignment_id']
                     })
         
-        return sorted(upcoming_shifts, key=lambda x: (x['date'], x['start_time']))
+        # Sort by date and time
+        upcoming_shifts = sorted(upcoming_shifts, key=lambda x: (x['date'], x['start_time']))
+        
+        # Apply pagination
+        total_shifts = len(upcoming_shifts)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_shifts = upcoming_shifts[start_idx:end_idx]
+        
+        # Add pagination metadata
+        total_pages = (total_shifts + per_page - 1) // per_page
+        
+        return {
+            'shifts': paginated_shifts,
+            'pagination': {
+                'current_page': page,
+                'per_page': per_page,
+                'total_shifts': total_shifts,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
+        }
         
     except Exception as e:
         print(f"Error getting upcoming shifts: {e}")
-        return []
+        return {'shifts': [], 'pagination': {}}
 
 def check_late_checkins(face_log_df):
     """Check for late check-ins or early check-outs based on scheduled shifts"""

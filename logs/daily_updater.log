@@ -87,3 +87,36 @@
 2025-06-25 14:33:39,719 - INFO -   Current month records: 4
 2025-06-25 14:33:39,721 - INFO -   Current month hours: 10.4
 2025-06-25 14:33:39,722 - INFO -   Active tutors: 20
+2025-06-28 17:38:19,340 - INFO - Adding 5 today logs...
+2025-06-28 17:38:19,358 - INFO - Added 5 today logs
+2025-06-28 17:38:19,358 - INFO - Added 5 today logs
+2025-06-28 17:38:25,727 - INFO - Starting daily data update...
+2025-06-28 17:38:25,727 - INFO - Cleaning schedule overlaps...
+2025-06-28 17:38:26,783 - INFO - Schedule overlaps cleaned
+2025-06-28 17:38:26,784 - INFO - Generating check-ins from schedule...
+2025-06-28 17:38:27,688 - ERROR - Error generating check-ins: Traceback (most recent call last):
+  File "C:\Users\avish\OneDrive\Desktop\stem-face-dashboard-main\generate_checkins_from_schedule.py", line 21, in <module>
+    face_log['check_in'] = pd.to_datetime(face_log['check_in'])
+                           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\avish\AppData\Roaming\Python\Python313\site-packages\pandas\core\tools\datetimes.py", line 1067, in to_datetime
+    values = convert_listlike(arg._values, format)
+  File "C:\Users\avish\AppData\Roaming\Python\Python313\site-packages\pandas\core\tools\datetimes.py", line 433, in _convert_listlike_datetimes
+    return _array_strptime_with_fallback(arg, name, utc, format, exact, errors)
+  File "C:\Users\avish\AppData\Roaming\Python\Python313\site-packages\pandas\core\tools\datetimes.py", line 467, in _array_strptime_with_fallback
+    result, tz_out = array_strptime(arg, fmt, exact=exact, errors=errors, utc=utc)
+                     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "strptime.pyx", line 501, in pandas._libs.tslibs.strptime.array_strptime
+  File "strptime.pyx", line 451, in pandas._libs.tslibs.strptime.array_strptime
+  File "strptime.pyx", line 583, in pandas._libs.tslibs.strptime._parse_with_format
+ValueError: time data "2025-06-28 17:13" doesn't match format "%Y-%m-%d %H:%M:%S", at position 504. You might want to try:
+    - passing `format` if your strings have a consistent format;
+    - passing `format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+    - passing `format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+
+2025-06-28 17:38:27,689 - INFO - Adding 3 today logs...
+2025-06-28 17:38:27,701 - INFO - Added 3 today logs
+2025-06-28 17:38:27,701 - INFO - Added 3 today logs
+2025-06-28 17:38:27,702 - INFO - Updating analytics...
+2025-06-28 17:38:27,887 - INFO - Analytics updated
+2025-06-28 17:38:27,896 - INFO - Update logged to audit log
+2025-06-28 17:38:27,897 - INFO - Daily update completed successfully

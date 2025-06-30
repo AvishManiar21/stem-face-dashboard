@@ -1,3 +1,8 @@
+// Register Chart.js Zoom plugin globally at the very top
+if (window.Chart && window.Chart.register && window.ChartZoom) {
+  Chart.register(window.ChartZoom);
+}
+
 let tutorChart;
 
 function isDarkMode() {
@@ -20,7 +25,8 @@ const chartOptions = {
   session_duration_distribution: ['bar', 'pie'],
   punctuality_analysis: ['bar', 'pie'],
   avg_session_duration_per_tutor: ['bar', 'pie'],
-  tutor_consistency_score: ['bar', 'pie']
+  tutor_consistency_score: ['bar', 'pie'],
+  session_duration_vs_checkin_hour: ['scatter']
 };
 
 const chartTitles = {
@@ -39,7 +45,8 @@ const chartTitles = {
   session_duration_distribution: "Session Duration Distribution",
   punctuality_analysis: "Punctuality Analysis",
   avg_session_duration_per_tutor: "Average Session Duration per Tutor",
-  tutor_consistency_score: "Tutor Consistency Score"
+  tutor_consistency_score: "Tutor Consistency Score",
+  session_duration_vs_checkin_hour: "Session Duration vs. Check-in Hour"
 };
 
 function renderChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
@@ -173,27 +180,81 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     }
   }
 
+  // Special handling for scatter plot
+  if (chartType === 'scatter' && Array.isArray(rawData)) {
+    const data = rawData;
+    const datasetsArray = [{
+      label: title,
+      data: data,
+      backgroundColor: isDarkMode() ? 'rgba(255, 159, 64, 0.7)' : 'rgba(0, 188, 212, 0.7)',
+      borderColor: isDarkMode() ? 'rgba(255, 159, 64, 1)' : 'rgba(0, 188, 212, 1)',
+      pointRadius: 5
+    }];
+    tutorChart = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets: datasetsArray },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'xy'
+            },
+            pan: {
+              enabled: true,
+              mode: 'xy'
+            }
+          }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Check-in Hour' }, min: 0, max: 23 },
+          y: { title: { display: true, text: 'Session Duration (hours)' }, min: 0 }
+        }
+      }
+    });
+    return;
+  }
+
+  // Create chart with zoom plugin enabled for all chart types
   tutorChart = new Chart(ctx, {
-    type: chartType === 'area' ? 'line' : chartType,
+    type: chartType,
     data: { labels: labels, datasets: datasetsArray },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: chartType === 'pie' ? {} : {
-        x: { ticks: { color: isDarkMode() ? '#f2f2f2' : '#111' }, grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' } },
-        y: { beginAtZero: true, ticks: { color: isDarkMode() ? '#f2f2f2' : '#111' }, grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' } }
-      },
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: chartType === 'pie' ? 'right' : 'top', labels: { color: isDarkMode() ? '#f2f2f2' : '#111', boxWidth: 12, padding: 10 } },
-        tooltip: { callbacks: { label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) label += ': ';
-            if (context.parsed.y !== null && context.parsed.y !== undefined) label += context.parsed.y.toFixed(2);
-            else if (context.raw !== null && context.raw !== undefined) label += parseFloat(context.raw).toFixed(2);
-            return label;
-        }}}
+        zoom: {
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'xy'
+          },
+          pan: {
+            enabled: true,
+            mode: 'xy'
+          }
+        }
+      },
+      scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
+        y: {
+          beginAtZero: true,
+          grid: { color: isDarkMode() ? '#444' : '#ddd' },
+          ticks: { color: isDarkMode() ? '#e0e0e0' : '#333' }
+        },
+        x: {
+          grid: { color: isDarkMode() ? '#444' : '#ddd' },
+          ticks: { color: isDarkMode() ? '#e0e0e0' : '#333' }
+        }
       }
     }
   });
+  
+  // Store the chart instance for zoom functionality
+  if (typeof currentChartInstances !== 'undefined') {
+    currentChartInstances.singleChart = tutorChart;
+  }
 }
 
 function renderSplitChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
@@ -332,7 +393,8 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
               return label;
             }
           }
-        }
+        },
+        zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' } }
       }
     }
   });
@@ -354,14 +416,17 @@ async function fetchGridChartData() {
   Object.entries(advancedFilters).forEach(([key, value]) => {
     if (value && value !== '') params.append(key, value);
   });
-  
+
+  // --- FIX: Always send grid mode for grid chart ---
+  const bodyObj = Object.fromEntries(params);
+  bodyObj.mode = 'grid';
+
   try {
     const response = await fetch('/chart-data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.fromEntries(params))
+      body: JSON.stringify(bodyObj)
     });
-    
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -564,6 +629,42 @@ function exportFiltersLink() { /* ... same as before ... */
     }).catch(err => { prompt("Copy this link:", shareableLink); });
 }
 
+// --- Punctuality Analysis Fetch and Update ---
+async function loadPunctualityAnalysis(params = '') {
+  try {
+    // Build the request body with filters if needed
+    let body = { dataset: 'punctuality_analysis' };
+    if (params && typeof params === 'string' && params.length > 0) {
+      // Parse params string into an object
+      params.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key && value) body[key] = decodeURIComponent(value);
+      });
+    }
+    const res = await fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    const pa = data.punctuality_analysis || {};
+    // Update the cards
+    document.getElementById('earlyPercentage').textContent = pa.Early !== undefined ? pa.Early : '-';
+    document.getElementById('ontimePercentage').textContent = pa['On Time'] !== undefined ? pa['On Time'] : '-';
+    document.getElementById('latePercentage').textContent = pa.Late !== undefined ? pa.Late : '-';
+    document.getElementById('earlyCount').textContent = (pa.Early !== undefined ? pa.Early : '-') + ' sessions';
+    document.getElementById('ontimeCount').textContent = (pa['On Time'] !== undefined ? pa['On Time'] : '-') + ' sessions';
+    document.getElementById('lateCount').textContent = (pa.Late !== undefined ? pa.Late : '-') + ' sessions';
+  } catch (error) {
+    document.getElementById('earlyPercentage').textContent = '-';
+    document.getElementById('ontimePercentage').textContent = '-';
+    document.getElementById('latePercentage').textContent = '-';
+    document.getElementById('earlyCount').textContent = '- sessions';
+    document.getElementById('ontimeCount').textContent = '- sessions';
+    document.getElementById('lateCount').textContent = '- sessions';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('filterForm');
   const datasetSelect = document.getElementById('dataset');
@@ -636,6 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     fetchChartData(params.toString(), this.chartTypeSelect.value, this.dataset.value);
     updateFilterChips();
+    loadPunctualityAnalysis(params.toString());
   });
 
   document.getElementById('resetBtn')?.addEventListener('click', () => {
@@ -697,4 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (shouldSubmit) form.dispatchEvent(new Event('submit', { bubbles: true }));
   else form.dispatchEvent(new Event('submit', { bubbles: true })); // Initial load
+
+  // Initial load
+  loadPunctualityAnalysis();
 });

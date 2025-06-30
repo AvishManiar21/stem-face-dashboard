@@ -171,6 +171,7 @@
 
     <div class="d-flex justify-content-center flex-wrap gap-2 my-3">
       <a href="/charts" class="btn btn-outline-primary"><i class="fas fa-chart-line"></i> View Charts</a>
+      <a href="/calendar" class="btn btn-outline-info"><i class="fas fa-calendar-alt"></i> View Calendar</a>
       <button class="btn btn-outline-dark" onclick="toggleTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
       <button class="btn btn-outline-secondary" id="toggleAllCollapsibleBtn" data-state="collapsed"><i class="fas fa-expand-arrows-alt"></i> Expand/Collapse Logs</button>
       <a href="/download-log" class="btn btn-outline-success"><i class="fas fa-file-csv"></i> Download Full CSV</a>
@@ -321,7 +322,29 @@
   </div>
 
   <!-- Alerts Section -->
-  <div id="alertsContainer" class="mb-4"></div>
+  <div id="alertsContainer" class="mb-4">
+    <!-- Alerts will be populated here by JavaScript -->
+  </div>
+  
+  <!-- Upcoming Shifts Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-calendar-alt me-2"></i>Upcoming Shifts
+          </h5>
+        </div>
+        <div class="card-body">
+          <div id="upcomingShiftsContainer">
+            <div class="text-center text-muted">
+              <i class="fas fa-spinner fa-spin me-2"></i>Loading upcoming shifts...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   
   <hr class="my-4">
   <h4 class="mb-3 text-center">Grouped Log Entries</h4>
@@ -387,20 +410,27 @@
   }
 
   async function loadDashboardSummaryAndCollapsibleLogs() {
+    console.log('loadDashboardSummaryAndCollapsibleLogs called');
     // Show loading state for KPIs
     showKPILoadingState();
     document.getElementById("logContainerCollapsible").innerHTML = '<div class="col-12 text-center p-3"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading...</span></div> <p>Loading logs...</p></div>';
 
     try {
+        console.log('Fetching dashboard data...');
         const res = await fetch('/dashboard-data');
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}. Failed to load dashboard data.`);
         const data = await res.json();
+        console.log('Dashboard data received');
         
         // Update all KPI values
         updateKPIValues(data.summary);
         
         displayAlerts(data.alerts);
         populateCollapsibleLogs(data.logs_for_collapsible_view || []);
+        
+        // Load upcoming shifts
+        console.log('Calling loadUpcomingShifts...');
+        loadUpcomingShifts();
 
     } catch (error) {
         console.error("Error loading dashboard summary:", error);
@@ -489,19 +519,142 @@
     return Math.floor(avgHours * 1.5); // Assume top tutor works 50% more than average
   }
 
-
-
   function displayAlerts(alerts) {
-    const alertsContainer = document.getElementById('alertsContainer');
-    alertsContainer.innerHTML = '';
-    if (!alerts || alerts.length === 0) return;
+    const container = document.getElementById('alertsContainer');
+    container.innerHTML = '';
+    
+    if (!alerts || alerts.length === 0) {
+      return;
+    }
+    
     alerts.forEach(alert => {
-        const alertDiv = document.createElement('div');
-        let iconClass = alert.type === 'warning' ? 'fas fa-exclamation-triangle' : 'fas fa-info-circle';
-        alertDiv.className = `alert alert-${alert.type || 'info'} alert-dismissible fade show d-flex align-items-center`;
-        alertDiv.innerHTML = `<i class="${iconClass} me-2"></i><div>${alert.message}</div><button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-        alertsContainer.appendChild(alertDiv);
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${alert.type} alert-dismissible fade show`;
+      alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="fas fa-${getAlertIcon(alert.type)} me-2"></i>
+          <div>
+            <strong>${alert.title}</strong><br>
+            <small>${alert.message}</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      container.appendChild(alertDiv);
     });
+  }
+  
+  function getAlertIcon(type) {
+    switch(type) {
+      case 'danger': return 'exclamation-triangle';
+      case 'warning': return 'exclamation-circle';
+      case 'info': return 'info-circle';
+      case 'success': return 'check-circle';
+      default: return 'bell';
+    }
+  }
+  
+  async function loadUpcomingShifts(page = 1) {
+    console.log('loadUpcomingShifts called for page:', page);
+    try {
+      console.log('Fetching /upcoming-shifts...');
+      const response = await fetch(`/upcoming-shifts?page=${page}&per_page=12&exclude_today=true`);
+      console.log('Response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Shifts received:', data.shifts ? data.shifts.length : 0, 'shifts');
+        console.log('Pagination info:', data.pagination);
+        displayUpcomingShifts(data.shifts, data.pagination);
+      } else {
+        console.log('Response not ok, status:', response.status);
+        document.getElementById('upcomingShiftsContainer').innerHTML = 
+          '<div class="text-center text-muted">No upcoming shifts found.</div>';
+      }
+    } catch (error) {
+      console.error('Error loading upcoming shifts:', error);
+      document.getElementById('upcomingShiftsContainer').innerHTML = 
+        '<div class="text-center text-muted">Error loading shifts.</div>';
+    }
+  }
+  
+  function displayUpcomingShifts(shifts, pagination) {
+    console.log('displayUpcomingShifts called with:', shifts);
+    const container = document.getElementById('upcomingShiftsContainer');
+    console.log('Container found:', container);
+    
+    if (!shifts || shifts.length === 0) {
+      console.log('No shifts to display');
+      container.innerHTML = '<div class="text-center text-muted">No upcoming shifts scheduled.</div>';
+      return;
+    }
+    
+    console.log('Displaying', shifts.length, 'shifts');
+    
+    // Display shifts
+    let html = '<div class="row g-3">';
+    shifts.forEach((shift, index) => {
+      console.log('Processing shift', index, ':', shift);
+      
+      html += `
+        <div class="col-md-6 col-lg-4">
+          <div class="card border-primary h-100">
+            <div class="card-body">
+              <h6 class="card-title">${shift.shift_name || 'Shift ' + shift.shift_id}</h6>
+              <p class="card-text small">
+                <strong>Date:</strong> ${shift.date} (${shift.day_name})<br>
+                <strong>Time:</strong> ${shift.start_time} - ${shift.end_time}<br>
+                <strong>Tutor:</strong> ${shift.tutor_name || 'Unknown'}
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    // Add pagination controls
+    if (pagination && pagination.total_pages > 1) {
+      html += `
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div class="text-muted">
+            Showing ${((pagination.current_page - 1) * pagination.per_page) + 1} to ${Math.min(pagination.current_page * pagination.per_page, pagination.total_shifts)} of ${pagination.total_shifts} shifts
+          </div>
+          <nav aria-label="Upcoming shifts pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item ${pagination.has_prev ? '' : 'disabled'}">
+                <button class="page-link" onclick="loadUpcomingShifts(${pagination.current_page - 1})" ${pagination.has_prev ? '' : 'disabled'}>
+                  <i class="fas fa-chevron-left"></i> Previous
+                </button>
+              </li>
+      `;
+      
+      // Show page numbers
+      const startPage = Math.max(1, pagination.current_page - 2);
+      const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        html += `
+          <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+            <button class="page-link" onclick="loadUpcomingShifts(${i})">${i}</button>
+          </li>
+        `;
+      }
+      
+      html += `
+              <li class="page-item ${pagination.has_next ? '' : 'disabled'}">
+                <button class="page-link" onclick="loadUpcomingShifts(${pagination.current_page + 1})" ${pagination.has_next ? '' : 'disabled'}>
+                  Next <i class="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      `;
+    }
+    
+    console.log('Setting container HTML');
+    container.innerHTML = html;
+    console.log('Upcoming shifts displayed successfully');
   }
 
   function groupLogsByMonthAndDate(logs) { 

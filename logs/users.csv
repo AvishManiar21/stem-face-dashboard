@@ -1,0 +1,2 @@
+user_id,email,full_name,role,created_at,last_login,active
+ADMIN001,admin@example.com,System Administrator,admin,2025-06-28 16:52:11.554005,2025-06-28 16:53:35.977291,True
