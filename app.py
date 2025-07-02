@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, redirect, url_for, flash, session, send_from_directory
+from flask import Flask, request, jsonify, send_file, redirect, url_for, flash, session, send_from_directory, make_response, render_template
 import pandas as pd
 from datetime import datetime, timedelta
 import os
@@ -11,6 +11,7 @@ from analytics import TutorAnalytics
 import shifts
 import logging
 from auto_logger import start_auto_logger, add_today_logs
+import hashlib
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -71,12 +72,18 @@ SNAPSHOTS_DIR = 'static/snapshots'
 # User management file
 USERS_FILE = 'logs/users.csv'
 
+def hash_password(password):
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def verify_password(password, hashed):
+    return hash_password(password) == hashed
+
 def ensure_users_file():
     """Ensure users file exists with proper structure"""
     os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
     if not os.path.exists(USERS_FILE):
         users_df = pd.DataFrame(columns=[
-            'user_id', 'email', 'full_name', 'role', 'created_at', 'last_login', 'active'
+            'user_id', 'email', 'full_name', 'role', 'created_at', 'last_login', 'active', 'password_hash'
         ])
         # Create default admin user
         default_admin = {
@@ -86,7 +93,8 @@ def ensure_users_file():
             'role': 'admin',
             'created_at': datetime.now().isoformat(),
             'last_login': datetime.now().isoformat(),
-            'active': True
+            'active': True,
+            'password_hash': hash_password('admin123')
         }
         users_df = pd.concat([users_df, pd.DataFrame([default_admin])], ignore_index=True)
         users_df.to_csv(USERS_FILE, index=False)
@@ -103,14 +111,18 @@ def load_users():
     except Exception as e:
         print(f"Error loading users: {e}")
         return pd.DataFrame(columns=[
-            'user_id', 'email', 'full_name', 'role', 'created_at', 'last_login', 'active'
+            'user_id', 'email', 'full_name', 'role', 'created_at', 'last_login', 'active', 'password_hash'
         ])
 
 def get_current_user():
     """Get current user from session"""
     user_email = session.get('user_email')
-    if user_email and user_email in MOCK_USERS:
-        return MOCK_USERS[user_email]
+    if not user_email:
+        return None
+    df = load_users()
+    user_row = df[df['email'] == user_email]
+    if not user_row.empty:
+        return user_row.iloc[0].to_dict()
     return None
 
 def log_admin_action(action, target_user_email=None, details=""):
@@ -223,7 +235,7 @@ def charts_page():
 @app.route('/admin/users')
 def admin_users():
     """Serve the admin users page"""
-    return send_from_directory('templates', 'admin_users.html')
+    return render_template('admin_users.html')
 
 @app.route('/admin/audit-logs')
 def admin_audit_logs():
@@ -339,13 +351,17 @@ def api_admin_audit_logs():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 25))
-        
-        logs = analytics.get_audit_logs(page, per_page)
-        return jsonify(logs)
+        logs_result = analytics.get_audit_logs(page, per_page)
+        # Ensure logs_result is always a dict with 'logs' and 'total'
+        if isinstance(logs_result, dict) and 'logs' in logs_result and 'total' in logs_result:
+            return jsonify(logs_result)
+        elif isinstance(logs_result, list):
+            return jsonify({'logs': logs_result, 'total': len(logs_result)})
+        else:
+            return jsonify({'logs': [], 'total': 0})
     except Exception as e:
         logger.error(f"Error getting audit logs: {e}")
         return jsonify({'error': 'Failed to load audit logs'}), 500
@@ -358,10 +374,25 @@ def api_admin_create_user():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     data = request.get_json()
-    # In a real app, you would save to database
-    # For demo, we'll just return success
+    if not data.get('password'):
+        return jsonify({'error': 'Password is required'}), 400
+    df = load_users()
+    if data['email'] in df['email'].values:
+        return jsonify({'error': 'User already exists'}), 400
+    new_user = {
+        'user_id': f"U{int(datetime.now().timestamp())}",
+        'email': data['email'],
+        'full_name': data['full_name'],
+        'role': data['role'],
+        'created_at': datetime.now().isoformat(),
+        'last_login': '',
+        'active': data.get('active', True),
+        'password_hash': hash_password(data['password'])
+    }
+    df = pd.concat([df, pd.DataFrame([new_user])], ignore_index=True)
+    df.to_csv(USERS_FILE, index=False)
+    log_admin_action('create_user', target_user_email=data.get('email'), details=f"Created user with role {data.get('role')}")
     return jsonify({'message': 'User created successfully'})
 
 @app.route('/api/admin/edit-user', methods=['POST'])
@@ -370,9 +401,20 @@ def api_admin_edit_user():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     data = request.get_json()
-    # In a real app, you would update database
+    df = load_users()
+    idx = df.index[df['user_id'] == data['user_id']]
+    if len(idx) == 0:
+        return jsonify({'error': 'User not found'}), 404
+    i = idx[0]
+    df.at[i, 'email'] = data['email']
+    df.at[i, 'full_name'] = data['full_name']
+    df.at[i, 'role'] = data['role']
+    df.at[i, 'active'] = data.get('active', True)
+    if data.get('password'):
+        df.at[i, 'password_hash'] = hash_password(data['password'])
+    df.to_csv(USERS_FILE, index=False)
+    log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Edited user info for {data.get('user_id')}")
     return jsonify({'message': 'User updated successfully'})
 
 @app.route('/api/admin/delete-user', methods=['POST'])
@@ -381,9 +423,15 @@ def api_admin_delete_user():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     data = request.get_json()
-    # In a real app, you would delete from database
+    df = load_users()
+    idx = df.index[df['user_id'] == data['user_id']]
+    if len(idx) == 0:
+        return jsonify({'error': 'User not found'}), 404
+    email = df.at[idx[0], 'email']
+    df = df.drop(idx)
+    df.to_csv(USERS_FILE, index=False)
+    log_admin_action('delete_user', target_user_email=email, details=f"Deleted user")
     return jsonify({'message': 'User deleted successfully'})
 
 @app.route('/api/admin/change-role', methods=['POST'])
@@ -392,8 +440,9 @@ def api_admin_change_role():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     data = request.get_json()
+    # Log admin action
+    log_admin_action('change_role', target_user_email=data.get('user_id'), details=f"Changed role to {data.get('role')}")
     # In a real app, you would update database
     return jsonify({'message': 'Role updated successfully'})
 
@@ -457,15 +506,18 @@ def login():
     """Handle login"""
     email = request.form.get('email')
     password = request.form.get('password')
-    
-    # Simple demo authentication
-    if email in MOCK_USERS:
-        # In demo, accept any password
-        session['user_email'] = email
-        return redirect('/')
-    else:
-        flash('Invalid credentials', 'error')
-        return redirect('/login')
+    df = load_users()
+    user_row = df[df['email'] == email]
+    if not user_row.empty:
+        user = user_row.iloc[0]
+        if verify_password(password, user['password_hash']):
+            session['user_email'] = email
+            # Update last_login
+            df.loc[df['email'] == email, 'last_login'] = datetime.now().isoformat()
+            df.to_csv(USERS_FILE, index=False)
+            return redirect('/')
+    flash('Invalid credentials', 'error')
+    return redirect('/login')
 
 # Chart data endpoints
 @app.route('/chart-data', methods=['GET', 'POST'])
@@ -589,6 +641,66 @@ def get_tutors():
     except Exception as e:
         logger.error(f"Error getting tutors: {e}")
         return jsonify([])
+
+@app.route('/export-punctuality-csv', methods=['POST'])
+def export_punctuality_csv():
+    """Export punctuality analysis as CSV for the selected tab and filters"""
+    try:
+        # Accept both form and JSON
+        if request.content_type and 'application/json' in request.content_type:
+            req = request.get_json() or {}
+        else:
+            req = request.form.to_dict() or {}
+        tab = req.get('tab', 'breakdown')
+        # Extract filters (same as /chart-data)
+        dataset = 'punctuality_analysis'
+        max_date = req.get('max_date')
+        # Build analytics with filters
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv', max_date=pd.to_datetime(max_date) if max_date else None)
+        pa = analytics.get_chart_data(dataset)
+        import io
+        output = io.StringIO()
+        if tab == 'breakdown':
+            output.write('Category,Count,Percentage,Avg Deviation\n')
+            for cat in ['Early', 'On Time', 'Late']:
+                b = pa['breakdown'].get(cat, {})
+                output.write(f"{cat},{b.get('count','-')},{b.get('percent','-')},{b.get('avg_deviation','-')}\n")
+            filename = 'punctuality_breakdown.csv'
+        elif tab == 'trends':
+            output.write('Day,Early,On Time,Late\n')
+            days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+            for i, day in enumerate(days):
+                output.write(f"{day},{pa['trends'].get('Early',[0]*7)[i]},{pa['trends'].get('On Time',[0]*7)[i]},{pa['trends'].get('Late',[0]*7)[i]}\n")
+            filename = 'punctuality_trends.csv'
+        elif tab == 'daytime':
+            output.write('Day,Slot,Sessions\n')
+            days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+            slots = ['Morning','Afternoon','Evening']
+            for slot in slots:
+                for i, day in enumerate(days):
+                    val = pa['day_time'].get(slot, [0]*7)[i]
+                    output.write(f"{day},{slot},{val}\n")
+            filename = 'punctuality_by_day_time.csv'
+        elif tab == 'outliers':
+            output.write('Type,Tutors\n')
+            output.write(f"Most Punctual,\"{','.join(pa['outliers'].get('most_punctual', []))}\"\n")
+            output.write(f"Least Punctual,\"{','.join(pa['outliers'].get('least_punctual', []))}\"\n")
+            filename = 'punctuality_top_performers.csv'
+        elif tab == 'deviation':
+            output.write('Deviation Bucket,Sessions\n')
+            labels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min']
+            for label in labels:
+                output.write(f"{label},{pa['deviation_distribution'].get(label,0)}\n")
+            filename = 'punctuality_deviation.csv'
+        else:
+            return jsonify({'error': 'Unknown export type'}), 400
+        resp = make_response(output.getvalue())
+        resp.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        resp.headers['Content-Type'] = 'text/csv'
+        return resp
+    except Exception as e:
+        logger.error(f"Error exporting punctuality CSV: {e}")
+        return jsonify({'error': 'Failed to export punctuality data'}), 500
 
 if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(CSV_FILE)): os.makedirs(os.path.dirname(CSV_FILE))

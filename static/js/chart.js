@@ -855,84 +855,32 @@ function exportPunctualityData(tab) {
       else if (activeTab.id === 'tab-deviation') tab = 'deviation';
     }
   }
-  console.log('Exporting punctuality tab:', tab);
-  fetch('/chart-data', {
+  // Collect current filter form values
+  const form = document.getElementById('filterForm');
+  const formData = new FormData(form);
+  formData.append('tab', tab);
+  fetch('/export-punctuality-csv', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataset: 'punctuality_analysis' })
+    body: formData
   })
-  .then(response => response.json())
-  .then(data => {
-    const pa = data.punctuality_analysis || {};
-    let csv = '';
-    let filename = 'punctuality_export';
-    if (tab === 'breakdown') {
-      csv = 'Category,Count,Percentage,Avg Deviation\n';
-      const cats = ['Early', 'On Time', 'Late'];
-      cats.forEach(cat => {
-        const b = pa.breakdown?.[cat] || {};
-        csv += `${cat},${b.count ?? '-'},${b.percent ?? '-'},${b.avg_deviation ?? '-'}\n`;
-      });
-      filename = 'punctuality_breakdown';
-    } else if (tab === 'trends') {
-      csv = 'Day,Early,On Time,Late\n';
-      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-      for (let i = 0; i < days.length; i++) {
-        csv += `${days[i]},${pa.trends?.Early?.[i] ?? 0},${pa.trends?.['On Time']?.[i] ?? 0},${pa.trends?.Late?.[i] ?? 0}\n`;
-      }
-      filename = 'punctuality_trends';
-    } else if (tab === 'daytime') {
-      csv = 'Day,Slot,Sessions\n';
-      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-      const slots = ['Morning','Afternoon','Evening'];
-      slots.forEach(slot => {
-        (pa.day_time?.[slot] || []).forEach((val, i) => {
-          csv += `${days[i]},${slot},${val}\n`;
-        });
-      });
-      filename = 'punctuality_by_day_time';
-    } else if (tab === 'outliers') {
-      csv = 'Type,Tutors\n';
-      csv += `Most Punctual,"${(pa.outliers?.most_punctual || []).join(', ')}"\n`;
-      csv += `Least Punctual,"${(pa.outliers?.least_punctual || []).join(', ')}"\n`;
-      filename = 'punctuality_top_performers';
-    } else if (tab === 'deviation') {
-      csv = 'Deviation Bucket,Sessions\n';
-      const labels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min'];
-      labels.forEach(label => {
-        csv += `${label},${pa.deviation_distribution?.[label] ?? 0}\n`;
-      });
-      filename = 'punctuality_deviation';
-    } else {
-      alert('Unknown export type.');
-      return;
-    }
-    try {
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename + '.csv';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      // Fallback: check if download was blocked
-      setTimeout(() => {
-        if (!document.hidden) {
-          // If the file dialog did not open, show a manual copy dialog
-          if (!window.__lastDownload || window.__lastDownload !== filename) {
-            window.__lastDownload = filename;
-            const msg = `If the download did not start, copy the CSV below and save it manually.\n\n` + csv;
-            if (window.prompt) window.prompt('Copy CSV content:', csv);
-          }
-        }
-      }, 1000);
-    } catch (e) {
-      alert('Download failed. Here is the CSV:\n' + csv);
-    }
+  .then(response => {
+    if (!response.ok) throw new Error('Export failed');
+    return response.blob();
+  })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `punctuality_${tab}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  })
+  .catch(error => {
+    alert('Could not export punctuality data: ' + error.message);
   });
 }
 

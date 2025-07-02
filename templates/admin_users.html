@@ -30,87 +30,66 @@
     </style>
 </head>
 <body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-user-graduate"></i> Tutor Dashboard
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/charts">
-                            <i class="fas fa-chart-bar"></i> Charts
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/calendar">
-                            <i class="fas fa-calendar-alt"></i> Calendar
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/admin/users">
-                            <i class="fas fa-users-cog"></i> Users
-                        </a>
-                    </li>
-                </ul>
-                
-                <!-- User Dropdown -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> 
-                        <span id="userDisplayName">Loading...</span>
+<script src="/static/js/admin_navbar.js"></script>
+    <div class="container py-4">
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#usersPane" type="button" role="tab">Users</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#auditPane" type="button" role="tab">Audit Logs</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="adminTabsContent">
+            <div class="tab-pane fade show active" id="usersPane" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="fw-bold text-primary mb-1">👥 User Management</h2>
+                        <p class="text-muted mb-0">Manage tutor accounts, roles, and permissions</p>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                        <i class="fas fa-plus-circle"></i> Add New User
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header" id="userEmail">Loading...</h6></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/logout">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </a></li>
-                    </ul>
+                </div>
+
+                <!-- Flash Messages -->
+                <div id="flashMessages">
+                    <!-- Flash messages will be populated here -->
+                </div>
+
+                <!-- Users Grid -->
+                <div class="row g-4" id="usersGrid">
+                    <!-- Users will be populated here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-5" style="display: none;">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Users Found</h4>
+                    <p class="text-muted">Start by adding your first user account.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                        <i class="fas fa-plus-circle"></i> Add First User
+                    </button>
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold text-primary mb-1">👥 User Management</h2>
-                <p class="text-muted mb-0">Manage tutor accounts, roles, and permissions</p>
+            <div class="tab-pane fade" id="auditPane" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Audit Log Entries</h6>
+                        <span class="text-muted" id="logCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="logsContainer">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Loading audit logs...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center mt-4">
+                    <nav id="paginationContainer"></nav>
+                </div>
             </div>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                <i class="fas fa-plus-circle"></i> Add New User
-            </button>
-        </div>
-
-        <!-- Flash Messages -->
-        <div id="flashMessages">
-            <!-- Flash messages will be populated here -->
-        </div>
-
-        <!-- Users Grid -->
-        <div class="row g-4" id="usersGrid">
-            <!-- Users will be populated here -->
-        </div>
-
-        <!-- Empty State -->
-        <div id="emptyState" class="text-center py-5" style="display: none;">
-            <i class="fas fa-users fa-3x text-muted mb-3"></i>
-            <h4 class="text-muted">No Users Found</h4>
-            <p class="text-muted">Start by adding your first user account.</p>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                <i class="fas fa-plus-circle"></i> Add First User
-            </button>
         </div>
     </div>
 
@@ -192,6 +171,10 @@
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
+                        <div class="mb-3">
+                            <label for="editPassword" class="form-label">Password <span class="text-muted">(leave blank to keep unchanged)</span></label>
+                            <input type="password" class="form-control" id="editPassword" name="password" autocomplete="new-password">
+                        </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="editActive" name="active">
                             <label class="form-check-label" for="editActive">
@@ -238,6 +221,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let users = [];
+        let logs = [];
+        let currentPage = 1;
+        let pageSize = 25;
+        let totalPages = 1;
+        let totalLogs = 0;
 
         // Load user data and set up UI
         async function loadUserData() {
@@ -373,13 +361,12 @@
         function editUser(userId) {
             const user = users.find(u => u.user_id === userId);
             if (!user) return;
-            
             document.getElementById('editUserId').value = user.user_id;
             document.getElementById('editEmail').value = user.email;
             document.getElementById('editFullName').value = user.full_name;
             document.getElementById('editRole').value = user.role;
             document.getElementById('editActive').checked = user.active;
-            
+            document.getElementById('editPassword').value = '';
             new bootstrap.Modal(document.getElementById('editUserModal')).show();
         }
 
@@ -450,11 +437,11 @@
 
         document.getElementById('editUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             data.active = formData.get('active') === 'on';
-            
+            // Only include password if provided
+            if (!data.password) delete data.password;
             try {
                 const response = await fetch('/api/admin/edit-user', {
                     method: 'POST',
@@ -463,7 +450,6 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
                 if (response.ok) {
                     showFlashMessage('User updated successfully', 'success');
                     bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
@@ -511,7 +497,59 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUserData();
             loadUsers();
+            document.getElementById('audit-tab').addEventListener('shown.bs.tab', function () {
+                loadAuditLogs();
+            });
         });
+
+        // --- Audit Log Tab Logic ---
+        async function loadAuditLogs(page = 1) {
+            currentPage = page;
+            document.getElementById('logsContainer').innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading audit logs...</div>';
+            try {
+                const response = await fetch(`/api/admin/audit-logs?page=${page}&per_page=${pageSize}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    logs = data.logs || data || [];
+                    totalLogs = data.total || logs.length;
+                    totalPages = Math.ceil(totalLogs / pageSize) || 1;
+                    renderAuditLogs();
+                    renderPagination();
+                } else {
+                    document.getElementById('logsContainer').innerHTML = '<div class="text-danger">Failed to load audit logs.</div>';
+                }
+            } catch (e) {
+                document.getElementById('logsContainer').innerHTML = '<div class="text-danger">Error loading audit logs.</div>';
+            }
+        }
+        function renderAuditLogs() {
+            if (!logs || logs.length === 0) {
+                document.getElementById('logsContainer').innerHTML = '<div class="text-muted">No audit logs found.</div>';
+                document.getElementById('logCount').textContent = '0 logs';
+                return;
+            }
+            let html = `<table class="table table-sm table-bordered table-striped"><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th></tr></thead><tbody>`;
+            logs.forEach(log => {
+                // Fallback for admin_email and target_user_email
+                const adminEmail = log.admin_email || log.user_email || '';
+                const targetEmail = log.target_user_email || '';
+                html += `<tr><td>${log.timestamp || ''}</td><td>${adminEmail}</td><td>${log.action || ''}</td><td>${targetEmail}</td><td>${log.details || ''}</td><td>${log.ip_address || ''}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('logsContainer').innerHTML = html;
+            document.getElementById('logCount').textContent = `${totalLogs} logs`;
+        }
+        function renderPagination() {
+            let html = '';
+            if (totalPages > 1) {
+                html += '<ul class="pagination">';
+                for (let i = 1; i <= totalPages; i++) {
+                    html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#" onclick="loadAuditLogs(${i});return false;">${i}</a></li>`;
+                }
+                html += '</ul>';
+            }
+            document.getElementById('paginationContainer').innerHTML = html;
+        }
     </script>
 </body>
 </html>

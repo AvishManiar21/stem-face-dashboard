@@ -992,52 +992,21 @@ class TutorAnalytics:
             if not os.path.exists(audit_file):
                 # Create sample audit logs if file doesn't exist
                 self._create_sample_audit_logs()
-            
             df = pd.read_csv(audit_file)
+            print(f"[DEBUG] audit_log.csv columns: {df.columns.tolist()}")
             df['timestamp'] = pd.to_datetime(df['timestamp'])
             df = df.sort_values('timestamp', ascending=False)
-            
-            # Pagination
             total = len(df)
             start_idx = (page - 1) * per_page
             end_idx = start_idx + per_page
-            
-            # Create pagination object
-            class Pagination:
-                def __init__(self, items, page, per_page, total):
-                    self.items = items
-                    self.page = page
-                    self.per_page = per_page
-                    self.total = total
-                    self.pages = (total + per_page - 1) // per_page
-                    self.has_prev = page > 1
-                    self.has_next = page < self.pages
-                    self.prev_num = page - 1 if page > 1 else None
-                    self.next_num = page + 1 if page < self.pages else None
-                    self.total_pages = self.pages
-            
             paginated_df = df.iloc[start_idx:end_idx]
-            pagination = Pagination(paginated_df.to_dict('records'), page, per_page, total)
-            
-            return pagination
-            
+            logs = paginated_df.to_dict('records')
+            return {'logs': logs, 'total': total}
         except Exception as e:
+            import traceback
             print(f"Error loading audit logs: {e}")
-            # Return empty pagination
-            class EmptyPagination:
-                def __init__(self):
-                    self.items = []
-                    self.page = 1
-                    self.per_page = per_page
-                    self.total = 0
-                    self.pages = 0
-                    self.has_prev = False
-                    self.has_next = False
-                    self.prev_num = None
-                    self.next_num = None
-                    self.total_pages = 0
-            
-            return EmptyPagination()
+            traceback.print_exc()
+            return {'logs': [], 'total': 0}
 
     def _create_sample_audit_logs(self):
         """Create sample audit logs for testing"""
