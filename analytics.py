@@ -994,12 +994,42 @@ class TutorAnalytics:
                 self._create_sample_audit_logs()
             df = pd.read_csv(audit_file)
             print(f"[DEBUG] audit_log.csv columns: {df.columns.tolist()}")
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            
+            # Map existing columns to expected format
+            # Your audit log has: timestamp, user_email, action, details, ip_address, user_agent
+            # Frontend expects: timestamp, user_email, action, details, ip_address, user_agent, user_name, admin_email, etc.
+            
+            # Add missing columns for frontend compatibility
+            if 'user_name' not in df.columns:
+                # Handle empty user_email values safely
+                df['user_name'] = ''
+                if 'user_email' in df.columns:
+                    df['user_email'] = df['user_email'].astype(str)
+                    mask = df['user_email'].notna() & (df['user_email'] != '') & (df['user_email'] != 'nan')
+                    df.loc[mask, 'user_name'] = df.loc[mask, 'user_email'].str.split('@').str[0]
+            if 'admin_email' not in df.columns:
+                df['admin_email'] = df['user_email'] if 'user_email' in df.columns else ''
+            if 'admin_user_id' not in df.columns:
+                df['admin_user_id'] = ''
+            if 'target_user_email' not in df.columns:
+                df['target_user_email'] = ''
+            if 'status' not in df.columns:
+                df['status'] = 'completed'
+            
+            # Convert timestamp to datetime
+            df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
             df = df.sort_values('timestamp', ascending=False)
+            
             total = len(df)
             start_idx = (page - 1) * per_page
             end_idx = start_idx + per_page
             paginated_df = df.iloc[start_idx:end_idx]
+            
+            # Convert timestamps to ISO strings for JSON serialization
+            paginated_df = paginated_df.copy()  # Create a copy to avoid SettingWithCopyWarning
+            paginated_df['timestamp'] = paginated_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            # Replace NaN with None for JSON serialization
+            paginated_df = paginated_df.where(pd.notnull(paginated_df), None)
             logs = paginated_df.to_dict('records')
             return {'logs': logs, 'total': total}
         except Exception as e:
@@ -1579,6 +1609,41 @@ class TutorAnalytics:
             })
         
         return logs
+
+    def log_admin_action(self, action, target_user_email=None, details=""):
+        """Log admin actions for audit trail"""
+        from flask import request, session
+        from datetime import datetime
+        import os
+        import pandas as pd
+        try:
+            # Try to get current user from session
+            current_user = session.get('user')
+            if not current_user:
+                return
+            audit_file = 'logs/audit_log.csv'
+            os.makedirs(os.path.dirname(audit_file), exist_ok=True)
+            audit_entry = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'admin_email': current_user.get('email', 'unknown'),
+                'action': action,
+                'target_user_email': target_user_email or '',
+                'details': details,
+                'ip_address': request.remote_addr if request else '',
+                'user_agent': request.headers.get('User-Agent', '') if request else ''
+            }
+            # Load existing audit log or create new one
+            if os.path.exists(audit_file):
+                audit_df = pd.read_csv(audit_file)
+            else:
+                audit_df = pd.DataFrame(columns=[
+                    'timestamp', 'admin_email', 'action', 'target_user_email', 
+                    'details', 'ip_address', 'user_agent'
+                ])
+            audit_df = pd.concat([audit_df, pd.DataFrame([audit_entry])], ignore_index=True)
+            audit_df.to_csv(audit_file, index=False)
+        except Exception as e:
+            print(f"Error logging admin action: {e}")
 
 # Global instance
 analytics = TutorAnalytics()

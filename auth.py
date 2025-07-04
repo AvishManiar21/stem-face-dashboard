@@ -185,7 +185,7 @@ def verify_password(password, salt, stored_hash):
 
 def authenticate_user(email, password):
     """
-    Hybrid authentication - tries Supabase Auth first, then custom users table, then demo users
+    Hybrid authentication - tries Supabase Auth first, then custom users table, then demo users, then local CSV users
     """
     if not email or not password:
         return False, "Email and password are required"
@@ -197,7 +197,6 @@ def authenticate_user(email, password):
                 "email": email,
                 "password": password
             })
-            
             if response.user:
                 # Store user in session
                 session['user'] = {
@@ -209,7 +208,6 @@ def authenticate_user(email, password):
                     session['access_token'] = response.session.access_token
                 logger.info(f"User {email} authenticated via Supabase Auth")
                 return True, "Login successful"
-                
         except Exception as supabase_error:
             logger.warning(f"Supabase Auth failed for {email}: {supabase_error}")
             
@@ -258,6 +256,33 @@ def authenticate_user(email, password):
             except Exception as custom_error:
                 logger.error(f"Custom authentication error for {email}: {custom_error}")
                 return False, f"Authentication error: {str(custom_error)}"
+    
+    # If Supabase is not available, try local CSV users
+    import pandas as pd
+    import os
+    from app import hash_password, USERS_FILE
+    if os.path.exists(USERS_FILE):
+        df = pd.read_csv(USERS_FILE)
+        user_row = df[df['email'] == email]
+        if not user_row.empty:
+            user = user_row.iloc[0]
+            if not user.get('active', True):
+                return False, "User is not active"
+            stored_hash = user.get('password_hash', '')
+            if stored_hash and hash_password(password) == stored_hash:
+                session['user'] = {
+                    'id': user.get('user_id'),
+                    'email': user.get('email'),
+                    'user_metadata': {
+                        'role': user.get('role', 'tutor'),
+                        'full_name': user.get('full_name', ''),
+                        'tutor_id': user.get('user_id')
+                    }
+                }
+                logger.info(f"User {email} authenticated via local CSV users")
+                return True, "Login successful"
+            else:
+                return False, "Invalid email or password"
     
     # If Supabase is not available or failed, try demo users
     if email in DEMO_USERS:
@@ -442,195 +467,3 @@ def filter_data_by_role(df, user_role=None, user_tutor_id=None):
     
     # If no matching conditions, return empty dataframe
     return df.iloc[0:0]  # Empty dataframe with same structure
-
-def log_admin_action(action, target_user_email=None, details=None):
-    """Log admin actions for audit trail"""
-    try:
-        current_user = get_current_user()
-        if not current_user:
-            return
-        
-        # Create logs directory if it doesn't exist
-        os.makedirs(os.path.dirname(AUDIT_LOG_FILE), exist_ok=True)
-        
-        # Prepare audit log entry
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'admin_user_id': current_user.get('id'),
-            'admin_email': current_user.get('email'),
-            'action': action,
-            'target_user_email': target_user_email or '',
-            'details': details or '',
-            'ip_address': request.remote_addr if request else ''
-        }
-        
-        # Load existing audit log or create new one
-        try:
-            audit_df = pd.read_csv(AUDIT_LOG_FILE)
-        except FileNotFoundError:
-            audit_df = pd.DataFrame(columns=['timestamp', 'admin_user_id', 'admin_email', 
-                                           'action', 'target_user_email', 'details', 'ip_address'])
-        
-        # Append new entry
-        new_entry_df = pd.DataFrame([log_entry])
-        audit_df = pd.concat([audit_df, new_entry_df], ignore_index=True)
-        
-        # Save audit log
-        audit_df.to_csv(AUDIT_LOG_FILE, index=False)
-        
-    except Exception as e:
-        print(f"Error logging admin action: {e}")
-
-def populate_audit_logs_from_face_data():
-    """Populate audit logs with face recognition check-in/check-out data"""
-    try:
-        # Load face log data
-        face_log_file = 'logs/face_log.csv'
-        if not os.path.exists(face_log_file):
-            return False, "Face log file not found"
-        
-        face_df = pd.read_csv(face_log_file)
-        if face_df.empty:
-            return False, "No face log data found"
-        
-        # Parse datetime columns with flexible format
-        face_df['check_in'] = pd.to_datetime(face_df['check_in'], format='mixed', errors='coerce')
-        face_df['check_out'] = pd.to_datetime(face_df['check_out'], format='mixed', errors='coerce')
-        
-        # Load existing audit log or create new one
-        try:
-            audit_df = pd.read_csv(AUDIT_LOG_FILE)
-        except FileNotFoundError:
-            audit_df = pd.DataFrame(columns=['timestamp', 'admin_user_id', 'admin_email', 
-                                           'action', 'target_user_email', 'details', 'ip_address'])
-        
-        # Create audit entries for each face log entry
-        new_entries = []
-        
-        for _, row in face_df.iterrows():
-            tutor_id = str(row['tutor_id'])
-            tutor_name = row['tutor_name']
-            check_in = row['check_in']
-            check_out = row['check_out'] if pd.notna(row['check_out']) else None
-            shift_hours = row['shift_hours'] if pd.notna(row['shift_hours']) else 0
-            
-            # Create check-in entry
-            check_in_entry = {
-                'timestamp': check_in,
-                'admin_user_id': f'SYSTEM_FACE_RECOGNITION',
-                'admin_email': 'system@facerecognition.local',
-                'action': 'TUTOR_CHECK_IN',
-                'target_user_email': f'{tutor_name} (ID: {tutor_id})',
-                'details': f'Tutor checked in - Duration: {shift_hours}h',
-                'ip_address': 'FACE_RECOGNITION_SYSTEM'
-            }
-            new_entries.append(check_in_entry)
-            
-            # Create check-out entry if available
-            if check_out:
-                check_out_entry = {
-                    'timestamp': check_out,
-                    'admin_user_id': f'SYSTEM_FACE_RECOGNITION',
-                    'admin_email': 'system@facerecognition.local',
-                    'action': 'TUTOR_CHECK_OUT',
-                    'target_user_email': f'{tutor_name} (ID: {tutor_id})',
-                    'details': f'Tutor checked out - Total hours: {shift_hours}h',
-                    'ip_address': 'FACE_RECOGNITION_SYSTEM'
-                }
-                new_entries.append(check_out_entry)
-        
-        # Convert to DataFrame and combine with existing audit logs
-        if new_entries:
-            new_entries_df = pd.DataFrame(new_entries)
-            
-            # Remove duplicates by checking if similar entries already exist
-            # (to avoid re-adding the same data if function is called multiple times)
-            if not audit_df.empty:
-                # Check for existing face recognition entries
-                existing_face_entries = audit_df[
-                    audit_df['admin_user_id'] == 'SYSTEM_FACE_RECOGNITION'
-                ]
-                if not existing_face_entries.empty:
-                    # Only add entries that don't already exist
-                    existing_timestamps = set(existing_face_entries['timestamp'].astype(str))
-                    new_entries_df = new_entries_df[
-                        ~new_entries_df['timestamp'].astype(str).isin(existing_timestamps)
-                    ]
-            
-            if not new_entries_df.empty:
-                # Combine and sort
-                audit_df = pd.concat([audit_df, new_entries_df], ignore_index=True)
-                audit_df['timestamp'] = pd.to_datetime(audit_df['timestamp'])
-                audit_df = audit_df.sort_values('timestamp', ascending=False)
-                
-                # Create logs directory if it doesn't exist
-                os.makedirs(os.path.dirname(AUDIT_LOG_FILE), exist_ok=True)
-                
-                # Save updated audit log
-                audit_df.to_csv(AUDIT_LOG_FILE, index=False)
-                
-                return True, f"Added {len(new_entries_df)} new audit log entries from face recognition data"
-            else:
-                return True, "All face recognition entries already exist in audit logs"
-        else:
-            return False, "No valid face log entries to process"
-            
-    except Exception as e:
-        return False, f"Error populating audit logs: {str(e)}"
-
-def log_tutor_activity(tutor_id, tutor_name, action, timestamp, shift_hours=None):
-    """Log individual tutor activity to audit logs"""
-    try:
-        details = ""
-        if action == "CHECK_IN":
-            details = f"Tutor checked in - Duration: {shift_hours}h" if shift_hours else "Tutor checked in"
-            action = "TUTOR_CHECK_IN"
-        elif action == "CHECK_OUT":
-            details = f"Tutor checked out - Total hours: {shift_hours}h" if shift_hours else "Tutor checked out"
-            action = "TUTOR_CHECK_OUT"
-        
-        log_entry = {
-            'timestamp': timestamp,
-            'admin_user_id': 'SYSTEM_FACE_RECOGNITION',
-            'admin_email': 'system@facerecognition.local',
-            'action': action,
-            'target_user_email': f'{tutor_name} (ID: {tutor_id})',
-            'details': details,
-            'ip_address': 'FACE_RECOGNITION_SYSTEM'
-        }
-        
-        # Load existing audit log or create new one
-        try:
-            audit_df = pd.read_csv(AUDIT_LOG_FILE)
-        except FileNotFoundError:
-            audit_df = pd.DataFrame(columns=['timestamp', 'admin_user_id', 'admin_email', 
-                                           'action', 'target_user_email', 'details', 'ip_address'])
-        
-        # Add new entry
-        new_entry_df = pd.DataFrame([log_entry])
-        audit_df = pd.concat([audit_df, new_entry_df], ignore_index=True)
-        
-        # Create logs directory if it doesn't exist
-        os.makedirs(os.path.dirname(AUDIT_LOG_FILE), exist_ok=True)
-        
-        # Save audit log
-        audit_df.to_csv(AUDIT_LOG_FILE, index=False)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error logging tutor activity: {e}")
-        return False
-
-def get_audit_logs():
-    """Get all audit logs (admin only function)"""
-    try:
-        audit_df = pd.read_csv(AUDIT_LOG_FILE)
-        audit_df['timestamp'] = pd.to_datetime(audit_df['timestamp'])
-        return audit_df.sort_values('timestamp', ascending=False)
-    except FileNotFoundError:
-        return pd.DataFrame(columns=['timestamp', 'admin_user_id', 'admin_email', 
-                                   'action', 'target_user_email', 'details', 'ip_address'])
-    except Exception as e:
-        print(f"Error fetching audit logs: {e}")
-        return pd.DataFrame()

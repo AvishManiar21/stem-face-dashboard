@@ -94,12 +94,12 @@
                 <p class="text-muted mb-0">Track all system activities and user actions</p>
             </div>
             <div>
-                <button class="btn btn-outline-primary me-2" onclick="exportLogs()">
+                <button id="exportCsvBtn" class="btn btn-outline-primary me-2 admin-only" onclick="exportLogs()">
                     <i class="fas fa-download"></i> Export CSV
                 </button>
-                <button class="btn btn-warning" onclick="populateSampleLogs()">
+                <!-- <button class="btn btn-warning" onclick="populateSampleLogs()">
                     <i class="fas fa-plus"></i> Add Sample Data
-                </button>
+                </button> -->
             </div>
         </div>
 
@@ -109,7 +109,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="card mb-4">
+        <div class="card mb-4 admin-only" id="filtersCard">
             <div class="card-header">
                 <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h6>
             </div>
@@ -124,6 +124,7 @@
                             <option value="DELETE_USER">Delete User</option>
                             <option value="TUTOR_CHECK_IN">Check In</option>
                             <option value="TUTOR_CHECK_OUT">Check Out</option>
+                            <option value="user_activate">Activate/Deactivate</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -140,10 +141,10 @@
                     </div>
                 </div>
                 <div class="mt-3">
-                    <button class="btn btn-primary" onclick="applyFilters()">
+                    <button class="btn btn-primary" id="applyFiltersBtn">
                         <i class="fas fa-search"></i> Apply Filters
                     </button>
-                    <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
+                    <button class="btn btn-outline-secondary ms-2" id="clearFiltersBtn">
                         <i class="fas fa-times"></i> Clear
                     </button>
                 </div>
@@ -178,16 +179,20 @@
                 <!-- Pagination will be populated here -->
             </nav>
         </div>
+
+        <div id="leadTutorAlert" class="alert alert-info" style="display: none;">Read-only view: You can view audit logs but not filter, export, or delete.</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        console.log('Audit logs page loaded!');
         let logs = [];
         let currentPage = 1;
         let pageSize = 25;
         let totalPages = 1;
         let totalLogs = 0;
         let currentFilters = {};
+        let userRole = '';
 
         // Load user data and set up UI
         async function loadUserData() {
@@ -201,9 +206,21 @@
                     document.getElementById('userEmail').textContent = userData.email;
                     
                     // Check if user has admin privileges
-                    if (userData.role !== 'admin' && userData.role !== 'manager') {
+                    userRole = userData.role;
+                    if (userRole !== 'admin' && userRole !== 'manager' && userRole !== 'lead_tutor') {
                         window.location.href = '/';
                         return;
+                    }
+
+                    // Show/hide lead tutor alert
+                    const leadTutorAlert = document.getElementById('leadTutorAlert');
+                    if (userRole === 'lead_tutor') {
+                        leadTutorAlert.style.display = 'block';
+                        // Hide admin controls for lead tutors
+                        const adminControls = document.querySelectorAll('.admin-only');
+                        adminControls.forEach(control => control.style.display = 'none');
+                    } else {
+                        leadTutorAlert.style.display = 'none';
                     }
                 }
             } catch (error) {
@@ -214,23 +231,31 @@
 
         async function loadLogs() {
             try {
+                console.log('Loading audit logs...');
                 const params = new URLSearchParams({
                     page: currentPage,
                     per_page: pageSize,
                     ...currentFilters
                 });
                 
+                console.log('Fetching:', `/api/admin/audit-logs?${params}`);
                 const response = await fetch(`/api/admin/audit-logs?${params}`);
+                console.log('Response status:', response.status);
+                
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('Response data:', data);
                     logs = data.logs || [];
                     totalLogs = data.pagination?.total || 0;
                     totalPages = data.pagination?.total_pages || 1;
+                    console.log('Processed data - logs:', logs.length, 'total:', totalLogs, 'pages:', totalPages);
                     displayLogs();
                     displayPagination();
                     updateLogCount();
                 } else {
-                    showFlashMessage('Error loading audit logs', 'error');
+                    const errorText = await response.text();
+                    console.error('API Error:', response.status, errorText);
+                    showFlashMessage(`Error loading audit logs: ${response.status}`, 'error');
                 }
             } catch (error) {
                 console.error('Error loading audit logs:', error);
@@ -438,8 +463,16 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing...');
             loadUserData();
             loadLogs();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!window.userData || (window.userData.role !== 'admin' && window.userData.role !== 'manager')) {
+                var btn = document.getElementById('exportCsvBtn');
+                if (btn) btn.style.display = 'none';
+            }
         });
     </script>
 </body>

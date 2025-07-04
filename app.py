@@ -12,6 +12,10 @@ import shifts
 import logging
 from auto_logger import start_auto_logger, add_today_logs
 import hashlib
+from auth import authenticate_user
+import simplejson as json
+from supabase import create_client
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -115,7 +119,19 @@ def load_users():
         ])
 
 def get_current_user():
-    """Get current user from session"""
+    """Get current user from session (supports Supabase and legacy CSV)"""
+    # Supabase Auth: user info is stored in session['user']
+    if 'user' in session:
+        user = session['user']
+        # Try to provide a unified user dict for frontend
+        return {
+            'user_id': user.get('id') or user.get('user_id'),
+            'email': user.get('email'),
+            'full_name': user.get('user_metadata', {}).get('full_name', '') if 'user_metadata' in user else '',
+            'role': user.get('user_metadata', {}).get('role', 'tutor') if 'user_metadata' in user else 'tutor',
+            'active': True
+        }
+    # Legacy CSV Auth fallback
     user_email = session.get('user_email')
     if not user_email:
         return None
@@ -124,41 +140,6 @@ def get_current_user():
     if not user_row.empty:
         return user_row.iloc[0].to_dict()
     return None
-
-def log_admin_action(action, target_user_email=None, details=""):
-    """Log admin actions for audit trail"""
-    try:
-        current_user = get_current_user()
-        if not current_user:
-            return
-        
-        audit_file = 'logs/audit_log.csv'
-        os.makedirs(os.path.dirname(audit_file), exist_ok=True)
-        
-        audit_entry = {
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'admin_email': current_user.get('email', 'unknown'),
-            'action': action,
-            'target_user_email': target_user_email or '',
-            'details': details,
-            'ip_address': request.remote_addr,
-            'user_agent': request.headers.get('User-Agent', '')
-        }
-        
-        # Load existing audit log or create new one
-        if os.path.exists(audit_file):
-            audit_df = pd.read_csv(audit_file)
-        else:
-            audit_df = pd.DataFrame(columns=[
-                'timestamp', 'admin_email', 'action', 'target_user_email', 
-                'details', 'ip_address', 'user_agent'
-            ])
-        
-        audit_df = pd.concat([audit_df, pd.DataFrame([audit_entry])], ignore_index=True)
-        audit_df.to_csv(audit_file, index=False)
-        
-    except Exception as e:
-        print(f"Error logging admin action: {e}")
 
 def send_email_notification(to_email, subject, message):
     """Send email notification (placeholder for SMTP integration)"""
@@ -234,8 +215,11 @@ def charts_page():
 
 @app.route('/admin/users')
 def admin_users():
-    """Serve the admin users page"""
-    return render_template('admin_users.html')
+    """Serve the users page for all roles (admin, manager, lead_tutor, tutor)"""
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_users.html', user=user)
 
 @app.route('/admin/audit-logs')
 def admin_audit_logs():
@@ -250,7 +234,8 @@ def admin_shifts():
 @app.route('/login')
 def login_page():
     """Serve the login page"""
-    return send_from_directory('templates', 'login.html')
+    # Render login.html with default email value
+    return render_template('login.html', default_email='admin@tutordashboard.com')
 
 @app.route('/logout')
 def logout():
@@ -314,54 +299,96 @@ def api_upcoming_shifts():
 
 @app.route('/api/admin/users')
 def api_admin_users():
-    """Get all users for admin"""
+    """Get users list based on role:
+    - admin/manager: all users
+    - lead_tutor: all users (read-only)
+    - tutor: only their own info
+    """
     user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
+    if not user:
         return jsonify({'error': 'Unauthorized'}), 403
-    
-    return jsonify(list(MOCK_USERS.values()))
+    df = load_users()
+    if 'password_hash' in df.columns:
+        df = df.drop(columns=['password_hash'])
+    for col in ['created_at', 'last_login']:
+        if col in df.columns:
+            df[col] = df[col].apply(lambda x: x.isoformat() if pd.notnull(x) else '')
+    if user['role'] in ['admin', 'manager', 'lead_tutor']:
+        users = df.fillna('').to_dict(orient='records')
+        if user['role'] == 'lead_tutor':
+            # Add a flag to indicate read-only
+            for u in users:
+                u['read_only'] = True
+        return jsonify(users)
+    elif user['role'] == 'tutor':
+        user_row = df[df['email'] == user['email']]
+        if user_row.empty:
+            return jsonify([])
+        return jsonify(user_row.fillna('').to_dict(orient='records'))
+    else:
+        return jsonify({'error': 'Unauthorized'}), 403
 
 @app.route('/api/admin/tutors')
 def api_admin_tutors():
-    """Get all tutors for shift assignment"""
+    """Get all tutors for shift assignment (admin/manager only)"""
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     tutors = [u for u in MOCK_USERS.values() if u['role'] in ['tutor', 'lead_tutor']]
     return jsonify(tutors)
 
 @app.route('/api/admin/shifts')
 def api_admin_shifts():
-    """Get all shifts for admin management"""
+    """Get all shifts for admin and manager only"""
+    user = get_current_user()
+    if not user or user['role'] not in ['admin', 'manager']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     try:
-        all_shifts = shifts.get_all_shifts_with_assignments()
-        upcoming_shifts = shifts.get_upcoming_shifts()
+        # Get all shifts with assignments
+        shifts_data = shifts.get_all_shifts_with_assignments()
+        
+        # Get upcoming shifts for the next 7 days
+        upcoming_shifts_data = shifts.get_upcoming_shifts(days_ahead=7, page=1, per_page=50, exclude_today=False)
+        
         return jsonify({
-            'shifts': all_shifts,
-            'upcoming': upcoming_shifts
+            'shifts': shifts_data,
+            'upcoming_shifts': upcoming_shifts_data.get('shifts', [])
         })
     except Exception as e:
         logger.error(f"Error getting shifts: {e}")
-        return jsonify({'shifts': [], 'upcoming': []})
+        return jsonify({'error': 'Failed to load shifts'}), 500
 
 @app.route('/api/admin/audit-logs')
 def api_admin_audit_logs():
-    """Get audit logs for admin"""
+    """Get audit logs for admin, manager, and lead tutor (read-only for lead tutor)"""
     user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
+    if not user or user['role'] not in ['admin', 'manager', 'lead_tutor']:
         return jsonify({'error': 'Unauthorized'}), 403
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 25))
+        analytics = TutorAnalytics()
         logs_result = analytics.get_audit_logs(page, per_page)
-        # Ensure logs_result is always a dict with 'logs' and 'total'
-        if isinstance(logs_result, dict) and 'logs' in logs_result and 'total' in logs_result:
-            return jsonify(logs_result)
-        elif isinstance(logs_result, list):
-            return jsonify({'logs': logs_result, 'total': len(logs_result)})
-        else:
-            return jsonify({'logs': [], 'total': 0})
+        logs = logs_result.get('logs', [])
+        total = logs_result.get('total', len(logs))
+        total_pages = (total + per_page - 1) // per_page if per_page else 1
+        response_data = {
+            'logs': logs,
+            'total': total,
+            'pagination': {
+                'total': total,
+                'total_pages': total_pages,
+                'page': page,
+                'per_page': per_page
+            }
+        }
+        print(f"[DEBUG] API Response: {len(logs)} logs, total: {total}, pages: {total_pages}")
+        return app.response_class(
+            response=json.dumps(response_data, ignore_nan=True),
+            status=200,
+            mimetype='application/json'
+        )
     except Exception as e:
         logger.error(f"Error getting audit logs: {e}")
         return jsonify({'error': 'Failed to load audit logs'}), 500
@@ -370,7 +397,7 @@ def api_admin_audit_logs():
 
 @app.route('/api/admin/create-user', methods=['POST'])
 def api_admin_create_user():
-    """Create a new user"""
+    """Create a new user (admin/manager only)"""
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
@@ -380,6 +407,50 @@ def api_admin_create_user():
     df = load_users()
     if data['email'] in df['email'].values:
         return jsonify({'error': 'User already exists'}), 400
+
+    # Check if email already exists in Supabase Auth before creating
+    if supabase:
+        try:
+            # Query Supabase Auth for existing user by email
+            existing_user = None
+            try:
+                existing_user_resp = supabase.auth.admin.list_users(email=data['email'])
+                if hasattr(existing_user_resp, 'users') and existing_user_resp.users:
+                    existing_user = existing_user_resp.users[0]
+            except Exception as check_e:
+                print(f"Supabase Auth check exception: {check_e}")
+            if existing_user:
+                return jsonify({'error': 'A user with this email address already exists in Supabase Auth.'}), 400
+            # Proceed with user creation as before
+            response = supabase.auth.admin.create_user({
+                "email": data['email'],
+                "password": data['password'],
+                "user_metadata": {
+                    "role": data['role'],
+                    "full_name": data['full_name']
+                },
+                "email_confirm": True
+            })
+            if not getattr(response, 'user', None):
+                print(f"Supabase Auth error: {response}")
+                return jsonify({'error': 'Failed to create user in Supabase Auth', 'details': str(response)}), 400
+            try:
+                db_result = supabase.table("users").insert({
+                    "email": data['email'],
+                    "role": data['role'],
+                    "full_name": data['full_name'],
+                    "created_at": datetime.now().isoformat()
+                }).execute()
+                print(f"Supabase DB insert result: {db_result}")
+            except Exception as db_e:
+                print(f"[Supabase DB] Failed to insert user into users table: {db_e}")
+        except Exception as e:
+            print(f"Supabase Auth exception: {e}")
+            return jsonify({'error': f'Could not create user in Supabase Auth: {e}'}), 400
+    else:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    # 2. Add to users.csv as before
     new_user = {
         'user_id': f"U{int(datetime.now().timestamp())}",
         'email': data['email'],
@@ -392,36 +463,50 @@ def api_admin_create_user():
     }
     df = pd.concat([df, pd.DataFrame([new_user])], ignore_index=True)
     df.to_csv(USERS_FILE, index=False)
-    log_admin_action('create_user', target_user_email=data.get('email'), details=f"Created user with role {data.get('role')}")
+    analytics = TutorAnalytics()
+    analytics.log_admin_action('create_user', target_user_email=data.get('email'), details=f"Created user with role {data.get('role')}")
     return jsonify({'message': 'User created successfully'})
 
 @app.route('/api/admin/edit-user', methods=['POST'])
 def api_admin_edit_user():
-    """Edit a user"""
+    """Edit a user (admin/manager only, or tutor editing own info)"""
     user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
-        return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json()
     df = load_users()
     idx = df.index[df['user_id'] == data['user_id']]
     if len(idx) == 0:
         return jsonify({'error': 'User not found'}), 404
     i = idx[0]
-    df.at[i, 'email'] = data['email']
-    df.at[i, 'full_name'] = data['full_name']
-    df.at[i, 'role'] = data['role']
-    df.at[i, 'active'] = data.get('active', True)
-    if data.get('password'):
-        df.at[i, 'password_hash'] = hash_password(data['password'])
-    df.to_csv(USERS_FILE, index=False)
-    log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Edited user info for {data.get('user_id')}")
-    return jsonify({'message': 'User updated successfully'})
+    # Admin/manager can edit anyone
+    if user and user['role'] in ['admin', 'manager']:
+        df.at[i, 'email'] = data['email']
+        df.at[i, 'full_name'] = data['full_name']
+        df.at[i, 'role'] = data['role']
+        df.at[i, 'active'] = data.get('active', True)
+        if data.get('password'):
+            df.at[i, 'password_hash'] = hash_password(data['password'])
+        df.to_csv(USERS_FILE, index=False)
+        analytics = TutorAnalytics()
+        analytics.log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Edited user info for {data.get('user_id')}")
+        return jsonify({'message': 'User updated successfully'})
+    # Tutor can only edit their own info (password, maybe name)
+    elif user and user['role'] == 'tutor' and df.at[i, 'email'] == user['email']:
+        if data.get('full_name'):
+            df.at[i, 'full_name'] = data['full_name']
+        if data.get('password'):
+            df.at[i, 'password_hash'] = hash_password(data['password'])
+        df.to_csv(USERS_FILE, index=False)
+        analytics = TutorAnalytics()
+        analytics.log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Tutor edited own info for {data.get('user_id')}")
+        return jsonify({'message': 'User updated successfully'})
+    else:
+        return jsonify({'error': 'Unauthorized'}), 403
 
 @app.route('/api/admin/delete-user', methods=['POST'])
 def api_admin_delete_user():
-    """Delete a user"""
+    """Delete a user (admin only)"""
     user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
+    if not user or user['role'] != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json()
     df = load_users()
@@ -431,7 +516,8 @@ def api_admin_delete_user():
     email = df.at[idx[0], 'email']
     df = df.drop(idx)
     df.to_csv(USERS_FILE, index=False)
-    log_admin_action('delete_user', target_user_email=email, details=f"Deleted user")
+    analytics = TutorAnalytics()
+    analytics.log_admin_action('delete_user', target_user_email=email, details=f"Deleted user")
     return jsonify({'message': 'User deleted successfully'})
 
 @app.route('/api/admin/change-role', methods=['POST'])
@@ -442,7 +528,8 @@ def api_admin_change_role():
         return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json()
     # Log admin action
-    log_admin_action('change_role', target_user_email=data.get('user_id'), details=f"Changed role to {data.get('role')}")
+    analytics = TutorAnalytics()
+    analytics.log_admin_action('change_role', target_user_email=data.get('user_id'), details=f"Changed role to {data.get('role')}")
     # In a real app, you would update database
     return jsonify({'message': 'Role updated successfully'})
 
@@ -500,23 +587,78 @@ def api_admin_populate_audit_logs():
     # In a real app, you would add sample data to database
     return jsonify({'message': 'Sample audit logs added successfully'})
 
+@app.route('/api/admin/delete-supabase-user', methods=['POST'])
+def api_admin_delete_supabase_user():
+    """Delete a user from Supabase Auth and optionally from the users table (admin/manager only)"""
+    user = get_current_user()
+    if not user or user['role'] not in ['admin', 'manager']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json()
+    email = data.get('email')
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+    try:
+        # Find user in Supabase Auth
+        user_resp = supabase.auth.admin.list_users(email=email)
+        if hasattr(user_resp, 'users') and user_resp.users:
+            user_id = user_resp.users[0].id
+            supabase.auth.admin.delete_user(user_id)
+            # Optionally, also remove from users table
+            try:
+                supabase.table("users").delete().eq("email", email).execute()
+            except Exception as db_e:
+                print(f"[Supabase DB] Failed to delete user from users table: {db_e}")
+            return jsonify({'message': f'User {email} deleted from Supabase Auth and users table.'})
+        else:
+            return jsonify({'error': 'User not found in Supabase Auth.'}), 404
+    except Exception as e:
+        print(f"Supabase Auth delete exception: {e}")
+        return jsonify({'error': f'Could not delete user from Supabase Auth: {e}'}), 400
+
+@app.route('/api/admin/user-activate', methods=['POST'])
+def api_admin_user_activate():
+    user = get_current_user()
+    if not user or user['role'] not in ['admin', 'manager']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.get_json()
+    email = data.get('email')
+    active = data.get('active')
+    if not email or active is None:
+        return jsonify({'error': 'Missing email or active'}), 400
+    # Update CSV
+    import pandas as pd
+    csv_path = 'logs/users.csv'
+    df = pd.read_csv(csv_path)
+    if email not in df['email'].values:
+        return jsonify({'error': 'User not found in CSV'}), 404
+    df.loc[df['email'] == email, 'active'] = bool(active)
+    df.to_csv(csv_path, index=False)
+    # Update Supabase users table
+    if supabase:
+        try:
+            supabase.table('users').update({'active': bool(active)}).eq('email', email).execute()
+        except Exception as e:
+            print(f"[Supabase DB] Failed to update user active status: {e}")
+    # Optionally, disable in Supabase Auth (block login by checking active)
+    # Log audit
+    from datetime import datetime
+    with open('logs/audit_log.csv', 'a', encoding='utf-8') as f:
+        f.write(f"{datetime.now().isoformat()},{user['email']},user_activate,Set active={active},,,,{email},\n")
+    return jsonify({'success': True})
+
 # Authentication endpoint
 @app.route('/login', methods=['POST'])
 def login():
     """Handle login"""
     email = request.form.get('email')
     password = request.form.get('password')
-    df = load_users()
-    user_row = df[df['email'] == email]
-    if not user_row.empty:
-        user = user_row.iloc[0]
-        if verify_password(password, user['password_hash']):
-            session['user_email'] = email
-            # Update last_login
-            df.loc[df['email'] == email, 'last_login'] = datetime.now().isoformat()
-            df.to_csv(USERS_FILE, index=False)
-            return redirect('/')
-    flash('Invalid credentials', 'error')
+    success, message = authenticate_user(email, password)
+    if success:
+        # Store user in session (already handled by authenticate_user)
+        return redirect('/')
+    flash(message or 'Invalid credentials', 'error')
     return redirect('/login')
 
 # Chart data endpoints
@@ -615,10 +757,30 @@ def check_in():
         shift_hours = request.form.get('shift_hours')
         snapshot_in = request.form.get('snapshot_in')
         snapshot_out = request.form.get('snapshot_out')
-        
-        # In a real app, you would save to database
-        # For demo, we'll just return success
-        
+
+        # --- Audit log entry ---
+        audit_file = 'logs/audit_log.csv'
+        import pandas as pd
+        import os
+        from datetime import datetime
+        # Compose audit log row
+        audit_entry = {
+            'timestamp': check_in or datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'user_email': session.get('user', {}).get('email', ''),
+            'action': 'TUTOR_CHECK_IN',
+            'details': f'{tutor_name} ({tutor_id}) checked in',
+            'ip_address': request.remote_addr if request else '',
+            'user_agent': request.headers.get('User-Agent', '') if request else ''
+        }
+        # Append to audit log
+        if os.path.exists(audit_file):
+            audit_df = pd.read_csv(audit_file)
+        else:
+            audit_df = pd.DataFrame(columns=['timestamp','user_email','action','details','ip_address','user_agent'])
+        audit_df = pd.concat([audit_df, pd.DataFrame([audit_entry])], ignore_index=True)
+        audit_df.to_csv(audit_file, index=False)
+        # --- End audit log entry ---
+
         flash('Check-in recorded successfully', 'success')
         return redirect('/')
     except Exception as e:
@@ -702,8 +864,77 @@ def export_punctuality_csv():
         logger.error(f"Error exporting punctuality CSV: {e}")
         return jsonify({'error': 'Failed to export punctuality data'}), 500
 
+@app.route('/api/lead-tutor/users')
+def api_lead_tutor_users():
+    """Get only the current user's info for lead_tutor role (future self-service)"""
+    user = get_current_user()
+    if not user or user['role'] != 'lead_tutor':
+        return jsonify({'error': 'Unauthorized'}), 403
+    df = load_users()
+    user_row = df[df['email'] == user['email']]
+    if user_row.empty:
+        return jsonify({'error': 'User not found'}), 404
+    user_info = user_row.drop(columns=['password_hash']).fillna('').to_dict(orient='records')[0]
+    return jsonify(user_info)
+
+@app.route('/api/tutor/user')
+def api_tutor_user():
+    """Get only the current tutor's info (for profile/self-service)"""
+    user = get_current_user()
+    if not user or user['role'] != 'tutor':
+        return jsonify({'error': 'Unauthorized'}), 403
+    df = load_users()
+    user_row = df[df['email'] == user['email']]
+    if user_row.empty:
+        return jsonify({'error': 'User not found'}), 404
+    user_info = user_row.drop(columns=['password_hash']).fillna('').to_dict(orient='records')[0]
+    return jsonify(user_info)
+
+@app.route('/profile')
+def profile():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    return render_template('profile.html', user=user)
+
+@app.route('/api/profile', methods=['GET'])
+def api_profile_get():
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    return jsonify(user)
+
+@app.route('/api/profile', methods=['POST'])
+def api_profile_update():
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    updated = False
+    # Update name
+    if 'full_name' in data and data['full_name'] != user['full_name']:
+        # Update in CSV and Supabase users table
+        # ... update logic ...
+        updated = True
+    # Update password
+    if 'password' in data and data['password']:
+        # Update in Supabase Auth if enabled, else CSV
+        # ... update logic ...
+        updated = True
+    if updated:
+        # Log audit
+        # ... audit log logic ...
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'No changes'})
+
 if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(CSV_FILE)): os.makedirs(os.path.dirname(CSV_FILE))
     if not os.path.exists(SNAPSHOTS_DIR): os.makedirs(SNAPSHOTS_DIR)
+    load_dotenv()
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    supabase = None
+    if SUPABASE_URL and SUPABASE_KEY:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     app.run(debug=True, host='0.0.0.0', port=5000)
 

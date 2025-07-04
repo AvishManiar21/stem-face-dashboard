@@ -109,7 +109,7 @@
         
         <form method="POST">
             <div class="form-floating">
-                <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required value="{{ default_email|default('') }}">
                 <label for="email"><i class="fas fa-envelope"></i> Email address</label>
             </div>
             

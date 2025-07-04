@@ -26,6 +26,7 @@
         <ul class="dropdown-menu dropdown-menu-end">
           <li><h6 class="dropdown-header" id="userEmail">Loading...</h6></li>
           <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="/profile"><i class="fas fa-user"></i> Profile</a></li>
           <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
       </div>
@@ -40,6 +41,13 @@
       document.getElementById('userEmail').textContent = user.email;
       if (user.role !== 'admin' && user.role !== 'manager') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+      }
+      if (user.role !== 'admin' && user.role !== 'manager') {
+        document.querySelectorAll('.manager-only').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.lead-tutor-only').forEach(el => el.style.display = 'none');
+      }
+      if (user.role === 'tutor' || user.role === 'lead_tutor') {
+        document.querySelectorAll('.admin-only, .manager-only, .lead-tutor-only').forEach(el => el.style.display = 'none');
       }
     });
 })(); 
