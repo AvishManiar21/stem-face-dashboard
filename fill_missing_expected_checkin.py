@@ -14,8 +14,8 @@ else:
 if 'expected_check_in' not in df.columns:
     df['expected_check_in'] = df['check_in'] if 'check_in' in df.columns else ''
 else:
-    missing = df['expected_check_in'].isna() | (df['expected_check_in'] == '')
-    df.loc[missing, 'expected_check_in'] = df.loc[missing, 'check_in']
+missing = df['expected_check_in'].isna() | (df['expected_check_in'] == '')
+df.loc[missing, 'expected_check_in'] = df.loc[missing, 'check_in']
 
 if 'expected_check_out' not in df.columns:
     df['expected_check_out'] = df['check_out'] if 'check_out' in df.columns else ''

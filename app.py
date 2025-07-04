@@ -148,10 +148,58 @@ def send_email_notification(to_email, subject, message):
         print(f"EMAIL NOTIFICATION TO: {to_email}")
         print(f"SUBJECT: {subject}")
         print(f"MESSAGE: {message}")
+        
+        # TODO: Implement actual SMTP integration
+        # Example SMTP configuration:
+        # import smtplib
+        # from email.mime.text import MIMEText
+        # from email.mime.multipart import MIMEMultipart
+        # 
+        # msg = MIMEMultipart()
+        # msg['From'] = 'noreply@tutordashboard.com'
+        # msg['To'] = to_email
+        # msg['Subject'] = subject
+        # msg.attach(MIMEText(message, 'plain'))
+        # 
+        # server = smtplib.SMTP('smtp.gmail.com', 587)
+        # server.starttls()
+        # server.login('your-email@gmail.com', 'your-app-password')
+        # server.send_message(msg)
+        # server.quit()
+        
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
         return False
+
+def send_shift_alert_email(tutor_email, tutor_name, alert_type, details):
+    """Send specific shift-related alert emails"""
+    subject_map = {
+        'late_checkin': f'Late Check-in Alert - {tutor_name}',
+        'early_checkout': f'Early Check-out Alert - {tutor_name}',
+        'short_shift': f'Short Shift Alert - {tutor_name}',
+        'overlapping': f'Overlapping Shifts Alert - {tutor_name}',
+        'missed_shift': f'Missed Shift Alert - {tutor_name}',
+        'no_checkout': f'Missing Check-out Alert - {tutor_name}'
+    }
+    
+    subject = subject_map.get(alert_type, f'Shift Alert - {tutor_name}')
+    
+    message = f"""
+Dear {tutor_name},
+
+This is an automated alert from the Tutor Dashboard regarding your shift:
+
+ALERT TYPE: {alert_type.replace('_', ' ').title()}
+DETAILS: {details}
+
+Please review your schedule and take appropriate action.
+
+Best regards,
+Tutor Dashboard System
+    """
+    
+    return send_email_notification(tutor_email, subject, message)
 
 def load_data():
     try:
@@ -230,6 +278,11 @@ def admin_audit_logs():
 def admin_shifts():
     """Serve the admin shifts page"""
     return send_from_directory('templates', 'admin_shifts.html')
+
+@app.route('/calendar')
+def calendar_page():
+    """Serve the attendance calendar page"""
+    return render_template('calendar.html')
 
 @app.route('/login')
 def login_page():
@@ -526,12 +579,68 @@ def api_admin_change_role():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
+    
     data = request.get_json()
-    # Log admin action
+    user_id = data.get('user_id')
+    new_role = data.get('role')
+    if not user_id or not new_role:
+        return jsonify({'error': 'Missing user_id or role'}), 400
+
+    # Validate role
+    valid_roles = ['tutor', 'lead_tutor', 'manager', 'admin']
+    if new_role not in valid_roles:
+        return jsonify({'error': 'Invalid role'}), 400
+
+    # Load current user data
+    import pandas as pd
+    csv_path = 'logs/users.csv'
+    df = pd.read_csv(csv_path)
+    
+    # Find target user
+    target_user = df[df['user_id'].astype(str) == str(user_id)]
+    if target_user.empty:
+        return jsonify({'error': 'User not found'}), 404
+    
+    target_user = target_user.iloc[0]
+    old_role = target_user['role']
+    target_email = target_user['email']
+    
+    # Prevent changing your own role
+    if target_email == user['email']:
+        return jsonify({'error': 'You cannot change your own role'}), 400
+    
+    # Prevent demoting the last admin
+    if old_role == 'admin' and new_role != 'admin':
+        admin_count = len(df[df['role'] == 'admin'])
+        if admin_count <= 1:
+            return jsonify({'error': 'Cannot demote the last admin user'}), 400
+    
+    # Prevent managers from promoting to admin (only admins can create other admins)
+    if user['role'] == 'manager' and new_role == 'admin':
+        return jsonify({'error': 'Managers cannot promote users to admin'}), 403
+    
+    # Update CSV
+    df.loc[df['user_id'].astype(str) == str(user_id), 'role'] = new_role
+    df.to_csv(csv_path, index=False)
+
+    # Update Supabase users table
+    if supabase:
+        try:
+            supabase.table('users').update({'role': new_role}).eq('user_id', user_id).execute()
+        except Exception as e:
+            print(f"[Supabase DB] Failed to update user role: {e}")
+
+    # Log admin action with more details
     analytics = TutorAnalytics()
-    analytics.log_admin_action('change_role', target_user_email=data.get('user_id'), details=f"Changed role to {data.get('role')}")
-    # In a real app, you would update database
-    return jsonify({'message': 'Role updated successfully'})
+    details = f"Changed role from {old_role} to {new_role} for user {target_email}"
+    analytics.log_admin_action('change_role', target_user_email=target_email, details=details)
+    
+    return jsonify({
+        'message': 'Role updated successfully',
+        'old_role': old_role,
+        'new_role': new_role,
+        'user_name': target_user['full_name']
+    })
 
 @app.route('/api/admin/create-shift', methods=['POST'])
 def api_admin_create_shift():
@@ -657,7 +766,7 @@ def login():
     success, message = authenticate_user(email, password)
     if success:
         # Store user in session (already handled by authenticate_user)
-        return redirect('/')
+            return redirect('/')
     flash(message or 'Invalid credentials', 'error')
     return redirect('/login')
 
@@ -757,7 +866,7 @@ def check_in():
         shift_hours = request.form.get('shift_hours')
         snapshot_in = request.form.get('snapshot_in')
         snapshot_out = request.form.get('snapshot_out')
-
+        
         # --- Audit log entry ---
         audit_file = 'logs/audit_log.csv'
         import pandas as pd
@@ -780,7 +889,7 @@ def check_in():
         audit_df = pd.concat([audit_df, pd.DataFrame([audit_entry])], ignore_index=True)
         audit_df.to_csv(audit_file, index=False)
         # --- End audit log entry ---
-
+        
         flash('Check-in recorded successfully', 'success')
         return redirect('/')
     except Exception as e:
@@ -926,6 +1035,353 @@ def api_profile_update():
         # ... audit log logic ...
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'No changes'})
+
+@app.route('/api/dashboard-alerts')
+def api_dashboard_alerts():
+    """Return dashboard alerts for the current user (or all users if admin/manager)"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'alerts': []})
+
+    import pandas as pd
+    from datetime import datetime, timedelta
+    alerts = []
+    face_log_path = 'logs/face_log_with_expected.csv'
+    shifts_path = 'logs/shifts.csv'
+    assignments_path = 'logs/shift_assignments.csv'
+
+    try:
+        face_log = pd.read_csv(face_log_path)
+        shifts_df = pd.read_csv(shifts_path)
+        assignments_df = pd.read_csv(assignments_path)
+    except Exception as e:
+        return jsonify({'alerts': [f'Error loading logs: {e}']})
+
+    today = datetime.now().date()
+    # Filter logs for today - use check_in column instead of timestamp
+    today_logs = face_log[pd.to_datetime(face_log['check_in']).dt.date == today]
+
+    # Only show relevant logs for non-admins
+    if user['role'] not in ['admin', 'manager']:
+        # Filter by tutor_id instead of user_email since we don't have user_email in this format
+        today_logs = today_logs[today_logs['tutor_id'] == user.get('tutor_id', 0)]
+        assignments_df = assignments_df[assignments_df['tutor_email'] == user['email']]
+
+    # Late check-in: checked in after expected start time
+    for _, row in today_logs.iterrows():
+        if pd.notnull(row.get('expected_check_in')):
+            try:
+                checkin_time = datetime.strptime(row['check_in'], '%Y-%m-%d %H:%M:%S')
+                expected_time = datetime.strptime(row['expected_check_in'], '%Y-%m-%d %H:%M:%S')
+                if checkin_time > expected_time:
+                    time_diff = (checkin_time - expected_time).total_seconds() / 60  # minutes
+                    alert_msg = f"Late check-in: {row.get('tutor_name', 'Tutor')} (Expected {expected_time.strftime('%H:%M')}, Checked in {checkin_time.strftime('%H:%M')}, {time_diff:.0f} min late)"
+                    alerts.append(alert_msg)
+                    
+                    # Send email notification for late check-in
+                    if user['role'] in ['admin', 'manager']:
+                        send_shift_alert_email(
+                            f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
+                            row.get('tutor_name', 'Tutor'),
+                            'late_checkin',
+                            alert_msg
+                        )
+            except Exception as e:
+                continue
+    # Early check-out: checked out before expected end time
+    for _, row in today_logs.iterrows():
+        if pd.notnull(row.get('expected_check_out')) and pd.notnull(row.get('check_out')):
+            try:
+                checkout_time = datetime.strptime(row['check_out'], '%Y-%m-%d %H:%M:%S')
+                expected_time = datetime.strptime(row['expected_check_out'], '%Y-%m-%d %H:%M:%S')
+                if checkout_time < expected_time:
+                    time_diff = (expected_time - checkout_time).total_seconds() / 60  # minutes
+                    alert_msg = f"Early check-out: {row.get('tutor_name', 'Tutor')} (Expected {expected_time.strftime('%H:%M')}, Checked out {checkout_time.strftime('%H:%M')}, {time_diff:.0f} min early)"
+                    alerts.append(alert_msg)
+                    
+                    # Send email notification for early check-out
+                    if user['role'] in ['admin', 'manager']:
+                        send_shift_alert_email(
+                            f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
+                            row.get('tutor_name', 'Tutor'),
+                            'early_checkout',
+                            alert_msg
+                        )
+            except Exception as e:
+                continue
+    # Short shift: duration < 1 hour
+    for _, row in today_logs.iterrows():
+        if pd.notnull(row.get('check_out')) and row.get('shift_hours', 0) < 1.0:
+            alert_msg = f"Short shift: {row.get('tutor_name', 'Tutor')} (Duration: {row.get('shift_hours', 0):.1f}h)"
+            alerts.append(alert_msg)
+            
+            # Send email notification for short shift
+            if user['role'] in ['admin', 'manager']:
+                send_shift_alert_email(
+                    f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
+                    row.get('tutor_name', 'Tutor'),
+                    'short_shift',
+                    alert_msg
+                )
+    
+    # Missing check-outs: tutors who checked in but didn't check out
+    for _, row in today_logs.iterrows():
+        if pd.isna(row.get('check_out')):
+            checkin_time = datetime.strptime(row['check_in'], '%Y-%m-%d %H:%M:%S')
+            alert_msg = f"Missing check-out: {row.get('tutor_name', 'Tutor')} (Checked in at {checkin_time.strftime('%H:%M')})"
+            alerts.append(alert_msg)
+            
+            # Send email notification for missing check-out
+            if user['role'] in ['admin', 'manager']:
+                send_shift_alert_email(
+                    f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
+                    row.get('tutor_name', 'Tutor'),
+                    'no_checkout',
+                    alert_msg
+                )
+    
+    # Overlapping sessions: check for overlapping assignments (simplified)
+    # This would require more complex logic with shift assignments
+    # For now, we'll skip this check as it's not critical for calendar functionality
+    pass
+    
+    return jsonify({'alerts': alerts})
+
+@app.route('/api/notification-settings', methods=['GET'])
+def api_notification_settings():
+    """Get notification settings for the current user"""
+    user = get_current_user()
+    if not user or user['role'] not in ['admin', 'manager']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Default notification settings
+    settings = {
+        'email_notifications': True,
+        'late_checkin_alerts': True,
+        'early_checkout_alerts': True,
+        'short_shift_alerts': True,
+        'overlapping_shift_alerts': True,
+        'missing_checkout_alerts': True,
+        'smtp_configured': False,  # Will be True when SMTP is properly configured
+        'notification_email': user['email']
+    }
+    
+    return jsonify(settings)
+
+@app.route('/api/notification-settings', methods=['POST'])
+def api_update_notification_settings():
+    """Update notification settings"""
+    user = get_current_user()
+    if not user or user['role'] not in ['admin', 'manager']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    
+    # In a real implementation, you would save these settings to a database
+    # For now, we'll just return success
+    updated_settings = {
+        'email_notifications': data.get('email_notifications', True),
+        'late_checkin_alerts': data.get('late_checkin_alerts', True),
+        'early_checkout_alerts': data.get('early_checkout_alerts', True),
+        'short_shift_alerts': data.get('short_shift_alerts', True),
+        'overlapping_shift_alerts': data.get('overlapping_shift_alerts', True),
+        'missing_checkout_alerts': data.get('missing_checkout_alerts', True),
+        'notification_email': data.get('notification_email', user['email'])
+    }
+    
+    # Log the settings update
+    analytics = TutorAnalytics()
+    analytics.log_admin_action('update_notification_settings', 
+                              target_user_email=user['email'], 
+                              details=f"Updated notification settings: {updated_settings}")
+    
+    return jsonify({'message': 'Notification settings updated successfully', 'settings': updated_settings})
+
+@app.route('/api/forecasting-data')
+def api_forecasting_data():
+    """Get comprehensive forecasting data"""
+    try:
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        forecasting_data = analytics.get_forecasting_data()
+        return jsonify(forecasting_data)
+    except Exception as e:
+        logger.error(f"Error getting forecasting data: {e}")
+        return jsonify({'error': 'Failed to load forecasting data'}), 500
+
+@app.route('/api/ai-insights')
+def api_ai_insights():
+    """Get AI-powered insights and recommendations"""
+    try:
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        
+        insights_data = {
+            'nlp_summary': analytics.generate_nlp_summary(),
+            'ai_recommendations': analytics.get_ai_recommendations(),
+            'optimization_suggestions': analytics.get_optimization_suggestions(),
+            'risk_analysis': analytics.analyze_risks(),
+            'advanced_metrics': analytics.get_advanced_metrics()
+        }
+        
+        return jsonify(insights_data)
+    except Exception as e:
+        logger.error(f"Error getting AI insights: {e}")
+        return jsonify({'error': 'Failed to load AI insights'}), 500
+
+@app.route('/api/calendar-data')
+def api_calendar_data():
+    """Get calendar data for attendance view"""
+    try:
+        import calendar
+        from datetime import datetime, timedelta
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        # Print first few check_in values for debugging
+        logging.warning(f"First 5 check_in values: {analytics.data['check_in'].head().tolist()}")
+        # Get current month and year
+        now = datetime.now()
+        year = request.args.get('year', now.year, type=int)
+        month = request.args.get('month', now.month, type=int)
+        # Get calendar data
+        cal = calendar.monthcalendar(year, month)
+        # Get attendance data for the month
+        start_date = datetime(year, month, 1)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
+        # Filter data for the month
+        month_data = analytics.data[
+            (analytics.data['check_in'] >= start_date) & 
+            (analytics.data['check_in'] <= end_date)
+        ]
+        # Print number of rows after filtering
+        logging.warning(f"Rows for {year}-{month:02d}: {len(month_data)}")
+        # Group by date
+        daily_data = {}
+        for date in month_data['check_in'].dt.date.unique():
+            day_data = month_data[month_data['check_in'].dt.date == date]
+            daily_data[date] = {
+                'sessions': int(len(day_data)),
+                'total_hours': float(day_data['shift_hours'].sum()),
+                'tutors': int(day_data['tutor_id'].nunique()),
+                'status': str(analytics.get_day_status(day_data)),
+                'has_issues': bool(analytics.day_has_issues(day_data)),
+                'sessions_data': _serialize_sessions_data(day_data.to_dict('records'))
+            }
+        
+        # Create calendar matrix with attendance data
+        calendar_data = []
+        for week in cal:
+            week_data = []
+            for day in week:
+                if day == 0:
+                    week_data.append(None)  # Empty day
+                else:
+                    date = datetime(year, month, day).date()
+                    day_info = daily_data.get(date, {
+                        'sessions': 0,
+                        'total_hours': 0.0,
+                        'tutors': 0,
+                        'status': 'inactive',
+                        'has_issues': False,
+                        'sessions_data': []
+                    })
+                    week_data.append({
+                        'day': day,
+                        'date': date.isoformat(),
+                        **day_info
+                    })
+            calendar_data.append(week_data)
+        
+        # Convert calendar matrix to days object for frontend
+        days = {}
+        for week in calendar_data:
+            for day in week:
+                if day and day.get('day'):
+                    days[day['day']] = {
+                        'sessions': day['sessions'],
+                        'total_hours': day['total_hours'],
+                        'tutors': day['tutors'],
+                        'status': day['status'],
+                        'has_issues': day['has_issues'],
+                        'sessions_data': day['sessions_data']
+                    }
+        
+        return jsonify({
+            'days': days,
+            'year': year,
+            'month': month,
+            'month_name': calendar.month_name[month],
+            'prev_month': {'year': year if month > 1 else year - 1, 'month': month - 1 if month > 1 else 12},
+            'next_month': {'year': year if month < 12 else year + 1, 'month': month + 1 if month < 12 else 1}
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting calendar data: {e}")
+        return jsonify({'error': 'Failed to load calendar data'}), 500
+
+def _serialize_sessions_data(sessions):
+    """Helper function to serialize sessions data for JSON"""
+    import numpy as np
+    serialized = []
+    for session in sessions:
+        serialized_session = {}
+        for key, value in session.items():
+            if pd.isna(value):
+                serialized_session[key] = None
+            elif isinstance(value, (np.integer, np.int64)):
+                serialized_session[key] = int(value)
+            elif isinstance(value, (np.floating, np.float64)):
+                serialized_session[key] = float(value)
+            elif isinstance(value, (np.bool_, bool)):
+                serialized_session[key] = bool(value)
+            elif isinstance(value, (pd.Timestamp, datetime)):
+                serialized_session[key] = value.isoformat() if pd.notna(value) else None
+            else:
+                serialized_session[key] = str(value) if value is not None else None
+        serialized.append(serialized_session)
+    return serialized
+
+@app.route('/api/calendar-day-details')
+def api_calendar_day_details():
+    """Get detailed sessions for a specific day"""
+    try:
+        from datetime import datetime
+        
+        date_str = request.args.get('date')
+        if not date_str:
+            return jsonify({'error': 'Date parameter required'}), 400
+        
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        
+        # Filter data for the specific date
+        day_data = analytics.data[analytics.data['check_in'].dt.date == target_date]
+        
+        sessions = []
+        for _, session in day_data.iterrows():
+            sessions.append({
+                'tutor_id': session['tutor_id'],
+                'tutor_name': session['tutor_name'],
+                'check_in': session['check_in'].strftime('%H:%M'),
+                'check_out': session['check_out'].strftime('%H:%M') if pd.notna(session['check_out']) else None,
+                'shift_hours': session['shift_hours'],
+                'status': analytics.get_session_status(session),
+                'snapshot_in': session['snapshot_in'],
+                'snapshot_out': session['snapshot_out']
+            })
+        
+        return jsonify({
+            'date': target_date.isoformat(),
+            'sessions': sessions,
+            'total_sessions': len(sessions),
+            'total_hours': day_data['shift_hours'].sum(),
+            'unique_tutors': day_data['tutor_id'].nunique()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting day details: {e}")
+        return jsonify({'error': 'Failed to load day details'}), 500
 
 if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(CSV_FILE)): os.makedirs(os.path.dirname(CSV_FILE))

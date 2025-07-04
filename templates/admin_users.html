@@ -39,6 +39,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#usersPane" type="button" role="tab">Users</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notificationsPane" type="button" role="tab">Notifications</button>
+            </li>
         </ul>
         <div class="tab-content" id="adminTabsContent">
             <div class="tab-pane fade show active" id="usersPane" role="tabpanel">
@@ -55,6 +58,11 @@
                 <!-- Flash Messages -->
                 <div id="flashMessages">
                     <!-- Flash messages will be populated here -->
+                </div>
+
+                <!-- Role Statistics -->
+                <div class="row mb-4" id="roleStats">
+                    <!-- Role statistics will be populated here -->
                 </div>
 
                 <!-- Users Grid -->
@@ -250,14 +258,39 @@
         function displayUsers() {
             const container = document.getElementById('usersGrid');
             const emptyState = document.getElementById('emptyState');
+            const roleStatsContainer = document.getElementById('roleStats');
             
             if (!users || users.length === 0) {
                 container.innerHTML = '';
+                roleStatsContainer.innerHTML = '';
                 emptyState.style.display = 'block';
                 return;
             }
             
             emptyState.style.display = 'none';
+            
+            // Calculate role statistics
+            const roleStats = {};
+            users.forEach(user => {
+                roleStats[user.role] = (roleStats[user.role] || 0) + 1;
+            });
+            
+            // Display role statistics
+            let statsHtml = '';
+            Object.entries(roleStats).forEach(([role, count]) => {
+                const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                statsHtml += `
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-primary mb-1">${count}</h4>
+                                <p class="text-muted mb-0">${roleDisplay}${count > 1 ? 's' : ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            roleStatsContainer.innerHTML = statsHtml;
             
             let html = '';
             users.forEach(user => {
@@ -295,8 +328,8 @@
                                         <input class="form-check-input activate-toggle" type="checkbox" id="activeSwitch-${user.email}" data-email="${user.email}" ${user.active ? 'checked' : ''} ${user.email === window.userData.email ? 'disabled' : ''}>
                                         <label class="form-check-label" for="activeSwitch-${user.email}">
                                             <span class="badge bg-${user.active ? 'success' : 'secondary'}">
-                                                ${user.active ? 'Active' : 'Inactive'}
-                                            </span>
+                                        ${user.active ? 'Active' : 'Inactive'}
+                                    </span>
                                         </label>
                                     </div>
                                 </div>
@@ -313,8 +346,13 @@
                                         <option value="tutor" ${user.role === 'tutor' ? 'selected' : ''}>Tutor</option>
                                         <option value="lead_tutor" ${user.role === 'lead_tutor' ? 'selected' : ''}>Lead Tutor</option>
                                         <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
-                                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''} ${window.userData.role === 'manager' ? 'disabled' : ''}>Admin ${window.userData.role === 'manager' ? '(Admin Only)' : ''}</option>
                                     </select>
+                                    ${user.email === window.userData.email ? `
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> You cannot change your own role
+                                        </small>
+                                    ` : ''}
                                 </div>
                                 ` : ''}
                             </div>
@@ -371,6 +409,31 @@
         async function changeRole(userId, newRole) {
             if (!newRole) return;
             
+            // Find the user to get current role and name
+            const user = users.find(u => u.user_id === userId);
+            if (!user) {
+                showFlashMessage('User not found', 'error');
+                return;
+            }
+            
+            // Don't allow changing your own role
+            if (user.email === window.userData.email) {
+                showFlashMessage('You cannot change your own role', 'error');
+                return;
+            }
+            
+            // Confirmation dialog
+            const confirmMessage = `Are you sure you want to change ${user.full_name}'s role from "${user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}" to "${newRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}"?`;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Show loading state
+            const selectElement = event.target;
+            const originalValue = selectElement.value;
+            selectElement.disabled = true;
+            selectElement.innerHTML = '<option>Updating...</option>';
+            
             try {
                 const response = await fetch('/api/admin/change-role', {
                     method: 'POST',
@@ -384,14 +447,22 @@
                 });
                 
                 if (response.ok) {
-                    showFlashMessage('Role updated successfully', 'success');
+                    showFlashMessage(`Successfully changed ${user.full_name}'s role to ${newRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`, 'success');
                     loadUsers(); // Reload users
                 } else {
-                    showFlashMessage('Error updating role', 'error');
+                    const errorData = await response.json().catch(() => ({}));
+                    showFlashMessage(errorData.error || 'Error updating role', 'error');
+                    // Reset the select to original value
+                    selectElement.value = originalValue;
                 }
             } catch (error) {
                 console.error('Error changing role:', error);
-                showFlashMessage('Error updating role', 'error');
+                showFlashMessage('Network error updating role', 'error');
+                // Reset the select to original value
+                selectElement.value = originalValue;
+            } finally {
+                // Re-enable the select
+                selectElement.disabled = false;
             }
         }
 
@@ -489,6 +560,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUserData();
             loadUsers();
+            loadNotificationSettings();
         });
 
         // Hide add user button for lead tutors, but always show for admin/manager
@@ -530,6 +602,62 @@
             document.getElementById('user-toast-container').appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
+
+        // Notification Settings Functions
+        async function loadNotificationSettings() {
+            try {
+                const response = await fetch('/api/notification-settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    
+                    // Populate form fields
+                    document.getElementById('emailNotifications').checked = settings.email_notifications;
+                    document.getElementById('notificationEmail').value = settings.notification_email;
+                    document.getElementById('lateCheckinAlerts').checked = settings.late_checkin_alerts;
+                    document.getElementById('earlyCheckoutAlerts').checked = settings.early_checkout_alerts;
+                    document.getElementById('shortShiftAlerts').checked = settings.short_shift_alerts;
+                    document.getElementById('overlappingShiftAlerts').checked = settings.overlapping_shift_alerts;
+                    document.getElementById('missingCheckoutAlerts').checked = settings.missing_checkout_alerts;
+            }
+            } catch (error) {
+                console.error('Error loading notification settings:', error);
+            }
+        }
+
+        // Notification settings form submission
+        document.getElementById('notificationSettingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const settings = {
+                email_notifications: document.getElementById('emailNotifications').checked,
+                notification_email: document.getElementById('notificationEmail').value,
+                late_checkin_alerts: document.getElementById('lateCheckinAlerts').checked,
+                early_checkout_alerts: document.getElementById('earlyCheckoutAlerts').checked,
+                short_shift_alerts: document.getElementById('shortShiftAlerts').checked,
+                overlapping_shift_alerts: document.getElementById('overlappingShiftAlerts').checked,
+                missing_checkout_alerts: document.getElementById('missingCheckoutAlerts').checked
+            };
+            
+            try {
+                const response = await fetch('/api/notification-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    showFlashMessage('Notification settings updated successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showFlashMessage(error.message || 'Error updating notification settings', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating notification settings:', error);
+                showFlashMessage('Error updating notification settings', 'error');
+        }
+        });
     </script>
 </body>
 </html>

@@ -309,7 +309,7 @@ def check_late_checkins(face_log_df):
         return []
 
 def get_all_shifts_with_assignments():
-    """Get all shifts with their current assignments"""
+    """Get shifts that have actual schedule assignments, ordered by day and time"""
     try:
         shifts_df = load_shifts()
         assignments_df = load_shift_assignments()
@@ -317,22 +317,52 @@ def get_all_shifts_with_assignments():
         if shifts_df.empty:
             return []
         
-        shifts_with_assignments = []
+        shifts_list = []
         
         for _, shift in shifts_df.iterrows():
+            # Get assignments for this shift
             shift_assignments = assignments_df[
                 (assignments_df['shift_id'] == shift['shift_id']) &
                 (assignments_df['active'] == True)
             ]
             
+            # Only include shifts that have actual assignments
+            if shift_assignments.empty:
+                continue
+            
+            # Get working days from actual assignments
+            working_days = []
+            if not shift_assignments.empty:
+                # Get unique day names from assignments
+                day_names = shift_assignments['day_name'].unique()
+                # Sort days in proper order
+                day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                working_days = [day for day in day_order if day in day_names]
+            
             shift_data = shift.to_dict()
-            shift_data['assignments'] = shift_assignments.to_dict('records') if not shift_assignments.empty else []
-            shifts_with_assignments.append(shift_data)
+            shift_data['working_days'] = working_days
+            shifts_list.append(shift_data)
         
-        return shifts_with_assignments
+        # Sort shifts by day and time
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        
+        def sort_key(shift):
+            # Get the first working day (primary sort)
+            first_day = shift['working_days'][0] if shift['working_days'] else 'Sunday'
+            day_index = day_order.index(first_day)
+            
+            # Get start time (secondary sort)
+            start_time = shift['start_time']
+            
+            return (day_index, start_time)
+        
+        # Sort by day first, then by start time
+        shifts_list.sort(key=sort_key)
+        
+        return shifts_list
         
     except Exception as e:
-        print(f"Error getting shifts with assignments: {e}")
+        print(f"Error getting shifts: {e}")
         return []
 
 def deactivate_shift(shift_id):

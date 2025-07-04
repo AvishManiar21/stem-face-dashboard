@@ -66,11 +66,11 @@ for idx, row in schedule.iterrows():
     # Parse check_in and check_out with flexible format
     from pandas import to_datetime
     try:
-        check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M:%S')
+    check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M')
     try:
-        check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M:%S')
+    check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M')
     shift_hours = round((check_out - check_in).total_seconds() / 3600, 2)
@@ -117,7 +117,7 @@ else:
         face_log.to_csv(OUTPUT_FILE, index=False)
         print("No new check-ins to add. Future check-ins removed. All up-to-date.")
     else:
-        print("No new check-ins to add. All up-to-date.")
+        print("No new check-ins to add. All up-to-date.") 
 
 if __name__ == "__main__":
     # Existing script logic here (already runs on import)

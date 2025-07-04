@@ -196,7 +196,9 @@ class TutorAnalytics:
             'trend_analysis': self.analyze_trends(),
             'growth_data': self.get_growth_data(),
             'patterns': self.analyze_patterns(),
-            'advanced_metrics': self.get_advanced_metrics()
+            'advanced_metrics': self.get_advanced_metrics(),
+            'nlp_summary': self.generate_nlp_summary(),
+            'ai_recommendations': self.get_ai_recommendations()
         }
         
         # Convert numpy types to native Python types for JSON serialization
@@ -784,6 +786,184 @@ class TutorAnalytics:
         
         return suggestions
     
+    def generate_nlp_summary(self):
+        """Generate natural language summary of tutor performance"""
+        if self.data.empty:
+            return "No data available for analysis."
+        
+        summary_parts = []
+        
+        # Overall performance summary
+        total_hours = self.data['shift_hours'].sum()
+        total_sessions = len(self.data)
+        unique_tutors = self.data['tutor_id'].nunique()
+        avg_session_length = total_hours / total_sessions if total_sessions > 0 else 0
+        
+        summary_parts.append(f"📊 **Overall Performance**: {unique_tutors} tutors completed {total_sessions} sessions totaling {total_hours:.1f} hours, with an average session length of {avg_session_length:.1f} hours.")
+        
+        # Top performer analysis
+        tutor_performance = self.data.groupby(['tutor_id', 'tutor_name']).agg({
+            'shift_hours': ['sum', 'count', 'mean'],
+            'check_in': ['min', 'max']
+        }).round(2)
+        
+        if not tutor_performance.empty:
+            # Flatten column names
+            tutor_performance.columns = ['_'.join(col).strip() for col in tutor_performance.columns]
+            
+            # Find top performer
+            top_performer = tutor_performance.loc[tutor_performance['shift_hours_sum'].idxmax()]
+            top_performer_name = tutor_performance.loc[tutor_performance['shift_hours_sum'].idxmax()].name[1]
+            
+            summary_parts.append(f"🏆 **Top Performer**: {top_performer_name} worked {top_performer['shift_hours_sum']:.1f} hours across {top_performer['shift_hours_count']} sessions, averaging {top_performer['shift_hours_mean']:.1f} hours per session.")
+        
+        # Attendance patterns
+        daily_patterns = self.data.groupby('day_of_week')['shift_hours'].sum()
+        if not daily_patterns.empty:
+            busiest_day = daily_patterns.idxmax()
+            quietest_day = daily_patterns.idxmin()
+            summary_parts.append(f"📅 **Attendance Patterns**: {busiest_day} is the busiest day with {daily_patterns[busiest_day]:.1f} hours, while {quietest_day} is the quietest with {daily_patterns[quietest_day]:.1f} hours.")
+        
+        # Peak time analysis
+        hourly_patterns = self.data.groupby('hour')['shift_hours'].sum()
+        if not hourly_patterns.empty:
+            peak_hour = hourly_patterns.idxmax()
+            summary_parts.append(f"⏰ **Peak Activity**: The busiest hour is {peak_hour}:00 with {hourly_patterns[peak_hour]:.1f} hours of activity.")
+        
+        # Consistency analysis
+        tutor_consistency = {}
+        for tutor_id in self.data['tutor_id'].unique():
+            tutor_data = self.data[self.data['tutor_id'] == tutor_id]
+            if len(tutor_data) > 1:
+                std_dev = tutor_data['shift_hours'].std()
+                mean_hours = tutor_data['shift_hours'].mean()
+                consistency_score = max(0, 100 - (std_dev / mean_hours * 100)) if mean_hours > 0 else 0
+                tutor_consistency[tutor_id] = consistency_score
+        
+        if tutor_consistency:
+            avg_consistency = sum(tutor_consistency.values()) / len(tutor_consistency)
+            if avg_consistency > 80:
+                consistency_desc = "excellent"
+            elif avg_consistency > 60:
+                consistency_desc = "good"
+            else:
+                consistency_desc = "needs improvement"
+            
+            summary_parts.append(f"📈 **Consistency**: Overall consistency is {consistency_desc} with an average score of {avg_consistency:.1f}%.")
+        
+        # Growth trends
+        if len(self.data) > 7:  # Need at least a week of data
+            recent_data = self.data.tail(7)
+            older_data = self.data.head(7)
+            
+            recent_hours = recent_data['shift_hours'].sum()
+            older_hours = older_data['shift_hours'].sum()
+            
+            if recent_hours > older_hours * 1.1:
+                summary_parts.append("🚀 **Growth Trend**: Recent activity shows strong growth compared to earlier periods.")
+            elif recent_hours < older_hours * 0.9:
+                summary_parts.append("📉 **Declining Trend**: Recent activity shows a decline compared to earlier periods.")
+            else:
+                summary_parts.append("📊 **Stable Performance**: Activity levels remain consistent over time.")
+        
+        # Issue identification
+        issues = []
+        missing_checkouts = self.data['check_out'].isna().sum()
+        short_sessions = len(self.data[self.data['shift_hours'] < 1])
+        
+        if missing_checkouts > 0:
+            issues.append(f"{missing_checkouts} missing checkouts")
+        if short_sessions > 0:
+            issues.append(f"{short_sessions} sessions under 1 hour")
+        
+        if issues:
+            summary_parts.append(f"⚠️ **Areas for Improvement**: {', '.join(issues)} detected.")
+        else:
+            summary_parts.append("✅ **Quality**: No significant issues detected in the data.")
+        
+        return " ".join(summary_parts)
+    
+    def get_ai_recommendations(self):
+        """Generate AI-powered recommendations for optimization"""
+        recommendations = []
+        
+        if self.data.empty:
+            return recommendations
+        
+        # 1. Staffing optimization
+        current_tutors = self.data['tutor_id'].nunique()
+        avg_hours_per_tutor = self.data['shift_hours'].sum() / current_tutors if current_tutors > 0 else 0
+        
+        if avg_hours_per_tutor < 20:
+            recommendations.append({
+                'type': 'staffing',
+                'priority': 'high',
+                'title': 'Optimize Tutor Utilization',
+                'description': f'Current average of {avg_hours_per_tutor:.1f} hours per tutor suggests underutilization.',
+                'action': 'Consider redistributing hours or reducing tutor count',
+                'impact': 'Potential 15-25% cost savings'
+            })
+        
+        # 2. Schedule optimization
+        hourly_demand = self.data.groupby('hour')['shift_hours'].sum()
+        if not hourly_demand.empty:
+            peak_hour = hourly_demand.idxmax()
+            low_hour = hourly_demand.idxmin()
+            
+            if hourly_demand[peak_hour] > hourly_demand[low_hour] * 3:
+                recommendations.append({
+                    'type': 'schedule',
+                    'priority': 'medium',
+                    'title': 'Balance Peak and Off-Peak Hours',
+                    'description': f'Demand at {peak_hour}:00 is {hourly_demand[peak_hour]/hourly_demand[low_hour]:.1f}x higher than at {low_hour}:00.',
+                    'action': 'Consider incentivizing off-peak shifts or adjusting capacity',
+                    'impact': 'Improved resource utilization and student satisfaction'
+                })
+        
+        # 3. Quality improvement
+        short_sessions = len(self.data[self.data['shift_hours'] < 1])
+        total_sessions = len(self.data)
+        
+        if short_sessions / total_sessions > 0.1:  # More than 10% short sessions
+            recommendations.append({
+                'type': 'quality',
+                'priority': 'high',
+                'title': 'Address Short Session Issue',
+                'description': f'{short_sessions} out of {total_sessions} sessions are under 1 hour ({short_sessions/total_sessions*100:.1f}%).',
+                'action': 'Review scheduling policies and minimum session requirements',
+                'impact': 'Improved session quality and student outcomes'
+            })
+        
+        # 4. Growth opportunities
+        weekly_growth = self.data.groupby(self.data['check_in'].dt.isocalendar().week)['shift_hours'].sum()
+        if len(weekly_growth) >= 4:
+            recent_trend = weekly_growth.tail(2).pct_change().iloc[-1]
+            if recent_trend > 0.1:
+                recommendations.append({
+                    'type': 'growth',
+                    'priority': 'medium',
+                    'title': 'Capitalize on Growth Momentum',
+                    'description': f'Recent weekly growth of {recent_trend*100:.1f}% indicates strong demand.',
+                    'action': 'Consider expanding capacity and recruiting additional tutors',
+                    'impact': 'Capture market opportunity and increase revenue'
+                })
+        
+        # 5. Consistency improvement
+        daily_variance = self.data.groupby('day_of_week')['shift_hours'].sum().std()
+        daily_mean = self.data.groupby('day_of_week')['shift_hours'].sum().mean()
+        
+        if daily_variance / daily_mean > 0.4:
+            recommendations.append({
+                'type': 'consistency',
+                'priority': 'medium',
+                'title': 'Improve Schedule Consistency',
+                'description': 'High daily variation suggests inconsistent scheduling patterns.',
+                'action': 'Implement standardized daily hour targets and consistent scheduling policies',
+                'impact': 'Better predictability and improved student experience'
+            })
+        
+        return recommendations
+    
     def get_advanced_metrics(self):
         """Calculate advanced performance metrics"""
         if self.data.empty:
@@ -819,14 +999,14 @@ class TutorAnalytics:
         }
         
         return {
-            'efficiency_score': round((avg_session_length / 2.5) * 100, 1),  # Assuming 2.5h is optimal
-            'consistency_scores': tutor_consistency,
-            'avg_consistency': round(sum(tutor_consistency.values()) / len(tutor_consistency), 1) if tutor_consistency else 0,
-            'productivity_trend': weekly_productivity['hours_per_tutor'].tail(4).tolist(),
-            'session_distribution': session_length_distribution,
-            'utilization_rate': round((total_hours / (self.data['tutor_id'].nunique() * 40)) * 100, 1),  # Assuming 40h/week capacity
-            'peak_efficiency_day': self.data.groupby('day_of_week')['shift_hours'].mean().idxmax(),
-            'improvement_potential': round(max(0, 100 - (avg_session_length / 3.0) * 100), 1)  # Room for improvement
+            'efficiency_score': float(round((avg_session_length / 2.5) * 100, 1)),  # Assuming 2.5h is optimal
+            'consistency_scores': {str(k): float(v) for k, v in tutor_consistency.items()},
+            'avg_consistency': float(round(sum(tutor_consistency.values()) / len(tutor_consistency), 1) if tutor_consistency else 0),
+            'productivity_trend': [float(x) for x in weekly_productivity['hours_per_tutor'].tail(4).tolist()],
+            'session_distribution': {k: int(v) for k, v in session_length_distribution.items()},
+            'utilization_rate': float(round((total_hours / (self.data['tutor_id'].nunique() * 40)) * 100, 1)),  # Assuming 40h/week capacity
+            'peak_efficiency_day': str(self.data.groupby('day_of_week')['shift_hours'].mean().idxmax()),
+            'improvement_potential': float(round(max(0, 100 - (avg_session_length / 3.0) * 100), 1))  # Room for improvement
         }
     
     def _get_staffing_recommendations(self, optimal_tutors, current_tutors):
@@ -885,9 +1065,9 @@ class TutorAnalytics:
         growth_data = []
         for _, row in weekly_data.iterrows():
             growth_data.append({
-                'week': row['week'],
-                'total_hours': row['shift_hours'],
-                'active_tutors': row['tutor_id']
+                'week': str(row['week']),
+                'total_hours': float(row['shift_hours']),
+                'active_tutors': int(row['tutor_id'])
             })
         
         return growth_data
@@ -929,13 +1109,13 @@ class TutorAnalytics:
                 tutor_consistency[tutor_id] = round(consistency, 1)
         
         return {
-            'avg_session_length': round(avg_session_length, 1) if not pd.isna(avg_session_length) else 0,
+            'avg_session_length': float(round(avg_session_length, 1) if not pd.isna(avg_session_length) else 0),
             'most_active_tutor': {
-                'id': most_active[0] if most_active and len(most_active) > 0 else '',
-                'name': most_active[1] if most_active and len(most_active) > 1 else '',
-                'total_hours': tutor_hours.max() if not tutor_hours.empty else 0
+                'id': str(most_active[0] if most_active and len(most_active) > 0 else ''),
+                'name': str(most_active[1] if most_active and len(most_active) > 1 else ''),
+                'total_hours': float(tutor_hours.max() if not tutor_hours.empty else 0)
             },
-            'tutor_consistency': tutor_consistency
+            'tutor_consistency': {str(k): float(v) for k, v in tutor_consistency.items()}
         }
     
     # ==================== CALENDAR VIEW ====================

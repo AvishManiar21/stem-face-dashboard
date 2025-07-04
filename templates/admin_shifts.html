@@ -89,16 +89,45 @@
         <div id="flashMessages"></div>
 
         <!-- Section 1: Shift Templates -->
-        <h4 class="mt-4 mb-3">Shift Templates</h4>
+        <h4 class="mt-4 mb-3">
+            <i class="fas fa-layer-group me-2"></i>
+            Shift Templates
+            <small class="text-muted">(Ordered by day and time)</small>
+        </h4>
+        <div class="mb-3">
+            <input type="text" id="shiftSearchInput" class="form-control" placeholder="Search by shift name or day..." oninput="onShiftSearch()">
+        </div>
         <div id="allShiftsContainer"></div>
+        <nav class="d-flex justify-content-center mt-3">
+            <ul class="pagination" id="shiftPagination"></ul>
+        </nav>
 
         <!-- Section 2: Today's Shifts -->
-        <h4 class="mt-5 mb-3">Today's Shifts</h4>
-        <div id="todaysShiftsContainer"></div>
+        <h4 class="mt-5 mb-3">
+            <i class="fas fa-calendar-day me-2"></i>
+            Today's Shifts
+            <small class="text-muted">(Scheduled for today)</small>
+        </h4>
+        <div id="todaysShiftsContainer">
+            <div class="text-center text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i>Loading today's shifts...
+            </div>
+        </div>
 
         <!-- Section 3: Upcoming Shifts -->
-        <h4 class="mt-5 mb-3">Upcoming Shifts</h4>
-        <div id="upcomingShiftsContainer"></div>
+        <h4 class="mt-5 mb-3">
+            <i class="fas fa-calendar-week me-2"></i>
+            Upcoming Shifts
+            <small class="text-muted">(Future scheduled shifts)</small>
+        </h4>
+        <div class="mb-3">
+            <input type="text" id="upcomingShiftSearchInput" class="form-control" placeholder="Search upcoming shifts..." oninput="onUpcomingShiftSearch()">
+        </div>
+                <div id="upcomingShiftsContainer">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading upcoming shifts...
+            </div>
+        </div>
     </div>
 
     <!-- Create Shift Modal -->
@@ -218,6 +247,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let shifts = [];
+        let filteredShifts = [];
         let upcomingShifts = [];
         let tutors = [];
         let currentUser = null;
@@ -257,7 +287,7 @@
                 console.error('Error loading user data:', error);
                 showFlashMessage('Network error. Please check your connection and try again.', 'error');
                 setTimeout(() => {
-                    window.location.href = '/';
+                window.location.href = '/';
                 }, 10000);
             }
         }
@@ -268,10 +298,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     shifts = data.shifts || [];
-                    upcomingShifts = data.upcoming_shifts || [];
+                    filteredShifts = shifts;
                     displayShifts();
-                    displayTodaysShifts();
-                    displayUpcomingShifts();
+                    loadTodaysShifts(); // Load today's shifts from API
+                    loadUpcomingShifts(); // Load upcoming shifts from API
                 } else if (response.status === 403) {
                     showFlashMessage('Access denied. You need admin or manager privileges to view shifts.', 'error');
                     setTimeout(() => {
@@ -290,6 +320,23 @@
             }
         }
 
+        async function loadUpcomingShifts(page = 1) {
+            try {
+                const response = await fetch(`/upcoming-shifts?page=${page}&per_page=12&exclude_today=true`);
+                if (response.ok) {
+                    const data = await response.json();
+                    upcomingShifts = data.shifts || [];
+                    displayUpcomingShifts(data.shifts, data.pagination);
+                } else {
+                    console.error('Error loading upcoming shifts');
+                    displayUpcomingShifts([], {});
+                }
+            } catch (error) {
+                console.error('Error loading upcoming shifts:', error);
+                displayUpcomingShifts([], {});
+            }
+        }
+
         async function loadTutors() {
             try {
                 const response = await fetch('/api/admin/tutors');
@@ -303,187 +350,258 @@
             }
         }
 
-        function displayTodaysShifts() {
+        async function loadTodaysShifts() {
+            try {
+                const response = await fetch(`/upcoming-shifts?page=1&per_page=50&exclude_today=false`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const todaysShifts = data.shifts.filter(shift => shift.date === todayStr);
+                    displayTodaysShifts(todaysShifts);
+                } else {
+                    console.error('Error loading today\'s shifts');
+                    displayTodaysShifts([]);
+                }
+            } catch (error) {
+                console.error('Error loading today\'s shifts:', error);
+                displayTodaysShifts([]);
+            }
+        }
+
+        function displayTodaysShifts(todaysShifts) {
             const container = document.getElementById('todaysShiftsContainer');
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const todaysShifts = upcomingShifts.filter(shift => shift.date === todayStr);
+            
             if (!todaysShifts || todaysShifts.length === 0) {
                 container.innerHTML = '<div class="text-center text-muted">No shifts scheduled for today.</div>';
                 return;
             }
-            let html = '<div class="table-responsive"><table class="table table-hover">';
-            html += '<thead><tr><th>Date</th><th>Day</th><th>Shift</th><th>Time</th><th>Assigned Tutor</th><th>Actions</th></tr></thead><tbody>';
-            todaysShifts.forEach(shift => {
+            
+            // Display shifts in card layout like dashboard
+            let html = '<div class="row g-3">';
+            todaysShifts.forEach((shift, index) => {
                 const canManage = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager');
                 html += `
-                    <tr class="table-info">
-                        <td>${shift.date} <span class="badge bg-primary">Today</span></td>
-                        <td>${shift.day_name}</td>
-                        <td>${shift.shift_name}</td>
-                        <td>${shift.start_time} - ${shift.end_time}</td>
-                        <td>
-                            <strong>${shift.tutor_name || 'Unassigned'}</strong>
-                            ${shift.tutor_id ? `<br><small class="text-muted">ID: ${shift.tutor_id}</small>` : ''}
-                        </td>
-                        <td>
-                            ${canManage ? (
-                                shift.assignment_id ? `
-                                    <form method="POST" action="/api/admin/remove-assignment" style="display: inline;">
-                                        <input type="hidden" name="assignment_id" value="${shift.assignment_id}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">
-                                            <i class="fas fa-user-minus"></i> Remove
-                                        </button>
-                                    </form>
-                                ` : `
-                                    <button class="btn btn-sm btn-outline-primary" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
-                                        <i class="fas fa-user-plus"></i> Assign
-                                    </button>
-                                `
-                            ) : '<span class="text-muted">No actions available</span>'}
-                        </td>
-                    </tr>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-success h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">${shift.shift_name || 'Shift ' + shift.shift_id}</h6>
+                                <p class="card-text small">
+                                    <strong>Date:</strong> ${shift.date} (${shift.day_name}) <span class="badge bg-primary">Today</span><br>
+                                    <strong>Time:</strong> ${shift.start_time} - ${shift.end_time}<br>
+                                    <strong>Tutor:</strong> ${shift.tutor_name || 'Unassigned'}
+                                    ${shift.tutor_id ? `<br><small class="text-muted">ID: ${shift.tutor_id}</small>` : ''}
+                                </p>
+                                ${canManage ? `
+                                    <div class="mt-2">
+                                        ${shift.assignment_id ? `
+                                            <form method="POST" action="/api/admin/remove-assignment" style="display: inline;">
+                                                <input type="hidden" name="assignment_id" value="${shift.assignment_id}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">
+                                                    <i class="fas fa-user-minus"></i> Remove
+                                                </button>
+                                            </form>
+                                        ` : `
+                                            <button class="btn btn-sm btn-outline-primary" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
+                                                <i class="fas fa-user-plus"></i> Assign
+                                            </button>
+                                        `}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
                 `;
             });
-            html += '</tbody></table></div>';
+            html += '</div>';
             container.innerHTML = html;
         }
 
-        function displayUpcomingShifts() {
+        function displayUpcomingShifts(shifts, pagination) {
             const container = document.getElementById('upcomingShiftsContainer');
-            const todayStr = new Date().toISOString().slice(0, 10);
-            // Only future shifts
-            const futureShifts = upcomingShifts.filter(shift => shift.date > todayStr);
-            if (!futureShifts || futureShifts.length === 0) {
+            
+            if (!shifts || shifts.length === 0) {
                 container.innerHTML = '<div class="text-center text-muted">No upcoming shifts scheduled.</div>';
                 return;
             }
-            let html = '<div class="table-responsive"><table class="table table-hover">';
-            html += '<thead><tr><th>Date</th><th>Day</th><th>Shift</th><th>Time</th><th>Assigned Tutor</th><th>Actions</th></tr></thead><tbody>';
-            futureShifts.forEach(shift => {
+            
+            // Display shifts in card layout like dashboard
+            let html = '<div class="row g-3">';
+            shifts.forEach((shift, index) => {
                 const canManage = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager');
                 html += `
-                    <tr>
-                        <td>${shift.date}</td>
-                        <td>${shift.day_name}</td>
-                        <td>${shift.shift_name}</td>
-                        <td>${shift.start_time} - ${shift.end_time}</td>
-                        <td>
-                            <strong>${shift.tutor_name || 'Unassigned'}</strong>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-primary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">${shift.shift_name || 'Shift ' + shift.shift_id}</h6>
+                                <p class="card-text small">
+                                    <strong>Date:</strong> ${shift.date} (${shift.day_name})<br>
+                                    <strong>Time:</strong> ${shift.start_time} - ${shift.end_time}<br>
+                                    <strong>Tutor:</strong> ${shift.tutor_name || 'Unassigned'}
                             ${shift.tutor_id ? `<br><small class="text-muted">ID: ${shift.tutor_id}</small>` : ''}
-                        </td>
-                        <td>
-                            ${canManage ? (
-                                shift.assignment_id ? `
-                                    <form method="POST" action="/api/admin/remove-assignment" style="display: inline;">
-                                        <input type="hidden" name="assignment_id" value="${shift.assignment_id}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">
-                                            <i class="fas fa-user-minus"></i> Remove
-                                        </button>
-                                    </form>
-                                ` : `
-                                    <button class="btn btn-sm btn-outline-primary" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
-                                        <i class="fas fa-user-plus"></i> Assign
+                                </p>
+                                ${canManage ? `
+                                    <div class="mt-2">
+                            ${shift.assignment_id ? `
+                                <form method="POST" action="/api/admin/remove-assignment" style="display: inline;">
+                                    <input type="hidden" name="assignment_id" value="${shift.assignment_id}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">
+                                        <i class="fas fa-user-minus"></i> Remove
                                     </button>
-                                `
-                            ) : '<span class="text-muted">No actions available</span>'}
-                        </td>
-                    </tr>
+                                </form>
+                            ` : `
+                                <button class="btn btn-sm btn-outline-primary" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
+                                    <i class="fas fa-user-plus"></i> Assign
+                                </button>
+                            `}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
                 `;
             });
-            html += '</tbody></table></div>';
+            html += '</div>';
+            
+            // Add pagination controls
+            if (pagination && pagination.total_pages > 1) {
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div class="text-muted">
+                            Showing ${((pagination.current_page - 1) * pagination.per_page) + 1} to ${Math.min(pagination.current_page * pagination.per_page, pagination.total_shifts)} of ${pagination.total_shifts} shifts
+                        </div>
+                        <nav aria-label="Upcoming shifts pagination">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item ${pagination.has_prev ? '' : 'disabled'}">
+                                    <button class="page-link" onclick="loadUpcomingShifts(${pagination.current_page - 1})" ${pagination.has_prev ? '' : 'disabled'}>
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </button>
+                                </li>
+                `;
+                
+                // Show page numbers
+                const startPage = Math.max(1, pagination.current_page - 2);
+                const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+                            <button class="page-link" onclick="loadUpcomingShifts(${i})">${i}</button>
+                        </li>
+                    `;
+                }
+                
+                html += `
+                                <li class="page-item ${pagination.has_next ? '' : 'disabled'}">
+                                    <button class="page-link" onclick="loadUpcomingShifts(${pagination.current_page + 1})" ${pagination.has_next ? '' : 'disabled'}>
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                `;
+            }
+            
             container.innerHTML = html;
+        }
+
+        function onShiftSearch() {
+            const search = document.getElementById('shiftSearchInput').value.trim().toLowerCase();
+            if (!search) {
+                filteredShifts = shifts;
+            } else {
+                filteredShifts = shifts.filter(shift =>
+                    (shift.shift_name && shift.shift_name.toLowerCase().includes(search)) ||
+                    (shift.days_of_week && shift.days_of_week.toLowerCase().includes(search))
+                );
+            }
+            currentShiftPage = 1;
+            displayShifts();
+        }
+
+        function onUpcomingShiftSearch() {
+            const search = document.getElementById('upcomingShiftSearchInput').value.trim().toLowerCase();
+            if (!search) {
+                // If no search, reload from API
+                loadUpcomingShifts(1);
+            } else {
+                // Filter the current upcoming shifts
+                const filteredShifts = upcomingShifts.filter(shift =>
+                    (shift.shift_name && shift.shift_name.toLowerCase().includes(search)) ||
+                    (shift.tutor_name && shift.tutor_name.toLowerCase().includes(search)) ||
+                    (shift.day_name && shift.day_name.toLowerCase().includes(search)) ||
+                    (shift.date && shift.date.includes(search))
+                );
+                displayUpcomingShifts(filteredShifts, {});
+            }
         }
 
         function displayShifts() {
             const container = document.getElementById('allShiftsContainer');
-            
-            if (!shifts || shifts.length === 0) {
+            if (!filteredShifts || filteredShifts.length === 0) {
                 container.innerHTML = '<div class="text-center text-muted">No shifts found.</div>';
+                document.getElementById('shiftPagination').innerHTML = '';
                 return;
             }
-            
             const canManage = currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager');
-            
             // Pagination logic
-            totalShiftPages = Math.ceil(shifts.length / shiftPageSize);
+            totalShiftPages = Math.ceil(filteredShifts.length / shiftPageSize);
             const startIdx = (currentShiftPage - 1) * shiftPageSize;
-            const endIdx = Math.min(startIdx + shiftPageSize, shifts.length);
-            let html = '';
+            const endIdx = Math.min(startIdx + shiftPageSize, filteredShifts.length);
+            
+            // Display shifts in card layout like Today's Shifts and Upcoming Shifts
+            let html = '<div class="row g-3">';
             for (let i = startIdx; i < endIdx; i++) {
-                const shift = shifts[i];
+                const shift = filteredShifts[i];
                 html += `
-                    <div class="card mb-3 shift-card ${!shift.active ? 'shift-inactive' : ''}">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 ${!shift.active ? 'border-warning' : 'border-info'}">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
                                     <h6 class="card-title">${shift.shift_name}</h6>
-                                    <p class="text-muted mb-2">${shift.start_time} - ${shift.end_time} | ${shift.days_of_week}</p>
-                                </div>
+                                <p class="card-text small">
+                                    <strong>Time:</strong> ${shift.start_time} - ${shift.end_time}<br>
+                                    <strong>Working Days:</strong> ${shift.working_days && shift.working_days.length > 0 ? shift.working_days.join(', ') : 'No assignments'}<br>
+                                    <strong>Status:</strong> <span class="badge ${shift.active ? 'bg-success' : 'bg-warning'}">${shift.active ? 'Active' : 'Inactive'}</span>
+                                    ${shift.shift_id ? `<br><small class="text-muted">ID: ${shift.shift_id}</small>` : ''}
+                                </p>
                                 ${canManage ? `
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-v"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
-                                                <i class="fas fa-user-plus"></i> Assign Tutor
-                                            </a></li>
-                                            ${shift.active ? `
-                                                <li><a class="dropdown-item text-warning" href="#" onclick="deactivateShift('${shift.shift_id}')">
-                                                    <i class="fas fa-pause"></i> Deactivate
-                                                </a></li>
-                                            ` : `
-                                                <li><a class="dropdown-item text-success" href="#" onclick="activateShift('${shift.shift_id}')">
-                                                    <i class="fas fa-play"></i> Activate
-                                                </a></li>
-                                            `}
-                                        </ul>
-                                    </div>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="assignShift('${shift.shift_id}', '${shift.shift_name}')">
+                                            <i class="fas fa-user-plus"></i> Assign
+                                    </button>
+                                        ${shift.active ? `
+                                            <button class="btn btn-sm btn-outline-warning" onclick="deactivateShift('${shift.shift_id}')">
+                                                <i class="fas fa-pause"></i> Deactivate
+                                            </button>
+                                        ` : `
+                                            <button class="btn btn-sm btn-outline-success" onclick="activateShift('${shift.shift_id}')">
+                                                <i class="fas fa-play"></i> Activate
+                                            </button>
+                                        `}
+                                </div>
                                 ` : ''}
                             </div>
-                            
-                            ${shift.assignments && shift.assignments.length > 0 ? `
-                                <div class="mt-3">
-                                    <h6 class="text-muted">Current Assignments:</h6>
-                                    ${shift.assignments.map(assignment => `
-                                        <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded mb-2">
-                                            <div>
-                                                <strong>${assignment.tutor_name}</strong> (ID: ${assignment.tutor_id})
-                                                <br><small class="text-muted">${assignment.start_date} to ${assignment.end_date}</small>
-                                            </div>
-                                            ${canManage ? `
-                                                <form method="POST" action="/api/admin/remove-assignment" style="display: inline; float: right;">
-                                                    <input type="hidden" name="assignment_id" value="${assignment.assignment_id}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove assignment?')">
-                                                        <i class="fas fa-user-minus"></i>
-                                                    </button>
-                                                </form>
-                                            ` : ''}
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<p class="text-muted mt-2">No assignments</p>'}
                         </div>
                     </div>
                 `;
             }
+            html += '</div>';
+            container.innerHTML = html;
+            
             // Pagination controls
-            html += `<nav class="d-flex justify-content-center mt-3">
-                <ul class="pagination">
-                    <li class="page-item ${currentShiftPage === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="#" onclick="changeShiftPage(${currentShiftPage - 1})">Previous</a>
-                    </li>`;
+            let pagHtml = '';
+            pagHtml += `<li class="page-item ${currentShiftPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changeShiftPage(${currentShiftPage - 1});return false;">Previous</a>
+            </li>`;
             for (let i = 1; i <= totalShiftPages; i++) {
-                html += `<li class="page-item ${i === currentShiftPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="changeShiftPage(${i})">${i}</a>
+                pagHtml += `<li class="page-item ${i === currentShiftPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changeShiftPage(${i});return false;">${i}</a>
                 </li>`;
             }
-            html += `<li class="page-item ${currentShiftPage === totalShiftPages ? 'disabled' : ''}">
-                        <a class="page-link" href="#" onclick="changeShiftPage(${currentShiftPage + 1})">Next</a>
-                    </li>
-                </ul>
-            </nav>`;
-            container.innerHTML = html;
+            pagHtml += `<li class="page-item ${currentShiftPage === totalShiftPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changeShiftPage(${currentShiftPage + 1});return false;">Next</a>
+            </li>`;
+            document.getElementById('shiftPagination').innerHTML = pagHtml;
         }
 
         function changeShiftPage(page) {

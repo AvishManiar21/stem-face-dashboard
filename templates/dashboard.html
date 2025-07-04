@@ -326,19 +326,114 @@
     <!-- Alerts will be populated here by JavaScript -->
   </div>
   
-  <!-- Upcoming Shifts Section -->
+  <!-- Forecasting & Trends Section -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-calendar-alt me-2"></i>Upcoming Shifts
-          </h5>
+          <h5 class="mb-0"><i class="fas fa-chart-line"></i> Forecasting & Trends</h5>
         </div>
         <div class="card-body">
-          <div id="upcomingShiftsContainer">
-            <div class="text-center text-muted">
-              <i class="fas fa-spinner fa-spin me-2"></i>Loading upcoming shifts...
+          <div class="row g-4">
+            <!-- Next Week Prediction -->
+            <div class="col-lg-4 col-md-6">
+              <div class="card border-primary h-100">
+                <div class="card-body text-center">
+                  <div class="mb-3">
+                    <i class="fas fa-calendar-week text-primary" style="font-size: 2rem;"></i>
+            </div>
+                  <h4 class="text-primary mb-2" id="nextWeekHours">-</h4>
+                  <h6 class="text-muted mb-2">Expected Hours Next Week</h6>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-primary" id="nextWeekConfidence">-</span>
+                    <span class="badge" id="nextWeekTrend">-</span>
+          </div>
+                  <small class="text-muted d-block mt-2" id="nextWeekMethods">-</small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Growth Trends -->
+            <div class="col-lg-4 col-md-6">
+              <div class="card border-success h-100">
+                <div class="card-body text-center">
+                  <div class="mb-3">
+                    <i class="fas fa-trending-up text-success" style="font-size: 2rem;"></i>
+                  </div>
+                  <h4 class="text-success mb-2" id="growthRate">-</h4>
+                  <h6 class="text-muted mb-2">Monthly Growth Rate</h6>
+                  <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-success" id="growthProgress" style="width: 0%"></div>
+                  </div>
+                  <small class="text-muted" id="growthInsight">-</small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Peak Times Forecast -->
+            <div class="col-lg-4 col-md-6">
+              <div class="card border-warning h-100">
+                <div class="card-body text-center">
+                  <div class="mb-3">
+                    <i class="fas fa-clock text-warning" style="font-size: 2rem;"></i>
+                  </div>
+                  <h4 class="text-warning mb-2" id="peakTimeForecast">-</h4>
+                  <h6 class="text-muted mb-2">Peak Time Forecast</h6>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-warning text-dark" id="peakDay">-</span>
+                    <span class="badge bg-info" id="peakHour">-</span>
+                  </div>
+                  <small class="text-muted d-block mt-2" id="peakInsight">-</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Advanced Forecasting Details -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="card border-info">
+                <div class="card-header">
+                  <h6 class="mb-0"><i class="fas fa-brain"></i> AI-Powered Insights</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h6>Optimization Suggestions</h6>
+                      <ul class="list-unstyled" id="optimizationSuggestions">
+                        <li class="text-muted">Loading suggestions...</li>
+                      </ul>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Risk Analysis</h6>
+                      <ul class="list-unstyled" id="riskAnalysis">
+                        <li class="text-muted">Loading analysis...</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- AI Performance Summary -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="card border-success">
+                <div class="card-header">
+                  <h6 class="mb-0"><i class="fas fa-robot"></i> AI Performance Summary</h6>
+                </div>
+                <div class="card-body">
+                  <div id="nlpSummary" class="mb-3">
+                    <div class="text-muted">Loading performance summary...</div>
+                  </div>
+                  
+                  <h6>AI Recommendations</h6>
+                  <div id="aiRecommendations">
+                    <div class="text-muted">Loading recommendations...</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -431,6 +526,14 @@
         // Load upcoming shifts
         console.log('Calling loadUpcomingShifts...');
         loadUpcomingShifts();
+        
+        // Load forecasting data
+        console.log('Loading forecasting data...');
+        loadForecastingData();
+        
+        // Load AI insights
+        console.log('Loading AI insights...');
+        loadAIInsights();
 
     } catch (error) {
         console.error("Error loading dashboard summary:", error);
@@ -783,6 +886,233 @@
           }
 
       });
+  }
+
+  async function loadDashboardAlerts() {
+    try {
+      const response = await fetch('/api/dashboard-alerts');
+      if (response.ok) {
+        const data = await response.json();
+        const alerts = data.alerts || [];
+        const container = document.getElementById('alertsContainer');
+        if (!alerts.length) {
+          container.innerHTML = '';
+          return;
+        }
+        let html = '';
+        alerts.forEach(alert => {
+          html += `<div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i> ${alert}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>`;
+        });
+        container.innerHTML = html;
+      }
+    } catch (error) {
+      console.error('Error loading dashboard alerts:', error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardAlerts();
+  });
+
+  // Forecasting & Trends Functions
+  async function loadForecastingData() {
+    try {
+      const response = await fetch('/api/forecasting-data');
+      if (response.ok) {
+        const data = await response.json();
+        displayForecastingData(data);
+      } else {
+        console.error('Error loading forecasting data');
+        displayForecastingError();
+      }
+    } catch (error) {
+      console.error('Error loading forecasting data:', error);
+      displayForecastingError();
+    }
+  }
+
+  function displayForecastingData(data) {
+    // Next Week Prediction
+    const nextWeek = data.next_week_prediction || {};
+    document.getElementById('nextWeekHours').textContent = nextWeek.prediction || '-';
+    document.getElementById('nextWeekConfidence').textContent = `${nextWeek.confidence || 0}% confidence`;
+    
+    // Set trend badge color
+    const trendBadge = document.getElementById('nextWeekTrend');
+    const trend = nextWeek.trend || 'stable';
+    trendBadge.textContent = trend;
+    trendBadge.className = `badge ${trend === 'increasing' ? 'bg-success' : trend === 'decreasing' ? 'bg-danger' : 'bg-secondary'}`;
+    
+    // Show prediction methods
+    const methods = nextWeek.methods || {};
+    const methodText = Object.entries(methods).map(([method, value]) => `${method}: ${value}h`).join(', ');
+    document.getElementById('nextWeekMethods').textContent = methodText || 'Using historical data';
+
+    // Growth Trends
+    const trendAnalysis = data.trend_analysis || {};
+    const growthRate = trendAnalysis.monthly_growth_rate || 0;
+    document.getElementById('growthRate').textContent = `${growthRate.toFixed(1)}%`;
+    
+    // Set progress bar
+    const progressBar = document.getElementById('growthProgress');
+    const progressWidth = Math.min(100, Math.max(0, growthRate + 50)); // Normalize to 0-100
+    progressBar.style.width = `${progressWidth}%`;
+    
+    // Growth insight
+    const insight = growthRate > 10 ? 'Strong growth trend' : 
+                   growthRate > 0 ? 'Moderate growth' : 
+                   growthRate > -10 ? 'Stable performance' : 'Declining trend';
+    document.getElementById('growthInsight').textContent = insight;
+
+    // Peak Times Forecast
+    const peakForecast = data.peak_times_forecast || {};
+    document.getElementById('peakTimeForecast').textContent = peakForecast.peak_hour || '-';
+    document.getElementById('peakDay').textContent = peakForecast.peak_day || '-';
+    document.getElementById('peakHour').textContent = `${peakForecast.peak_hour || '-'}:00`;
+    
+    const peakInsight = peakForecast.insight || 'Based on historical patterns';
+    document.getElementById('peakInsight').textContent = peakInsight;
+
+    // Optimization Suggestions
+    const suggestions = data.optimization_suggestions || [];
+    const suggestionsList = document.getElementById('optimizationSuggestions');
+    if (suggestions.length > 0) {
+      suggestionsList.innerHTML = suggestions.map(suggestion => 
+        `<li><i class="fas fa-lightbulb text-warning me-2"></i>${suggestion}</li>`
+      ).join('');
+    } else {
+      suggestionsList.innerHTML = '<li class="text-muted">No optimization suggestions available</li>';
+    }
+
+    // Risk Analysis
+    const risks = data.risk_analysis || {};
+    const riskList = document.getElementById('riskAnalysis');
+    const riskItems = [];
+    
+    if (risks.low_staffing_risk) {
+      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-warning me-2"></i>Low staffing risk: ${risks.low_staffing_risk}</li>`);
+    }
+    if (risks.overstaffing_risk) {
+      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-info me-2"></i>Overstaffing risk: ${risks.overstaffing_risk}</li>`);
+    }
+    if (risks.attendance_risk) {
+      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-danger me-2"></i>Attendance risk: ${risks.attendance_risk}</li>`);
+    }
+    
+    if (riskItems.length > 0) {
+      riskList.innerHTML = riskItems.join('');
+    } else {
+      riskList.innerHTML = '<li class="text-muted">No significant risks detected</li>';
+    }
+  }
+
+  function displayForecastingError() {
+    document.getElementById('nextWeekHours').textContent = 'Error';
+    document.getElementById('growthRate').textContent = 'Error';
+    document.getElementById('peakTimeForecast').textContent = 'Error';
+    document.getElementById('optimizationSuggestions').innerHTML = '<li class="text-danger">Failed to load suggestions</li>';
+    document.getElementById('riskAnalysis').innerHTML = '<li class="text-danger">Failed to load analysis</li>';
+  }
+
+  // AI Insights Functions
+  async function loadAIInsights() {
+    try {
+      const response = await fetch('/api/ai-insights');
+      if (response.ok) {
+        const data = await response.json();
+        displayAIInsights(data);
+      } else {
+        console.error('Error loading AI insights');
+        displayAIInsightsError();
+      }
+    } catch (error) {
+      console.error('Error loading AI insights:', error);
+      displayAIInsightsError();
+    }
+  }
+
+  function displayAIInsights(data) {
+    // Display NLP Summary
+    const nlpSummary = document.getElementById('nlpSummary');
+    if (data.nlp_summary) {
+      nlpSummary.innerHTML = `
+        <div class="alert alert-info">
+          <i class="fas fa-robot me-2"></i>
+          <strong>AI Analysis:</strong> ${data.nlp_summary}
+        </div>
+      `;
+    } else {
+      nlpSummary.innerHTML = '<div class="text-muted">No performance summary available</div>';
+    }
+
+    // Display AI Recommendations
+    const aiRecommendations = document.getElementById('aiRecommendations');
+    if (data.ai_recommendations && data.ai_recommendations.length > 0) {
+      const recommendationsHtml = data.ai_recommendations.map(rec => `
+        <div class="card mb-3 ${getRecommendationCardClass(rec.priority)}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="card-title mb-1">
+                  <i class="fas ${getRecommendationIcon(rec.type)} me-2"></i>
+                  ${rec.title}
+                </h6>
+                <p class="card-text small mb-2">${rec.description}</p>
+                <div class="row">
+                  <div class="col-md-6">
+                    <strong>Action:</strong> ${rec.action}
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Impact:</strong> ${rec.impact}
+                  </div>
+                </div>
+              </div>
+              <span class="badge ${getPriorityBadgeClass(rec.priority)}">${rec.priority}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      aiRecommendations.innerHTML = recommendationsHtml;
+    } else {
+      aiRecommendations.innerHTML = '<div class="text-muted">No recommendations available</div>';
+    }
+  }
+
+  function getRecommendationCardClass(priority) {
+    switch (priority) {
+      case 'high': return 'border-danger';
+      case 'medium': return 'border-warning';
+      case 'low': return 'border-info';
+      default: return 'border-secondary';
+    }
+  }
+
+  function getRecommendationIcon(type) {
+    switch (type) {
+      case 'staffing': return 'fa-users';
+      case 'schedule': return 'fa-clock';
+      case 'quality': return 'fa-star';
+      case 'growth': return 'fa-chart-line';
+      case 'consistency': return 'fa-chart-bar';
+      default: return 'fa-lightbulb';
+    }
+  }
+
+  function getPriorityBadgeClass(priority) {
+    switch (priority) {
+      case 'high': return 'bg-danger';
+      case 'medium': return 'bg-warning text-dark';
+      case 'low': return 'bg-info';
+      default: return 'bg-secondary';
+    }
+  }
+
+  function displayAIInsightsError() {
+    document.getElementById('nlpSummary').innerHTML = '<div class="text-danger">Failed to load performance summary</div>';
+    document.getElementById('aiRecommendations').innerHTML = '<div class="text-danger">Failed to load recommendations</div>';
   }
 </script>
 </body>
