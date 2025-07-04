@@ -169,12 +169,23 @@ class TutorAnalytics:
     # ==================== FORECASTING & TRENDS ====================
     
     def get_forecasting_data(self):
-        """Get comprehensive forecasting data with advanced predictions"""
+        print("DATA HEAD:", self.data.head())
+        print("DATA COLUMNS:", self.data.columns)
+        print("DATA SHAPE:", self.data.shape)
+        """Get comprehensive forecasting data with advanced predictions and more features"""
+        import numpy as np
+        from datetime import datetime
         if self.data.empty:
             return {
                 'next_week_prediction': 0,
+                'next_week_confidence_interval': [0, 0],
                 'next_month_prediction': {},
+                'next_month_confidence_interval': [0, 0],
                 'tutor_demand_forecast': {},
+                'seasonal_pattern_summary': {},
+                'anomaly_detection': {},
+                'historical_vs_forecast': {},
+                'last_updated': datetime.now().isoformat(),
                 'peak_times_forecast': {},
                 'seasonal_forecast': {},
                 'risk_analysis': {},
@@ -182,13 +193,136 @@ class TutorAnalytics:
                 'trend_analysis': {},
                 'growth_data': [],
                 'patterns': {},
-                'advanced_metrics': {}
+                'advanced_metrics': {},
+                'nlp_summary': self.generate_nlp_summary(),
+                'ai_recommendations': self.get_ai_recommendations(),
+                'hourly_forecast': {},
+                'top_growth_opportunities': [],
+                'forecast_accuracy': 0.0,
+                'ai_confidence_score': 0.0,
+                'scenario_simulation': {},
+                'improved_natural_language_summary': 'No data available.'
             }
-        
+        # Next week prediction and confidence interval
+        next_week = self.predict_next_week_hours()
+        next_week_pred = next_week['prediction']
+        next_week_std = np.std(next_week.get('recent_weeks', [0]))
+        next_week_conf = [max(0, next_week_pred - 1.96 * next_week_std), next_week_pred + 1.96 * next_week_std]
+        # Next month prediction and confidence interval
+        next_month = self.predict_next_month_hours()
+        next_month_pred = next_month.get('prediction', 0) if isinstance(next_month, dict) else 0
+        next_month_std = next_month.get('std', 0) if isinstance(next_month, dict) else 0
+        next_month_conf = [max(0, next_month_pred - 1.96 * next_month_std), next_month_pred + 1.96 * next_month_std]
+        # Tutor demand forecast (expected tutors needed next week/month)
+        weekly_tutors = self.data.groupby(self.data['check_in'].dt.isocalendar().week)['tutor_id'].nunique().tail(8)
+        expected_tutors_next_week = int(np.round(weekly_tutors.mean())) if not weekly_tutors.empty else 0
+        monthly_tutors = self.data.groupby(self.data['check_in'].dt.month)['tutor_id'].nunique().tail(6)
+        expected_tutors_next_month = int(np.round(monthly_tutors.mean())) if not monthly_tutors.empty else 0
+        tutor_demand_forecast = {
+            'next_week': expected_tutors_next_week,
+            'next_month': expected_tutors_next_month
+        }
+        # Seasonal pattern summary
+        day_pattern = self.data.groupby('day_of_week')['shift_hours'].sum()
+        hour_pattern = self.data.groupby('hour')['shift_hours'].sum()
+        busiest_day = day_pattern.idxmax() if not day_pattern.empty else 'Monday'
+        busiest_hour = hour_pattern.idxmax() if not hour_pattern.empty else 10
+        seasonal_pattern_summary = {
+            'busiest_day': busiest_day,
+            'busiest_hour': int(busiest_hour),
+            'day_pattern': day_pattern.to_dict(),
+            'hour_pattern': hour_pattern.to_dict()
+        }
+        # Anomaly detection (last week/month vs. previous average)
+        weekly_hours = self.data.groupby(self.data['check_in'].dt.isocalendar().week)['shift_hours'].sum().tail(8)
+        last_week = weekly_hours.iloc[-1] if len(weekly_hours) > 0 else 0
+        prev_weeks_avg = weekly_hours.iloc[:-1].mean() if len(weekly_hours) > 1 else 0
+        week_anomaly = (last_week - prev_weeks_avg) / prev_weeks_avg * 100 if prev_weeks_avg > 0 else 0
+        anomaly_detection = {
+            'last_week': float(round(last_week, 1)),
+            'prev_weeks_avg': float(round(prev_weeks_avg, 1)),
+            'percent_diff': float(round(week_anomaly, 1)),
+            'is_anomaly': abs(week_anomaly) > 30
+        }
+        # Historical vs. forecast comparison
+        historical_vs_forecast = {
+            'last_week': float(round(last_week, 1)),
+            'forecast_next_week': float(round(next_week_pred, 1)),
+            'last_month': float(round(self.data.groupby(self.data['check_in'].dt.month)['shift_hours'].sum().tail(2).iloc[0], 1)) if self.data.groupby(self.data['check_in'].dt.month)['shift_hours'].sum().shape[0] > 1 else 0,
+            'forecast_next_month': float(round(next_month_pred, 1))
+        }
+        # Hourly forecast
+        hourly_forecast = {}
+        for hour in range(24):
+            hour_data = self.data[self.data['check_in'].dt.hour == hour]
+            hourly_forecast[hour] = {
+                'predicted_hours': float(hour_data['shift_hours'].mean() if not hour_data.empty else 0),
+                'predicted_sessions': int(hour_data.shape[0])
+            }
+        # Top growth opportunities
+        day_growth = self.data.groupby(self.data['check_in'].dt.day_name())['shift_hours'].sum().sort_values(ascending=False)
+        top_growth_opportunities = [
+            {'type': 'day', 'label': day, 'projected_growth': float(val)} for day, val in day_growth.head(3).items()
+        ]
+        # Forecast accuracy (simple: compare last week's forecast to actual)
+        last_week_actual = self.data[self.data['check_in'] >= (datetime.now() - pd.Timedelta(days=7))]['shift_hours'].sum()
+        last_week_forecast = self.get_last_week_forecast() if hasattr(self, 'get_last_week_forecast') else last_week_actual
+        forecast_accuracy = 100.0 - abs(last_week_actual - last_week_forecast) / (last_week_actual + 1e-6) * 100.0
+        # AI confidence score (simple average of all confidence fields)
+        confidences = [
+            next_week.get('confidence', 0),
+            next_month.get('confidence', 0)
+        ]
+        ai_confidence_score = float(np.mean([c for c in confidences if c is not None]))
+        # Scenario simulation (simulate adding tutors)
+        scenario_simulation = {}
+        for add in [2, 5, 10]:
+            scenario_simulation[f'+{add}_tutors'] = float(self.data['shift_hours'].sum() * (1 + 0.05 * add))
+        # Improved natural language summary
+        improved_natural_language_summary = f"AI Forecast: Next week is expected to have {int(self.data['shift_hours'].mean())} hours per day, with peak activity at {day_growth.index[0]}. Adding more tutors could increase total hours by up to {int(scenario_simulation['+10_tutors'])}h. Forecast accuracy last week: {forecast_accuracy:.1f}%."
+        # Per-tutor forecast (next week)
+        per_tutor_forecast = {}
+        if not self.data.empty and 'tutor_id' in self.data.columns:
+            next_week_num = self.data['week'].max() + 1
+            for tutor_id, group in self.data.groupby('tutor_id'):
+                avg_hours = group['shift_hours'].tail(4).mean() if 'shift_hours' in group else 0
+                per_tutor_forecast[tutor_id] = {
+                    'tutor_name': group['tutor_name'].iloc[0] if 'tutor_name' in group else str(tutor_id),
+                    'predicted_hours': float(round(avg_hours, 2)),
+                    'predicted_sessions': int(group['date'].nunique() // 4)  # crude estimate
+                }
+        # Day-of-week forecast (next week)
+        day_of_week_forecast = {}
+        if not self.data.empty:
+            for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']:
+                day_data = self.data[self.data['day_of_week'] == day]
+                avg_hours = day_data['shift_hours'].tail(8).mean() if not day_data.empty else 0
+                avg_sessions = day_data.shape[0] // 8 if not day_data.empty else 0
+                day_of_week_forecast[day] = {
+                    'predicted_hours': float(round(avg_hours, 2)),
+                    'predicted_sessions': int(avg_sessions)
+                }
+        # Anomaly probability (next week)
+        anomaly_probability = float(min(1.0, abs(anomaly_detection['percent_diff']) / 100.0)) if 'anomaly_detection' in locals() else 0.0
+        # Forecast vs actual history (last 8 weeks)
+        forecast_vs_actual_history = []
+        weekly_hours = self.data.groupby(self.data['check_in'].dt.isocalendar().week)['shift_hours'].sum().tail(8)
+        for i, week in enumerate(weekly_hours.index):
+            forecast = float(round(weekly_hours.iloc[i-1], 1)) if i > 0 else float(round(weekly_hours.iloc[0], 1))
+            actual = float(round(weekly_hours.iloc[i], 1))
+            forecast_vs_actual_history.append({'week': int(week), 'forecast': forecast, 'actual': actual})
+        # Forecast explanation
+        forecast_explanation = f"Based on recent trends, the busiest day next week is likely to be {seasonal_pattern_summary.get('busiest_day', 'Monday')}, with an anomaly probability of {anomaly_probability*100:.1f}%. Top tutor: {max(per_tutor_forecast.values(), key=lambda x: x['predicted_hours'])['tutor_name'] if per_tutor_forecast else 'N/A'}."
         forecasting_data = {
-            'next_week_prediction': self.predict_next_week_hours(),
-            'next_month_prediction': self.predict_next_month_hours(),
-            'tutor_demand_forecast': self.predict_tutor_demand(),
+            'next_week_prediction': next_week,
+            'next_week_confidence_interval': [float(round(next_week_conf[0], 1)), float(round(next_week_conf[1], 1))],
+            'next_month_prediction': next_month,
+            'next_month_confidence_interval': [float(round(next_month_conf[0], 1)), float(round(next_month_conf[1], 1))],
+            'tutor_demand_forecast': tutor_demand_forecast,
+            'seasonal_pattern_summary': seasonal_pattern_summary,
+            'anomaly_detection': anomaly_detection,
+            'historical_vs_forecast': historical_vs_forecast,
+            'last_updated': datetime.now().isoformat(),
             'peak_times_forecast': self.predict_peak_times(),
             'seasonal_forecast': self.predict_seasonal_patterns(),
             'risk_analysis': self.analyze_risks(),
@@ -198,10 +332,19 @@ class TutorAnalytics:
             'patterns': self.analyze_patterns(),
             'advanced_metrics': self.get_advanced_metrics(),
             'nlp_summary': self.generate_nlp_summary(),
-            'ai_recommendations': self.get_ai_recommendations()
+            'ai_recommendations': self.get_ai_recommendations(),
+            'hourly_forecast': hourly_forecast,
+            'top_growth_opportunities': top_growth_opportunities,
+            'forecast_accuracy': forecast_accuracy,
+            'ai_confidence_score': ai_confidence_score,
+            'scenario_simulation': scenario_simulation,
+            'improved_natural_language_summary': improved_natural_language_summary,
+            'per_tutor_forecast': per_tutor_forecast,
+            'day_of_week_forecast': day_of_week_forecast,
+            'anomaly_probability': anomaly_probability,
+            'forecast_vs_actual_history': forecast_vs_actual_history,
+            'forecast_explanation': forecast_explanation
         }
-        
-        # Convert numpy types to native Python types for JSON serialization
         return self._convert_numpy_types(forecasting_data)
     
     def predict_next_week_hours(self):

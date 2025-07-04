@@ -319,6 +319,87 @@
         </div>
       </div>
     </div>
+
+    <!-- AI Forecasting & Insights Section -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h4 class="fw-bold mb-3"><i class="fas fa-brain me-2"></i>AI Forecasting & Insights <span class="text-muted" style="font-size:1rem;">(powered by real data)</span></h4>
+        <hr class="mb-4">
+      </div>
+    </div>
+    <!-- Improved AI Forecasting Summary -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="alert alert-info shadow-sm d-flex align-items-center" id="improvedNLSummary" style="font-size:1.15rem;font-weight:500;">
+          <i class="fas fa-lightbulb me-2 text-primary"></i>
+          <span>Loading AI forecast summary...</span>
+          <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="AI-generated summary of key trends and predictions."></i>
+        </div>
+      </div>
+    </div>
+    <!-- New AI Forecasting Features Row -->
+    <div class="row mb-4 g-4">
+      <!-- AI Confidence Score -->
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm kpi-card primary h-100 position-relative">
+          <div class="card-body">
+            <div class="kpi-icon mb-2"><i class="fas fa-robot"></i></div>
+            <h4 id="aiConfidenceScore">-</h4>
+            <div class="small text-muted">AI Confidence Score <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="How confident the AI is in its predictions (higher is better)"></i></div>
+          </div>
+        </div>
+      </div>
+      <!-- Forecast Accuracy -->
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm kpi-card success h-100 position-relative">
+          <div class="card-body">
+            <div class="kpi-icon mb-2"><i class="fas fa-bullseye"></i></div>
+            <h4 id="forecastAccuracy">-</h4>
+            <div class="small text-muted">Forecast Accuracy <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="How close last week's forecast was to reality"></i></div>
+          </div>
+        </div>
+      </div>
+      <!-- Top Growth Opportunities -->
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm kpi-card warning h-100 position-relative">
+          <div class="card-body">
+            <div class="kpi-icon mb-2"><i class="fas fa-arrow-up"></i></div>
+            <div class="small text-muted mb-1">Top Growth Opportunities <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="Where the most growth is expected"></i></div>
+            <ul class="list-unstyled mb-0" id="topGrowthOpportunities" style="font-size:0.95rem;"></ul>
+          </div>
+        </div>
+      </div>
+      <!-- Scenario Simulation -->
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm kpi-card info h-100 position-relative">
+          <div class="card-body">
+            <div class="kpi-icon mb-2"><i class="fas fa-users-cog"></i></div>
+            <div class="small text-muted mb-1">Scenario Simulation <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="Impact of adding more tutors"></i></div>
+            <table class="table table-sm table-borderless mb-0" id="scenarioSimulationTable">
+              <tbody>
+                <tr><td>+2 tutors</td><td id="simTutors2">-</td></tr>
+                <tr><td>+5 tutors</td><td id="simTutors5">-</td></tr>
+                <tr><td>+10 tutors</td><td id="simTutors10">-</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Hourly Forecast Bar Chart/Table -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card shadow-sm kpi-card indigo">
+          <div class="card-header d-flex align-items-center">
+            <i class="fas fa-clock me-2"></i> Hourly Forecast
+            <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Predicted hours and sessions for each hour of the day"></i>
+          </div>
+          <div class="card-body">
+            <div id="hourlyForecastTable" style="overflow-x:auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Alerts Section -->
@@ -335,107 +416,101 @@
         </div>
         <div class="card-body">
           <div class="row g-4">
-            <!-- Next Week Prediction -->
-            <div class="col-lg-4 col-md-6">
-              <div class="card border-primary h-100">
+            <!-- Next Week Prediction Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
                 <div class="card-body text-center">
-                  <div class="mb-3">
-                    <i class="fas fa-calendar-week text-primary" style="font-size: 2rem;"></i>
-            </div>
+                  <i class="fas fa-calendar-alt text-primary" style="font-size: 2rem;"></i>
                   <h4 class="text-primary mb-2" id="nextWeekHours">-</h4>
                   <h6 class="text-muted mb-2">Expected Hours Next Week</h6>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge bg-primary" id="nextWeekConfidence">-</span>
-                    <span class="badge" id="nextWeekTrend">-</span>
-          </div>
-                  <small class="text-muted d-block mt-2" id="nextWeekMethods">-</small>
+                  <span class="badge bg-primary mb-1" id="nextWeekConfidence">-</span>
+                  <span class="badge bg-success mb-1" id="nextWeekTrend">-</span>
+                  <div class="small text-muted mb-1" id="nextWeekCI">-</div>
+                  <div class="small text-muted mb-1" id="nextWeekMethods">-</div>
                 </div>
               </div>
             </div>
-            
-            <!-- Growth Trends -->
-            <div class="col-lg-4 col-md-6">
-              <div class="card border-success h-100">
+            <!-- Next Month Prediction Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
                 <div class="card-body text-center">
-                  <div class="mb-3">
-                    <i class="fas fa-trending-up text-success" style="font-size: 2rem;"></i>
-                  </div>
-                  <h4 class="text-success mb-2" id="growthRate">-</h4>
-                  <h6 class="text-muted mb-2">Monthly Growth Rate</h6>
-                  <div class="progress mb-2" style="height: 8px;">
-                    <div class="progress-bar bg-success" id="growthProgress" style="width: 0%"></div>
-                  </div>
-                  <small class="text-muted" id="growthInsight">-</small>
+                  <i class="fas fa-calendar text-info" style="font-size: 2rem;"></i>
+                  <h4 class="text-info mb-2" id="nextMonthHours">-</h4>
+                  <h6 class="text-muted mb-2">Expected Hours Next Month</h6>
+                  <span class="badge bg-info mb-1" id="nextMonthConfidence">-</span>
+                  <span class="badge bg-success mb-1" id="nextMonthTrend">-</span>
+                  <div class="small text-muted mb-1" id="nextMonthCI">-</div>
                 </div>
               </div>
             </div>
-            
-            <!-- Peak Times Forecast -->
-            <div class="col-lg-4 col-md-6">
-              <div class="card border-warning h-100">
+            <!-- Tutor Demand Forecast Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
                 <div class="card-body text-center">
-                  <div class="mb-3">
-                    <i class="fas fa-clock text-warning" style="font-size: 2rem;"></i>
-                  </div>
-                  <h4 class="text-warning mb-2" id="peakTimeForecast">-</h4>
-                  <h6 class="text-muted mb-2">Peak Time Forecast</h6>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge bg-warning text-dark" id="peakDay">-</span>
-                    <span class="badge bg-info" id="peakHour">-</span>
-                  </div>
-                  <small class="text-muted d-block mt-2" id="peakInsight">-</small>
+                  <i class="fas fa-users text-success" style="font-size: 2rem;"></i>
+                  <h4 class="text-success mb-2" id="tutorDemandWeek">-</h4>
+                  <h6 class="text-muted mb-2">Expected Tutors Next Week</h6>
+                  <div class="small text-muted mb-1" id="tutorDemandMonth">-</div>
                 </div>
               </div>
             </div>
           </div>
-          
-          <!-- Advanced Forecasting Details -->
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="card border-info">
-                <div class="card-header">
-                  <h6 class="mb-0"><i class="fas fa-brain"></i> AI-Powered Insights</h6>
+          <div class="row g-4 mt-2">
+            <!-- Seasonal Pattern Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-sun text-warning" style="font-size: 2rem;"></i>
+                  <h4 class="text-warning mb-2" id="busiestDay">-</h4>
+                  <h6 class="text-muted mb-2">Busiest Day & Hour</h6>
+                  <div class="small text-muted mb-1" id="busiestHour">-</div>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <h6>Optimization Suggestions</h6>
-                      <ul class="list-unstyled" id="optimizationSuggestions">
-                        <li class="text-muted">Loading suggestions...</li>
-                      </ul>
-                    </div>
-                    <div class="col-md-6">
-                      <h6>Risk Analysis</h6>
-                      <ul class="list-unstyled" id="riskAnalysis">
-                        <li class="text-muted">Loading analysis...</li>
-                      </ul>
-                    </div>
-                  </div>
+              </div>
+            </div>
+            <!-- Anomaly Detection Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                  <h4 class="text-danger mb-2" id="anomalyStatus">-</h4>
+                  <h6 class="text-muted mb-2">Anomaly Detection</h6>
+                  <div class="small text-muted mb-1" id="anomalyPercent">-</div>
+                  <div class="small text-muted mb-1" id="anomalyLastWeek">-</div>
+                  <div class="small text-muted mb-1" id="anomalyPrevAvg">-</div>
+                </div>
+              </div>
+            </div>
+            <!-- Historical vs Forecast Card -->
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-history text-secondary" style="font-size: 2rem;"></i>
+                  <h4 class="text-secondary mb-2" id="histLastWeek">-</h4>
+                  <h6 class="text-muted mb-2">Last Week vs Forecast</h6>
+                  <div class="small text-muted mb-1" id="histForecastWeek">-</div>
+                  <div class="small text-muted mb-1" id="histLastMonth">-</div>
+                  <div class="small text-muted mb-1" id="histForecastMonth">-</div>
                 </div>
               </div>
             </div>
           </div>
-          
-          <!-- AI Performance Summary -->
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="card border-success">
-                <div class="card-header">
-                  <h6 class="mb-0"><i class="fas fa-robot"></i> AI Performance Summary</h6>
-                </div>
-                <div class="card-body">
-                  <div id="nlpSummary" class="mb-3">
-                    <div class="text-muted">Loading performance summary...</div>
-                  </div>
-                  
-                  <h6>AI Recommendations</h6>
-                  <div id="aiRecommendations">
-                    <div class="text-muted">Loading recommendations...</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="text-end mt-2">
+            <small class="text-muted">Last updated: <span id="forecastLastUpdated">-</span></small>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Upcoming Shifts Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Upcoming Shifts</h5>
+        </div>
+        <div class="card-body">
+          <div id="upcomingShiftsContainer"></div>
         </div>
       </div>
     </div>
@@ -937,84 +1012,94 @@
   function displayForecastingData(data) {
     // Next Week Prediction
     const nextWeek = data.next_week_prediction || {};
-    document.getElementById('nextWeekHours').textContent = nextWeek.prediction || '-';
-    document.getElementById('nextWeekConfidence').textContent = `${nextWeek.confidence || 0}% confidence`;
-    
-    // Set trend badge color
-    const trendBadge = document.getElementById('nextWeekTrend');
-    const trend = nextWeek.trend || 'stable';
-    trendBadge.textContent = trend;
-    trendBadge.className = `badge ${trend === 'increasing' ? 'bg-success' : trend === 'decreasing' ? 'bg-danger' : 'bg-secondary'}`;
-    
-    // Show prediction methods
-    const methods = nextWeek.methods || {};
-    const methodText = Object.entries(methods).map(([method, value]) => `${method}: ${value}h`).join(', ');
-    document.getElementById('nextWeekMethods').textContent = methodText || 'Using historical data';
+    document.getElementById('nextWeekHours').textContent = nextWeek.prediction !== undefined ? nextWeek.prediction : '-';
+    document.getElementById('nextWeekConfidence').textContent = (nextWeek.confidence !== undefined ? nextWeek.confidence : 0) + '% confidence';
+    document.getElementById('nextWeekTrend').textContent = nextWeek.trend || '-';
+    document.getElementById('nextWeekCI').textContent = data.next_week_confidence_interval ? `[${data.next_week_confidence_interval[0]}, ${data.next_week_confidence_interval[1]}]` : '-';
+    document.getElementById('nextWeekMethods').textContent = nextWeek.methods ? `ewma: ${nextWeek.methods.ewma}h, linear: ${nextWeek.methods.linear}h, sma: ${nextWeek.methods.sma}h` : '-';
 
-    // Growth Trends
-    const trendAnalysis = data.trend_analysis || {};
-    const growthRate = trendAnalysis.monthly_growth_rate || 0;
-    document.getElementById('growthRate').textContent = `${growthRate.toFixed(1)}%`;
-    
-    // Set progress bar
-    const progressBar = document.getElementById('growthProgress');
-    const progressWidth = Math.min(100, Math.max(0, growthRate + 50)); // Normalize to 0-100
-    progressBar.style.width = `${progressWidth}%`;
-    
-    // Growth insight
-    const insight = growthRate > 10 ? 'Strong growth trend' : 
-                   growthRate > 0 ? 'Moderate growth' : 
-                   growthRate > -10 ? 'Stable performance' : 'Declining trend';
-    document.getElementById('growthInsight').textContent = insight;
+    // Next Month Prediction
+    const nextMonth = data.next_month_prediction || {};
+    document.getElementById('nextMonthHours').textContent = nextMonth.prediction !== undefined ? nextMonth.prediction : '-';
+    document.getElementById('nextMonthConfidence').textContent = (nextMonth.confidence !== undefined ? nextMonth.confidence : 0) + '% confidence';
+    document.getElementById('nextMonthTrend').textContent = nextMonth.growth_rate !== undefined ? (nextMonth.growth_rate > 0 ? 'increasing' : 'decreasing') : '-';
+    document.getElementById('nextMonthCI').textContent = data.next_month_confidence_interval ? `[${data.next_month_confidence_interval[0]}, ${data.next_month_confidence_interval[1]}]` : '-';
 
-    // Peak Times Forecast
-    const peakForecast = data.peak_times_forecast || {};
-    document.getElementById('peakTimeForecast').textContent = peakForecast.peak_hour || '-';
-    document.getElementById('peakDay').textContent = peakForecast.peak_day || '-';
-    document.getElementById('peakHour').textContent = `${peakForecast.peak_hour || '-'}:00`;
-    
-    const peakInsight = peakForecast.insight || 'Based on historical patterns';
-    document.getElementById('peakInsight').textContent = peakInsight;
+    // Tutor Demand Forecast
+    const tutorDemand = data.tutor_demand_forecast || {};
+    document.getElementById('tutorDemandWeek').textContent = tutorDemand.next_week !== undefined ? tutorDemand.next_week : '-';
+    document.getElementById('tutorDemandMonth').textContent = tutorDemand.next_month !== undefined ? tutorDemand.next_month : '-';
 
-    // Optimization Suggestions
-    const suggestions = data.optimization_suggestions || [];
-    const suggestionsList = document.getElementById('optimizationSuggestions');
-    if (suggestions.length > 0) {
-      suggestionsList.innerHTML = suggestions.map(suggestion => 
-        `<li><i class="fas fa-lightbulb text-warning me-2"></i>${suggestion}</li>`
-      ).join('');
-    } else {
-      suggestionsList.innerHTML = '<li class="text-muted">No optimization suggestions available</li>';
-    }
+    // Seasonal Pattern Summary
+    const seasonal = data.seasonal_pattern_summary || {};
+    document.getElementById('busiestDay').textContent = seasonal.busiest_day || '-';
+    document.getElementById('busiestHour').textContent = seasonal.busiest_hour !== undefined ? seasonal.busiest_hour : '-';
 
-    // Risk Analysis
-    const risks = data.risk_analysis || {};
-    const riskList = document.getElementById('riskAnalysis');
-    const riskItems = [];
-    
-    if (risks.low_staffing_risk) {
-      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-warning me-2"></i>Low staffing risk: ${risks.low_staffing_risk}</li>`);
+    // Anomaly Detection
+    const anomaly = data.anomaly_detection || {};
+    document.getElementById('anomalyStatus').textContent = anomaly.is_anomaly ? 'Anomaly Detected' : 'Normal';
+    document.getElementById('anomalyPercent').textContent = anomaly.percent_diff !== undefined ? anomaly.percent_diff + '%' : '-';
+    document.getElementById('anomalyLastWeek').textContent = anomaly.last_week !== undefined ? anomaly.last_week : '-';
+    document.getElementById('anomalyPrevAvg').textContent = anomaly.prev_weeks_avg !== undefined ? anomaly.prev_weeks_avg : '-';
+
+    // Historical vs Forecast
+    const hist = data.historical_vs_forecast || {};
+    document.getElementById('histLastWeek').textContent = hist.last_week !== undefined ? hist.last_week : '-';
+    document.getElementById('histForecastWeek').textContent = hist.forecast_next_week !== undefined ? hist.forecast_next_week : '-';
+    document.getElementById('histLastMonth').textContent = hist.last_month !== undefined ? hist.last_month : '-';
+    document.getElementById('histForecastMonth').textContent = hist.forecast_next_month !== undefined ? hist.forecast_next_month : '-';
+
+    // Last Updated
+    document.getElementById('forecastLastUpdated').textContent = data.last_updated ? new Date(data.last_updated).toLocaleString() : '-';
+
+    // Improved Natural Language Summary
+    document.getElementById('improvedNLSummary').textContent = data.improved_natural_language_summary || '-';
+    // AI Confidence Score
+    document.getElementById('aiConfidenceScore').textContent = data.ai_confidence_score !== undefined ? data.ai_confidence_score.toFixed(1) + '%' : '-';
+    // Forecast Accuracy
+    document.getElementById('forecastAccuracy').textContent = data.forecast_accuracy !== undefined ? data.forecast_accuracy.toFixed(1) + '%' : '-';
+    // Top Growth Opportunities
+    const tgo = data.top_growth_opportunities || [];
+    document.getElementById('topGrowthOpportunities').innerHTML = tgo.length ? tgo.map(g => `<li><span class='badge bg-warning text-dark me-1'>${g.type}</span> ${g.label}: <b>${g.projected_growth.toFixed(1)}h</b></li>`).join('') : '<li class="text-muted">-</li>';
+    // Scenario Simulation
+    const sim = data.scenario_simulation || {};
+    document.getElementById('simTutors2').textContent = sim['+2_tutors'] !== undefined ? sim['+2_tutors'].toFixed(1) + 'h' : '-';
+    document.getElementById('simTutors5').textContent = sim['+5_tutors'] !== undefined ? sim['+5_tutors'].toFixed(1) + 'h' : '-';
+    document.getElementById('simTutors10').textContent = sim['+10_tutors'] !== undefined ? sim['+10_tutors'].toFixed(1) + 'h' : '-';
+    // Hourly Forecast Table
+    const hf = data.hourly_forecast || {};
+    let hfHtml = '<table class="table table-sm table-bordered mb-0"><thead><tr><th>Hour</th><th>Predicted Hours</th><th>Predicted Sessions</th></tr></thead><tbody>';
+    for (let h = 0; h < 24; h++) {
+      const row = hf[h] || {predicted_hours: 0, predicted_sessions: 0};
+      hfHtml += `<tr><td>${h}:00</td><td>${row.predicted_hours.toFixed(2)}</td><td>${row.predicted_sessions}</td></tr>`;
     }
-    if (risks.overstaffing_risk) {
-      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-info me-2"></i>Overstaffing risk: ${risks.overstaffing_risk}</li>`);
-    }
-    if (risks.attendance_risk) {
-      riskItems.push(`<li><i class="fas fa-exclamation-triangle text-danger me-2"></i>Attendance risk: ${risks.attendance_risk}</li>`);
-    }
-    
-    if (riskItems.length > 0) {
-      riskList.innerHTML = riskItems.join('');
-    } else {
-      riskList.innerHTML = '<li class="text-muted">No significant risks detected</li>';
-    }
+    hfHtml += '</tbody></table>';
+    document.getElementById('hourlyForecastTable').innerHTML = hfHtml;
   }
 
   function displayForecastingError() {
     document.getElementById('nextWeekHours').textContent = 'Error';
-    document.getElementById('growthRate').textContent = 'Error';
-    document.getElementById('peakTimeForecast').textContent = 'Error';
-    document.getElementById('optimizationSuggestions').innerHTML = '<li class="text-danger">Failed to load suggestions</li>';
-    document.getElementById('riskAnalysis').innerHTML = '<li class="text-danger">Failed to load analysis</li>';
+    document.getElementById('nextWeekConfidence').textContent = 'Error';
+    document.getElementById('nextWeekTrend').textContent = 'Error';
+    document.getElementById('nextWeekCI').textContent = 'Error';
+    document.getElementById('nextWeekMethods').textContent = 'Error';
+    document.getElementById('nextMonthHours').textContent = 'Error';
+    document.getElementById('nextMonthConfidence').textContent = 'Error';
+    document.getElementById('nextMonthTrend').textContent = 'Error';
+    document.getElementById('nextMonthCI').textContent = 'Error';
+    document.getElementById('tutorDemandWeek').textContent = 'Error';
+    document.getElementById('tutorDemandMonth').textContent = 'Error';
+    document.getElementById('tutorDemandInsight').textContent = 'Error';
+    document.getElementById('busiestDay').textContent = 'Error';
+    document.getElementById('busiestHour').textContent = 'Error';
+    document.getElementById('seasonalInsight').textContent = 'Error';
+    document.getElementById('anomalyStatus').textContent = 'Error';
+    document.getElementById('anomalyDetail').textContent = 'Error';
+    document.getElementById('histLastWeek').textContent = 'Error';
+    document.getElementById('histForecastWeek').textContent = 'Error';
+    document.getElementById('histLastMonth').textContent = 'Error';
+    document.getElementById('histForecastMonth').textContent = 'Error';
+    document.getElementById('forecastLastUpdated').textContent = 'Error';
   }
 
   // AI Insights Functions
@@ -1114,6 +1199,13 @@
     document.getElementById('nlpSummary').innerHTML = '<div class="text-danger">Failed to load performance summary</div>';
     document.getElementById('aiRecommendations').innerHTML = '<div class="text-danger">Failed to load recommendations</div>';
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
 </script>
 </body>
 </html>

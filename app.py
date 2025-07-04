@@ -1199,14 +1199,10 @@ def api_update_notification_settings():
 
 @app.route('/api/forecasting-data')
 def api_forecasting_data():
-    """Get comprehensive forecasting data"""
-    try:
-        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
-        forecasting_data = analytics.get_forecasting_data()
-        return jsonify(forecasting_data)
-    except Exception as e:
-        logger.error(f"Error getting forecasting data: {e}")
-        return jsonify({'error': 'Failed to load forecasting data'}), 500
+    print("FORECASTING ENDPOINT CALLED")
+    analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+    forecasting_data = analytics.get_forecasting_data()
+    return jsonify(forecasting_data)
 
 @app.route('/api/ai-insights')
 def api_ai_insights():
