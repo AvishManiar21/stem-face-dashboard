@@ -14,5 +14,9 @@ pytz==2025.2
 tzdata==2025.2
 six==1.17.0
 
+# Machine Learning for Forecasting
+scikit-learn==1.5.2
+scipy==1.14.1
+
 # Console colors
 colorama==0.4.6

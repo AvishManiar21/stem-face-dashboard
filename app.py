@@ -16,9 +16,13 @@ from auth import authenticate_user
 import simplejson as json
 from supabase import create_client
 from dotenv import load_dotenv
+from forecasting_routes import forecasting_bp
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# Register forecasting blueprint
+app.register_blueprint(forecasting_bp)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1196,32 +1200,6 @@ def api_update_notification_settings():
                               details=f"Updated notification settings: {updated_settings}")
     
     return jsonify({'message': 'Notification settings updated successfully', 'settings': updated_settings})
-
-@app.route('/api/forecasting-data')
-def api_forecasting_data():
-    print("FORECASTING ENDPOINT CALLED")
-    analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
-    forecasting_data = analytics.get_forecasting_data()
-    return jsonify(forecasting_data)
-
-@app.route('/api/ai-insights')
-def api_ai_insights():
-    """Get AI-powered insights and recommendations"""
-    try:
-        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
-        
-        insights_data = {
-            'nlp_summary': analytics.generate_nlp_summary(),
-            'ai_recommendations': analytics.get_ai_recommendations(),
-            'optimization_suggestions': analytics.get_optimization_suggestions(),
-            'risk_analysis': analytics.analyze_risks(),
-            'advanced_metrics': analytics.get_advanced_metrics()
-        }
-        
-        return jsonify(insights_data)
-    except Exception as e:
-        logger.error(f"Error getting AI insights: {e}")
-        return jsonify({'error': 'Failed to load AI insights'}), 500
 
 @app.route('/api/calendar-data')
 def api_calendar_data():

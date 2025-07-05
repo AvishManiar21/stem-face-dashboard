@@ -6,31 +6,59 @@
     <title>📋 Audit Logs - Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .log-entry {
-            transition: all 0.3s ease;
-            border-radius: 8px;
+            transition: all var(--transition-normal);
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
         }
         .log-entry:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-color);
         }
         .action-badge {
             font-size: 0.75rem;
-            padding: 0.4rem 0.6rem;
-            border-radius: 12px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-lg);
+            color: var(--text-light);
+            font-weight: 600;
         }
-        .action-CREATE_USER { background: linear-gradient(135deg, #28a745, #20c997); }
-        .action-UPDATE_USER_ROLE { background: linear-gradient(135deg, #ffc107, #fd7e14); }
-        .action-change_role { background: linear-gradient(135deg, #ffc107, #fd7e14); }
-        .action-DELETE_USER { background: linear-gradient(135deg, #dc3545, #e83e8c); }
-        .action-TUTOR_CHECK_IN { background: linear-gradient(135deg, #007bff, #6610f2); }
-        .action-TUTOR_CHECK_OUT { background: linear-gradient(135deg, #6c757d, #495057); }
+        .action-CREATE_USER { background: var(--bg-gradient-success); }
+        .action-UPDATE_USER_ROLE { background: var(--bg-gradient-warning); }
+        .action-change_role { background: var(--bg-gradient-warning); }
+        .action-DELETE_USER { background: var(--bg-gradient-danger); }
+        .action-TUTOR_CHECK_IN { background: var(--bg-gradient-primary); }
+        .action-TUTOR_CHECK_OUT { background: var(--bg-gradient-info); }
         .admin-only { display: none; }
+        
+        .navbar {
+            background: var(--bg-gradient-primary) !important;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-group .btn {
+            border-color: var(--border-color);
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+        
+        .btn-group .btn:hover {
+            background: var(--primary-color);
+            color: var(--text-light);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-group .btn.active {
+            background: var(--primary-color);
+            color: var(--text-light);
+            border-color: var(--primary-color);
+        }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light admin-page">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/">
@@ -186,6 +214,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin_navbar_tailwind.js"></script>
     <script>
         console.log('Audit logs page loaded!');
         let logs = [];

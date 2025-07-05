@@ -144,3 +144,19 @@ ValueError: time data "2025-06-28 17:13" doesn't match format "%Y-%m-%d %H:%M:%S
 2025-07-04 10:32:58,126 - INFO - Analytics updated
 2025-07-04 10:32:58,177 - INFO - Update logged to audit log
 2025-07-04 10:32:58,180 - INFO - Daily update completed successfully
+2025-07-05 10:55:55,558 - INFO - Starting daily data update...
+2025-07-05 10:55:55,564 - INFO - Cleaning schedule overlaps...
+2025-07-05 10:55:58,028 - INFO - Schedule overlaps cleaned
+2025-07-05 10:55:58,029 - INFO - Generating check-ins from schedule...
+2025-07-05 10:55:58,201 - ERROR - Error generating check-ins:   File "C:\Users\avish\OneDrive\Desktop\stem-face-dashboard-main\generate_checkins_from_schedule.py", line 69
+    check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M:%S')
+    ^^^^^^^^
+IndentationError: expected an indented block after 'try' statement on line 68
+
+2025-07-05 10:55:58,202 - INFO - Adding 3 today logs...
+2025-07-05 10:55:58,273 - INFO - Added 3 today logs (no duplicates)
+2025-07-05 10:55:58,274 - INFO - Added 3 today logs
+2025-07-05 10:55:58,275 - INFO - Updating analytics...
+2025-07-05 10:55:58,767 - INFO - Analytics updated
+2025-07-05 10:55:58,827 - INFO - Update logged to audit log
+2025-07-05 10:55:58,830 - INFO - Daily update completed successfully

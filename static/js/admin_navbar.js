@@ -34,20 +34,49 @@
   </div>
 </nav>
   `);
+  
+  // Load user data with error handling
   fetch('/api/user-info')
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error('User not authenticated');
+      }
+      return res.json();
+    })
     .then(user => {
-      document.getElementById('userDisplayName').textContent = user.full_name || user.email.split('@')[0];
-      document.getElementById('userEmail').textContent = user.email;
-      if (user.role !== 'admin' && user.role !== 'manager') {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+      if (user && user.email) {
+        const displayName = user.full_name || user.email.split('@')[0] || 'User';
+        const userEmail = user.email || 'Unknown';
+        
+        const displayNameEl = document.getElementById('userDisplayName');
+        const userEmailEl = document.getElementById('userEmail');
+        
+        if (displayNameEl) displayNameEl.textContent = displayName;
+        if (userEmailEl) userEmailEl.textContent = userEmail;
+        
+        // Handle role-based visibility
+        if (user.role && user.role !== 'admin' && user.role !== 'manager') {
+          document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        }
+        if (user.role && user.role !== 'admin' && user.role !== 'manager') {
+          document.querySelectorAll('.manager-only').forEach(el => el.style.display = 'none');
+          document.querySelectorAll('.lead-tutor-only').forEach(el => el.style.display = 'none');
+        }
+        if (user.role && (user.role === 'tutor' || user.role === 'lead_tutor')) {
+          document.querySelectorAll('.admin-only, .manager-only, .lead-tutor-only').forEach(el => el.style.display = 'none');
+        }
       }
-      if (user.role !== 'admin' && user.role !== 'manager') {
-        document.querySelectorAll('.manager-only').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.lead-tutor-only').forEach(el => el.style.display = 'none');
-      }
-      if (user.role === 'tutor' || user.role === 'lead_tutor') {
-        document.querySelectorAll('.admin-only, .manager-only, .lead-tutor-only').forEach(el => el.style.display = 'none');
-      }
+    })
+    .catch(error => {
+      console.log('User not authenticated or error loading user data:', error.message);
+      // Set default values for unauthenticated users
+      const displayNameEl = document.getElementById('userDisplayName');
+      const userEmailEl = document.getElementById('userEmail');
+      
+      if (displayNameEl) displayNameEl.textContent = 'Guest';
+      if (userEmailEl) userEmailEl.textContent = 'Not logged in';
+      
+      // Hide admin elements for unauthenticated users
+      document.querySelectorAll('.admin-only, .manager-only, .lead-tutor-only').forEach(el => el.style.display = 'none');
     });
 })(); 

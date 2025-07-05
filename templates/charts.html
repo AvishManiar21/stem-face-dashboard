@@ -6,7 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/js/theme-switcher.js"></script>
+  <script src="/static/js/error_handler.js"></script>
   <style> 
     .dark-mode .form-control, .dark-mode .form-select { background-color: #2a2a2a; color: #e0e0e0; border-color: #444; }
     .dark-mode .form-control::placeholder { color: #888; }
@@ -83,8 +85,8 @@
     }
   </style>
 </head>
-<body class="bg-light">
-<script src="/static/js/admin_navbar.js"></script>
+<body class="bg-light charts-page">
+<script src="/static/js/admin_navbar_tailwind.js"></script>
 
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -181,7 +183,7 @@
                 <option value="avg_hours_per_day_of_week">Avg Hours by Day of Week</option>
                 <option value="checkins_per_day_of_week">Check-ins by Day of Week</option>
               </optgroup>
-              <optgroup label="Trends & Patterns">
+              <optgroup label="Patterns">
                 <option value="cumulative_checkins">Cumulative Check-ins</option>
                 <option value="cumulative_hours">Cumulative Hours</option>
                 <option value="hourly_activity_by_day">Hourly Activity Heatmap</option>
@@ -495,7 +497,7 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="punctualityDetailsDropdown">
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('breakdown')"><i class="fas fa-list me-1"></i>Breakdown</a></li>
-            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('trends')"><i class="fas fa-chart-line me-1"></i>Trends</a></li>
+            
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('daytime')"><i class="fas fa-clock me-1"></i>By Day & Time</a></li>
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('outliers')"><i class="fas fa-star me-1"></i>Top Performers</a></li>
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('deviation')"><i class="fas fa-sliders-h me-1"></i>Deviation Distribution</a></li>
@@ -683,6 +685,8 @@
       </div>
     </div>
   </div>
+
+
 </div>
 
 <div class="modal fade" id="chartsSnapshotModal" tabindex="-1">
@@ -706,9 +710,7 @@
           <li class="nav-item" role="presentation">
             <button class="nav-link active" id="tab-breakdown" data-bs-toggle="tab" data-bs-target="#pane-breakdown" type="button" role="tab" aria-controls="pane-breakdown" aria-selected="true"><i class="fas fa-list me-1"></i>Breakdown</button>
           </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-trends" data-bs-toggle="tab" data-bs-target="#pane-trends" type="button" role="tab" aria-controls="pane-trends" aria-selected="false"><i class="fas fa-chart-line me-1"></i>Trends</button>
-          </li>
+
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-daytime" data-bs-toggle="tab" data-bs-target="#pane-daytime" type="button" role="tab" aria-controls="pane-daytime" aria-selected="false"><i class="fas fa-clock me-1"></i>By Day & Time</button>
           </li>
@@ -764,19 +766,7 @@
               </div>
             </div>
           </div>
-          <!-- Trends Tab -->
-          <div class="tab-pane fade" id="pane-trends" role="tabpanel" aria-labelledby="tab-trends">
-            <h6>Recent Punctuality Trends</h6>
-            <div class="mb-2">
-              <span class="badge bg-success">Early</span>
-              <span class="badge bg-info">On Time</span>
-              <span class="badge bg-danger">Late</span>
-            </div>
-            <div id="punctualityTrendChart" style="height: 200px;">
-              <canvas id="punctualityTrendCanvas"></canvas>
-            </div>
-            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('trends')"><i class="fas fa-download me-1"></i>Export Trends</button>
-          </div>
+
           <!-- By Day & Time Tab -->
           <div class="tab-pane fade" id="pane-daytime" role="tabpanel" aria-labelledby="tab-daytime">
             <h6>Punctuality by Day & Time</h6>
@@ -1592,31 +1582,7 @@
           options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
         });
       }
-      // Trends chart
-      const trendCtx = document.getElementById('punctualityTrendCanvas');
-      if (trendCtx) {
-        if (window.punctualityTrendChartInstance) window.punctualityTrendChartInstance.destroy();
-        const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        window.punctualityTrendChartInstance = new Chart(trendCtx, {
-          type: 'line',
-          data: {
-            labels: days.map(d => d.slice(0,3)),
-            datasets: cats.map((cat, idx) => ({
-              label: cat + ' %',
-              data: (punctualityData.trends && punctualityData.trends[cat]) ? punctualityData.trends[cat] : Array(7).fill(0),
-              borderColor: ['#28a745', '#17a2b8', '#dc3545'][idx],
-              backgroundColor: ['rgba(40,167,69,0.1)','rgba(23,162,184,0.1)','rgba(220,53,69,0.1)'][idx],
-              tension: 0.4
-            }))
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
-            plugins: { legend: { display: true, position: 'bottom' } }
-          }
-        });
-      }
+
       // Day/Time grouped bar chart
       const dayTimeCtx = document.getElementById('punctualityDayTimeChart');
       if (dayTimeCtx) {
@@ -1739,7 +1705,7 @@
         document.getElementById('tutorChartContainer').innerHTML = '<canvas id="tutorChart"></canvas>';
         const dataset = data[chartKey];
         const isComparison = data.is_comparison_mode || false;
-        const forecast = data.forecast_daily_checkins || null;
+        
 
         if (dataset === undefined || dataset === null) {
           console.error("Dataset key not found or is null:", chartKey, data);
@@ -1749,7 +1715,7 @@
         // Update chart header title
         document.getElementById('chartHeaderTitle').textContent = chartTitles[chartKey] || "Analytics Dashboard";
         
-        renderChart(chartType, dataset, chartTitles[chartKey] || "Chart", isComparison, forecast);
+        renderChart(chartType, dataset, chartTitles[chartKey] || "Chart", isComparison);
         
         // Update chart metrics
         updateChartMetrics(data);
@@ -1762,7 +1728,11 @@
         document.getElementById('totalCount').textContent = '';
         document.getElementById('chartSummaryTable').innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
       });
+
+
   };
+
+
 </script>
 </body>
 </html>

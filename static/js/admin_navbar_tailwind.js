@@ -1,3 +1,5 @@
+(function() {
+  document.body.insertAdjacentHTML('afterbegin', `
 <nav class="sticky top-0 z-50 bg-blue-600 dark:bg-blue-900 shadow">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
@@ -44,50 +46,57 @@
     </div>
   </div>
 </nav>
-<script>
-// User info and admin-only links
-fetch('/api/user-info')
-  .then(res => res.json())
-  .then(user => {
-    document.getElementById('userDisplayName').textContent = user.full_name || user.email.split('@')[0];
-    document.getElementById('userEmail').textContent = user.email;
-    if (user.role !== 'admin' && user.role !== 'manager') {
-      document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-    }
-  });
-// Dropdown logic
-const userDropdownBtn = document.getElementById('userDropdownBtn');
-const userDropdownMenu = document.getElementById('userDropdownMenu');
-userDropdownBtn.addEventListener('click', () => {
-  userDropdownMenu.classList.toggle('hidden');
-});
-document.addEventListener('click', (e) => {
-  if (!userDropdownBtn.contains(e.target) && !userDropdownMenu.contains(e.target)) {
-    userDropdownMenu.classList.add('hidden');
-  }
-});
-// Mobile nav logic
-const burger = document.getElementById('navbarBurger');
-const mobileNav = document.getElementById('mobileNav');
-burger.addEventListener('click', () => {
-  mobileNav.style.display = mobileNav.style.display === 'none' ? 'block' : 'none';
-});
-// Highlight current page
-const path = window.location.pathname;
-const navMap = {
-  '/': ['nav-dashboard', 'mobile-nav-dashboard'],
-  '/charts': ['nav-charts', 'mobile-nav-charts'],
-  '/calendar': ['nav-calendar', 'mobile-nav-calendar'],
-  '/admin/users': ['nav-users', 'mobile-nav-users'],
-  '/admin/audit-logs': ['nav-audit', 'mobile-nav-audit'],
-  '/admin/shifts': ['nav-shifts', 'mobile-nav-shifts']
-};
-Object.entries(navMap).forEach(([route, ids]) => {
-  if (path === route) {
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('bg-blue-800', 'dark:bg-blue-700', 'text-white');
+  `);
+
+  // User info and admin-only links
+  fetch('/api/user-info')
+    .then(res => res.json())
+    .then(user => {
+      document.getElementById('userDisplayName').textContent = user.full_name || user.email.split('@')[0];
+      document.getElementById('userEmail').textContent = user.email;
+      if (user.role !== 'admin' && user.role !== 'manager') {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+      }
     });
-  }
-});
-</script> 
+  // Dropdown logic
+  setTimeout(function() {
+    const userDropdownBtn = document.getElementById('userDropdownBtn');
+    const userDropdownMenu = document.getElementById('userDropdownMenu');
+    if (userDropdownBtn && userDropdownMenu) {
+      userDropdownBtn.addEventListener('click', () => {
+        userDropdownMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', (e) => {
+        if (!userDropdownBtn.contains(e.target) && !userDropdownMenu.contains(e.target)) {
+          userDropdownMenu.classList.add('hidden');
+        }
+      });
+    }
+    // Mobile nav logic
+    const burger = document.getElementById('navbarBurger');
+    const mobileNav = document.getElementById('mobileNav');
+    if (burger && mobileNav) {
+      burger.addEventListener('click', () => {
+        mobileNav.style.display = mobileNav.style.display === 'none' ? 'block' : 'none';
+      });
+    }
+    // Highlight current page
+    const path = window.location.pathname;
+    const navMap = {
+      '/': ['nav-dashboard', 'mobile-nav-dashboard'],
+      '/charts': ['nav-charts', 'mobile-nav-charts'],
+      '/calendar': ['nav-calendar', 'mobile-nav-calendar'],
+      '/admin/users': ['nav-users', 'mobile-nav-users'],
+      '/admin/audit-logs': ['nav-audit', 'mobile-nav-audit'],
+      '/admin/shifts': ['nav-shifts', 'mobile-nav-shifts']
+    };
+    Object.entries(navMap).forEach(([route, ids]) => {
+      if (path === route) {
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('bg-blue-800', 'dark:bg-blue-700', 'text-white');
+        });
+      }
+    });
+  }, 0);
+})(); 
