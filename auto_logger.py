@@ -45,12 +45,8 @@ class AutoLogger:
         self.thread = None
         
     def start(self):
-        """Start the auto-logger in a separate thread"""
-        if not self.running:
-            self.running = True
-            self.thread = threading.Thread(target=self._run, daemon=True)
-            self.thread.start()
-            logger.info("Auto-logger started")
+        """Auto-logger disabled in production."""
+        logger.info("Auto-logger is disabled")
             
     def stop(self):
         """Stop the auto-logger"""
@@ -60,15 +56,8 @@ class AutoLogger:
         logger.info("Auto-logger stopped")
             
     def _run(self):
-        """Main auto-logger loop"""
-        while self.running:
-            try:
-                # Add a random check-in/check-out every 30-120 seconds
-                self._add_random_log()
-                time.sleep(random.randint(30, 120))
-            except Exception as e:
-                logger.error(f"Error in auto-logger: {e}")
-                time.sleep(60)  # Wait a minute before retrying
+        """Disabled."""
+        return
                 
     def _add_random_log(self):
         """Add a random check-in/check-out log for today, avoiding duplicates"""
@@ -120,47 +109,8 @@ class AutoLogger:
         logger.info(f"Added auto-log: {tutor['name']} checked in at {check_in.strftime('%H:%M')} for {shift_hours:.1f} hours")
         
     def add_today_logs(self, count=5):
-        """Add multiple logs for today at once, avoiding duplicates"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        
-        # Load existing data
-        if os.path.exists(self.log_file):
-            df = pd.read_csv(self.log_file)
-        else:
-            df = pd.DataFrame(columns=['tutor_id', 'tutor_name', 'check_in', 'check_out', 'shift_hours', 'snapshot_in', 'snapshot_out'])
-        
-        today_logs = df[df['check_in'].str.startswith(today, na=False)]
-        existing_pairs = set(zip(today_logs['tutor_id'], today_logs['check_in']))
-        new_logs = []
-        attempts = 0
-        while len(new_logs) < count and attempts < count * 3:
-            tutor = random.choice(self.tutors)
-            hour = random.randint(8, 18)
-            minute = random.randint(0, 59)
-            check_in = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
-            check_in_str = check_in.strftime('%Y-%m-%d %H:%M')
-            if (tutor['id'], check_in_str) in existing_pairs:
-                attempts += 1
-                continue
-            shift_hours = random.uniform(1.0, 4.0)
-            check_out = check_in + timedelta(hours=shift_hours)
-            new_log = {
-                'tutor_id': tutor['id'],
-                'tutor_name': tutor['name'],
-                'check_in': check_in_str,
-                'check_out': check_out.strftime('%Y-%m-%d %H:%M'),
-                'shift_hours': round(shift_hours, 2),
-                'snapshot_in': f"snapshots/{tutor['id']}.jpg",
-                'snapshot_out': f"snapshots/{tutor['id']}.jpg"
-            }
-            new_logs.append(new_log)
-            existing_pairs.add((tutor['id'], check_in_str))
-            attempts += 1
-        if new_logs:
-            df = pd.concat([df, pd.DataFrame(new_logs)], ignore_index=True)
-            df.to_csv(self.log_file, index=False)
-            logger.info(f"Added {len(new_logs)} today logs (no duplicates)")
-        return new_logs
+        """Disabled."""
+        return []
 
 # Global auto-logger instance
 auto_logger = AutoLogger()

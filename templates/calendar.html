@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Calendar - Tutor Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/global.css">
     <script src="/static/js/theme-switcher.js"></script>
     <style>
         body {
@@ -140,26 +140,26 @@
         }
 
         .calendar-day-header {
-            background: var(--gray-50);
+            background: var(--bg-secondary);
             padding: 1rem 0.5rem;
             text-align: center;
             font-weight: 600;
-            color: var(--gray-600);
+            color: var(--text-primary);
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
         .calendar-day {
-            background: white;
+            background: var(--bg-card);
             min-height: 120px;
             padding: 1.25rem 0.75rem 0.75rem 0.75rem;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(.4,2,.6,1);
             position: relative;
-            border: 1.5px solid var(--gray-200);
+            border: 1.5px solid var(--border-color);
             border-radius: 18px;
-            box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.06);
+            box-shadow: var(--shadow-sm);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -179,8 +179,8 @@
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            color: var(--gray-800);
-            background: rgba(79,70,229,0.07);
+            color: var(--text-primary);
+            background: var(--bg-secondary);
             border-radius: 50%;
             width: 38px;
             height: 38px;
@@ -203,9 +203,9 @@
         }
 
         .calendar-day.other-month {
-            background: var(--gray-50);
-            color: var(--gray-400);
-            border: 1.5px dashed var(--gray-200);
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            border: 1.5px dashed var(--border-color);
         }
 
         .day-status {
@@ -230,7 +230,7 @@
 
         .day-summary {
             font-size: 0.8rem;
-            color: var(--gray-600);
+            color: var(--text-secondary);
             text-align: center;
             line-height: 1.2;
         }
@@ -262,7 +262,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--bg-overlay);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -273,7 +273,7 @@
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid var(--gray-200);
+            border: 4px solid var(--border-color);
             border-top: 4px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -300,6 +300,8 @@
             border: none;
             box-shadow: var(--shadow-xl);
             overflow: hidden;
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
 
         .modal-header {
@@ -316,14 +318,16 @@
 
         .modal-body {
             padding: 2rem;
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
 
         .session-card {
-            background: var(--gray-50);
+            background: var(--bg-card);
             border-radius: 16px;
             padding: 1.5rem;
             margin-bottom: 1rem;
-            border: 1px solid var(--gray-200);
+            border: 1px solid var(--border-color);
             transition: all 0.3s ease;
         }
 
@@ -362,12 +366,12 @@
         .tutor-details h5 {
             margin: 0;
             font-weight: 600;
-            color: var(--gray-800);
+            color: var(--text-primary);
         }
 
         .tutor-details p {
             margin: 0;
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 0.9rem;
         }
 
@@ -404,12 +408,12 @@
 
         .detail-label {
             font-weight: 600;
-            color: var(--gray-700);
+            color: var(--text-primary);
             font-size: 0.9rem;
         }
 
         .detail-value {
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-size: 0.9rem;
         }
 
@@ -566,21 +570,21 @@
         }
 
         .modal-body::-webkit-scrollbar-track {
-            background: var(--gray-100);
+            background: var(--bg-secondary);
             border-radius: 4px;
         }
 
         .modal-body::-webkit-scrollbar-thumb {
-            background: var(--gray-300);
+            background: var(--border-color);
             border-radius: 4px;
         }
 
         .modal-body::-webkit-scrollbar-thumb:hover {
-            background: var(--gray-400);
+            background: var(--text-muted);
         }
     </style>
 </head>
-<body class="bg-light calendar-page">
+<body class="calendar-page">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0,0,0,0.1); backdrop-filter: blur(10px);">
         <div class="container">
@@ -857,9 +861,9 @@
             } else {
                 sessionsHtml = `
                     <div class="text-center py-4">
-                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No sessions recorded</h5>
-                        <p class="text-muted">No tutor sessions were recorded for this day.</p>
+                        <i class="fas fa-calendar-times fa-3x mb-3" style="color: var(--text-muted);"></i>
+                        <h5 style="color: var(--text-muted);">No sessions recorded</h5>
+                        <p style="color: var(--text-muted);">No tutor sessions were recorded for this day.</p>
                     </div>
                 `;
             }
@@ -867,28 +871,28 @@
             modalBody.innerHTML = `
                 <div class="row mb-4">
                     <div class="col-md-4">
-                        <div class="text-center p-3 bg-light rounded">
+                        <div class="text-center p-3" style="background: var(--bg-secondary); border-radius: 12px;">
                             <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                            <h4>${dayData.sessions}</h4>
-                            <p class="text-muted mb-0">Total Sessions</p>
+                            <h4 style="color: var(--text-primary);">${dayData.sessions}</h4>
+                            <p style="color: var(--text-secondary); margin-bottom: 0;">Total Sessions</p>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="text-center p-3 bg-light rounded">
+                        <div class="text-center p-3" style="background: var(--bg-secondary); border-radius: 12px;">
                             <i class="fas fa-clock fa-2x text-success mb-2"></i>
-                            <h4>${dayData.total_hours.toFixed(1)}h</h4>
-                            <p class="text-muted mb-0">Total Hours</p>
+                            <h4 style="color: var(--text-primary);">${dayData.total_hours.toFixed(1)}h</h4>
+                            <p style="color: var(--text-secondary); margin-bottom: 0;">Total Hours</p>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="text-center p-3 bg-light rounded">
+                        <div class="text-center p-3" style="background: var(--bg-secondary); border-radius: 12px;">
                             <i class="fas fa-user-graduate fa-2x text-warning mb-2"></i>
-                            <h4>${dayData.tutors}</h4>
-                            <p class="text-muted mb-0">Active Tutors</p>
+                            <h4 style="color: var(--text-primary);">${dayData.tutors}</h4>
+                            <p style="color: var(--text-secondary); margin-bottom: 0;">Active Tutors</p>
                         </div>
                     </div>
                 </div>
-                <h5 class="mb-3"><i class="fas fa-list me-2"></i>Session Details</h5>
+                <h5 class="mb-3" style="color: var(--text-primary);"><i class="fas fa-list me-2"></i>Session Details</h5>
                 ${sessionsHtml}
             `;
             

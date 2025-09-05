@@ -66,11 +66,11 @@ for idx, row in schedule.iterrows():
     # Parse check_in and check_out with flexible format
     from pandas import to_datetime
     try:
-    check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M:%S')
+        check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         check_in = datetime.strptime(check_in_str, '%Y-%m-%d %H:%M')
     try:
-    check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M:%S')
+        check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         check_out = datetime.strptime(check_out_str, '%Y-%m-%d %H:%M')
     shift_hours = round((check_out - check_in).total_seconds() / 3600, 2)

@@ -130,8 +130,9 @@ class ForecastingManager {
             // Update last updated timestamp
             this.updateElement('forecastLastUpdated', this.forecastingData.forecast_last_updated);
 
-            // Update hourly forecast table
+            // Update forecast tables
             this.updateHourlyForecastTable();
+            this.updateDailyForecastTable();
 
             // Update scenario simulation
             this.updateScenarioSimulation();
@@ -245,35 +246,132 @@ class ForecastingManager {
      * Update hourly forecast table
      */
     updateHourlyForecastTable() {
-        const tableElement = document.getElementById('hourlyForecastTable');
-        if (!tableElement || !this.forecastingData.hourly_forecast) return;
+        // Build the enhanced hourly forecast table
+        const mount = document.getElementById('miniHourlyForecast');
+        const confidenceEl = document.getElementById('hourlyConfidence');
+        if (!mount || !this.forecastingData || !this.forecastingData.hourly_forecast) return;
 
-        const hourlyData = this.forecastingData.hourly_forecast;
-        let tableHtml = `
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th>Hour</th>
-                        <th>Predicted Hours</th>
-                        <th>Predicted Sessions</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        const data = this.forecastingData.hourly_forecast;
+        // Show only next 8 hours compactly
+        const now = new Date();
+        const startHour = now.getHours();
+        const rows = [];
+        let totalConfidence = 0;
+        let validHours = 0;
 
-        for (let hour = 0; hour < 24; hour++) {
-            const hourData = hourlyData[hour] || { predicted_hours: 0, predicted_sessions: 0 };
-            tableHtml += `
-                <tr>
-                    <td>${hour.toString().padStart(2, '0')}:00</td>
-                    <td>${hourData.predicted_hours}h</td>
-                    <td>${hourData.predicted_sessions}</td>
-                </tr>
-            `;
+        for (let i = 0; i < 8; i++) {
+            const h = (startHour + i) % 24;
+            const d = data[h] || { predicted_hours: 0, predicted_sessions: 0, confidence: 0.1, trend: 'stable' };
+            rows.push({ 
+                hour: `${h.toString().padStart(2,'0')}:00`, 
+                ph: d.predicted_hours, 
+                ps: d.predicted_sessions,
+                confidence: d.confidence || 0.1,
+                trend: d.trend || 'stable'
+            });
+            totalConfidence += d.confidence || 0.1;
+            validHours++;
         }
 
-        tableHtml += '</tbody></table>';
-        tableElement.innerHTML = tableHtml;
+        // Calculate average confidence
+        const avgConfidence = validHours > 0 ? totalConfidence / validHours : 0;
+        const confidenceClass = avgConfidence >= 0.7 ? 'confidence-high' : avgConfidence >= 0.4 ? 'confidence-medium' : 'confidence-low';
+        
+        if (confidenceEl) {
+            confidenceEl.innerHTML = `<span class="confidence-badge ${confidenceClass}">${Math.round(avgConfidence * 100)}% confidence</span>`;
+        }
+
+        let html = `
+          <table class="mini-hourly-table">
+            <thead>
+              <tr>
+                <th style="width:60px">Hour</th>
+                <th style="width:80px">Hours</th>
+                <th style="width:80px">Sessions</th>
+                <th style="width:60px">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        rows.forEach(r => {
+            const trendIcon = r.trend === 'increasing' ? '↗' : r.trend === 'decreasing' ? '↘' : '→';
+            const trendClass = r.trend === 'increasing' ? 'trend-up' : r.trend === 'decreasing' ? 'trend-down' : 'trend-stable';
+            html += `<tr>
+                <td>${r.hour}</td>
+                <td>${r.ph}h</td>
+                <td>${r.ps}</td>
+                <td class="${trendClass}">${trendIcon}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        mount.innerHTML = html;
+    }
+
+    updateDailyForecastTable() {
+        // Build the daily forecast table
+        const mount = document.getElementById('miniDailyForecast');
+        const confidenceEl = document.getElementById('dailyConfidence');
+        if (!mount || !this.forecastingData || !this.forecastingData.daily_forecast) return;
+
+        const data = this.forecastingData.daily_forecast;
+        const rows = [];
+        let totalConfidence = 0;
+        let validDays = 0;
+
+        // Get next 7 days
+        Object.entries(data).slice(0, 7).forEach(([date, d]) => {
+            const dayName = d.day_of_week || 'Unknown';
+            const shortDate = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            rows.push({
+                date: shortDate,
+                day: dayName.substring(0, 3),
+                ph: d.predicted_hours,
+                ps: d.predicted_sessions,
+                confidence: d.confidence || 0.1,
+                trend: d.trend || 'stable'
+            });
+            totalConfidence += d.confidence || 0.1;
+            validDays++;
+        });
+
+        // Calculate average confidence
+        const avgConfidence = validDays > 0 ? totalConfidence / validDays : 0;
+        const confidenceClass = avgConfidence >= 0.7 ? 'confidence-high' : avgConfidence >= 0.4 ? 'confidence-medium' : 'confidence-low';
+        
+        if (confidenceEl) {
+            confidenceEl.innerHTML = `<span class="confidence-badge ${confidenceClass}">${Math.round(avgConfidence * 100)}% confidence</span>`;
+        }
+
+        let html = `
+          <table class="mini-daily-table">
+            <thead>
+              <tr>
+                <th style="width:50px">Date</th>
+                <th style="width:50px">Day</th>
+                <th style="width:70px">Hours</th>
+                <th style="width:70px">Sessions</th>
+                <th style="width:50px">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        rows.forEach(r => {
+            const trendIcon = r.trend === 'increasing' ? '↗' : r.trend === 'decreasing' ? '↘' : '→';
+            const trendClass = r.trend === 'increasing' ? 'trend-up' : r.trend === 'decreasing' ? 'trend-down' : 'trend-stable';
+            html += `<tr>
+                <td>${r.date}</td>
+                <td>${r.day}</td>
+                <td>${r.ph}h</td>
+                <td>${r.ps}</td>
+                <td class="${trendClass}">${trendIcon}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        mount.innerHTML = html;
     }
 
     /**

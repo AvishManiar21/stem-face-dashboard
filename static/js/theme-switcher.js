@@ -2,8 +2,15 @@
 
 class ThemeSwitcher {
     constructor() {
-        this.currentTheme = localStorage.getItem('theme') || 'light';
+        this.currentTheme = localStorage.getItem('theme') || this.getSystemTheme();
         this.init();
+    }
+
+    getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark';
+        }
+        return 'light';
     }
 
     init() {
@@ -18,6 +25,9 @@ class ThemeSwitcher {
         
         // Apply theme to all elements
         this.applyThemeToElements();
+        
+        // Add theme transition class to body
+        document.body.classList.add('theme-transition');
     }
 
     setTheme(theme) {
@@ -28,8 +38,23 @@ class ThemeSwitcher {
         // Update theme toggle button
         this.updateThemeToggle();
         
+        // Update meta theme color
+        this.updateMetaThemeColor();
+        
         // Trigger custom event for other components
         document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme } }));
+        
+        // Update chart colors if charts exist
+        this.updateChartColors();
+    }
+
+    updateMetaThemeColor() {
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute('content', 
+                this.currentTheme === 'dark' ? '#0f172a' : '#ffffff'
+            );
+        }
     }
 
     toggleTheme() {
@@ -51,6 +76,7 @@ class ThemeSwitcher {
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'theme-toggle';
         toggleBtn.className = 'btn btn-outline-primary theme-toggle-btn';
+        toggleBtn.setAttribute('aria-label', 'Toggle theme');
         toggleBtn.innerHTML = `
             <i class="fas fa-sun light-icon"></i>
             <i class="fas fa-moon dark-icon"></i>
@@ -72,30 +98,33 @@ class ThemeSwitcher {
         if (mobileMenu) {
             const mobileItem = document.createElement('div');
             mobileItem.className = 'nav-item d-md-none';
-            mobileItem.appendChild(toggleBtn.cloneNode(true));
+            const mobileToggleBtn = toggleBtn.cloneNode(true);
+            mobileItem.appendChild(mobileToggleBtn);
             mobileMenu.appendChild(mobileItem);
         }
     }
 
     updateThemeToggle() {
-        const toggleBtn = document.getElementById('theme-toggle');
-        if (!toggleBtn) return;
+        const toggleBtns = document.querySelectorAll('#theme-toggle');
+        toggleBtns.forEach(toggleBtn => {
+            const lightIcon = toggleBtn.querySelector('.light-icon');
+            const darkIcon = toggleBtn.querySelector('.dark-icon');
+            const themeText = toggleBtn.querySelector('.theme-text');
 
-        const lightIcon = toggleBtn.querySelector('.light-icon');
-        const darkIcon = toggleBtn.querySelector('.dark-icon');
-        const themeText = toggleBtn.querySelector('.theme-text');
-
-        if (this.currentTheme === 'dark') {
-            lightIcon.style.display = 'inline-block';
-            darkIcon.style.display = 'none';
-            themeText.textContent = 'Light Mode';
-            toggleBtn.title = 'Switch to Light Mode';
-        } else {
-            lightIcon.style.display = 'none';
-            darkIcon.style.display = 'inline-block';
-            themeText.textContent = 'Dark Mode';
-            toggleBtn.title = 'Switch to Dark Mode';
-        }
+            if (this.currentTheme === 'dark') {
+                lightIcon.style.display = 'inline-block';
+                darkIcon.style.display = 'none';
+                themeText.textContent = 'Light Mode';
+                toggleBtn.title = 'Switch to Light Mode';
+                toggleBtn.setAttribute('aria-label', 'Switch to Light Mode');
+            } else {
+                lightIcon.style.display = 'none';
+                darkIcon.style.display = 'inline-block';
+                themeText.textContent = 'Dark Mode';
+                toggleBtn.title = 'Switch to Dark Mode';
+                toggleBtn.setAttribute('aria-label', 'Switch to Dark Mode');
+            }
+        });
     }
 
     addEventListeners() {
@@ -143,16 +172,24 @@ class ThemeSwitcher {
     updateChartColors() {
         // Update Chart.js colors if charts exist
         if (typeof Chart !== 'undefined') {
-            Chart.defaults.color = getComputedStyle(document.documentElement)
-                .getPropertyValue('--text-primary');
+            const isDark = this.currentTheme === 'dark';
+            
+            // Update default colors
+            Chart.defaults.color = isDark ? '#f8fafc' : '#1e293b';
+            Chart.defaults.borderColor = isDark ? '#334155' : '#e2e8f0';
             
             // Update existing charts
-            Chart.instances.forEach(chart => {
+            Object.values(Chart.instances).forEach(chart => {
                 if (chart.config.type === 'line' || chart.config.type === 'bar') {
-                    chart.config.options.scales.x.grid.color = getComputedStyle(document.documentElement)
-                        .getPropertyValue('--border-color');
-                    chart.config.options.scales.y.grid.color = getComputedStyle(document.documentElement)
-                        .getPropertyValue('--border-color');
+                    const scales = chart.config.options.scales;
+                    if (scales) {
+                        if (scales.x && scales.x.grid) {
+                            scales.x.grid.color = isDark ? '#334155' : '#e2e8f0';
+                        }
+                        if (scales.y && scales.y.grid) {
+                            scales.y.grid.color = isDark ? '#334155' : '#e2e8f0';
+                        }
+                    }
                 }
                 chart.update('none');
             });
@@ -228,15 +265,13 @@ class HoverEffects {
 
     handleRowHover(e) {
         const row = e.currentTarget;
-        row.style.backgroundColor = 'var(--primary-color)';
-        row.style.color = 'var(--text-light)';
+        row.style.backgroundColor = 'var(--bg-secondary)';
         row.style.transform = 'scale(1.01)';
     }
 
     handleRowLeave(e) {
         const row = e.currentTarget;
         row.style.backgroundColor = '';
-        row.style.color = '';
         row.style.transform = '';
     }
 
@@ -251,7 +286,7 @@ class HoverEffects {
     handleNavHover(e) {
         const link = e.currentTarget;
         link.style.transform = 'translateY(-1px)';
-        link.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+        link.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
     }
 
     handleNavLeave(e) {
@@ -271,7 +306,7 @@ class HoverEffects {
     handleFormFocus(e) {
         const control = e.currentTarget;
         control.style.transform = 'scale(1.02)';
-        control.style.boxShadow = '0 0 0 0.2rem rgba(102, 126, 234, 0.25)';
+        control.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
     }
 
     handleFormBlur(e) {
@@ -380,17 +415,22 @@ style.textContent = `
     .theme-toggle-btn {
         position: relative;
         overflow: hidden;
-        border-radius: var(--radius-pill);
+        border-radius: var(--radius-full);
         padding: var(--spacing-sm) var(--spacing-md);
-        font-weight: 600;
+        font-weight: var(--font-semibold);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         transition: all var(--transition-normal);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-light);
     }
 
     .theme-toggle-btn:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.3);
     }
 
     .theme-toggle-btn i {
@@ -454,6 +494,17 @@ style.textContent = `
             opacity: 1;
             transform: scale(1);
         }
+    }
+
+    /* Dark mode specific styles */
+    [data-theme="dark"] .theme-toggle-btn {
+        background: rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .theme-toggle-btn:hover {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.2);
     }
 `;
 document.head.appendChild(style);

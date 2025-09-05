@@ -6,48 +6,386 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/global.css">
   <script src="/static/js/theme-switcher.js"></script>
   <script src="/static/js/error_handler.js"></script>
-  <style> 
-    .dark-mode .form-control, .dark-mode .form-select { background-color: #2a2a2a; color: #e0e0e0; border-color: #444; }
-    .dark-mode .form-control::placeholder { color: #888; }
-    .dark-mode .form-control:focus, .dark-mode .form-select:focus { background-color: #333; color: #fff; border-color: #555; box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25); }
-    .dark-mode .filter-chip { background-color: #3a3a3a; color: #ccc; border: 1px solid #555; }
-    .filter-chip { display: inline-block; padding: 0.3em 0.6em; font-size: 0.85em; margin-right: 6px; margin-bottom: 6px; background-color: #e9ecef; border: 1px solid #ced4da; border-radius: 0.25rem; color: #495057; }
-    .range-slider-group { display: flex; align-items: center; }
-    .range-slider-group input[type="range"] { flex-grow: 1; }
-    .range-slider-group .range-value-display { margin-left: 10px; font-variant-numeric: tabular-nums; }
-    .tutor-chip { display: inline-block; padding: 0.25rem 0.5rem; margin: 0.125rem; background-color: #007bff; color: white; border-radius: 0.25rem; font-size: 0.8rem; }
-    .tutor-chip .remove-btn { margin-left: 0.5rem; cursor: pointer; font-weight: bold; }
-    .tutor-chip .remove-btn:hover { color: #ffcccc; }
-    .dark-mode .tutor-chip { background-color: #0056b3; }
-    .dropdown-item.tutor-option { cursor: pointer; }
-    .dropdown-item.tutor-option:hover { background-color: #f8f9fa; }
-    .dark-mode .dropdown-item.tutor-option:hover { background-color: #2a2a2a; }
-    .dark-mode .dropdown-menu { background-color: #2a2a2a; border-color: #444; }
-    .dark-mode .dropdown-item { color: #e0e0e0; }
-    .dark-mode .dropdown-item:hover { background-color: #3a3a3a; color: #fff; }
+  <style>
+    /* ===== CHARTS PAGE THEME STYLING ===== */
     
-    /* Advanced Filters Styling */
-    .advanced-filters-section { border-left: 4px solid #007bff; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
-    .dark-mode .advanced-filters-section { background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); border-left-color: #0d6efd; }
-    .filter-section-header { font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-    .dark-mode .filter-section-header { color: #e0e0e0; border-bottom-color: #444; }
-    .advanced-filter-toggle { transition: all 0.3s ease; }
-    .advanced-filter-toggle:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    /* Form Controls - Enhanced Theme Support */
+    .form-control, .form-select {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-color) !important;
+      transition: all var(--transition-normal) !important;
+    }
     
-    /* Metrics Summary Styling */
-    .metrics-summary { background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: 1px solid #dee2e6; border-radius: 0.5rem; }
-    .dark-mode .metrics-summary { background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%); border-color: #444; }
-    .metric-card { transition: all 0.3s ease; border-radius: 0.375rem; }
-    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .metric-value { font-size: 1.5rem; font-weight: 700; }
-    .metric-label { font-size: 0.875rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-    .dark-mode .metric-label { color: #adb5bd; }
-    .metric-trend { font-size: 0.75rem; }
-    .trend-up { color: #28a745; }
-    .trend-down { color: #dc3545; }
+    .form-control::placeholder, .form-select::placeholder {
+      color: var(--text-muted) !important;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-focus) !important;
+      box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25) !important;
+    }
+    
+    /* Filter Chips - Enhanced Styling */
+    .filter-chip {
+      display: inline-block;
+      padding: 0.4em 0.8em;
+      font-size: 0.85em;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      font-weight: var(--font-medium);
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .filter-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      border-color: var(--primary-color);
+    }
+    
+    .dark-mode .filter-chip {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+      border-color: #555;
+      color: #ccc;
+    }
+    
+    .dark-mode .filter-chip:hover {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+    }
+    
+    /* Range Slider Group */
+    .range-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .range-slider-group input[type="range"] {
+      flex-grow: 1;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--border-light);
+      outline: none;
+      transition: all var(--transition-normal);
+    }
+    
+    .range-slider-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-full);
+      background: var(--primary-color);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .range-slider-group input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .range-value-display {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+      min-width: 3rem;
+      text-align: center;
+    }
+    
+    /* Tutor Chips - Enhanced Styling */
+    .tutor-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.4rem 0.8rem;
+      margin: 0.2rem;
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      border-radius: var(--radius-lg);
+      font-size: 0.85rem;
+      font-weight: var(--font-medium);
+      box-shadow: var(--shadow-xs);
+      transition: all var(--transition-normal);
+    }
+    
+    .tutor-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .tutor-chip .remove-btn {
+      margin-left: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      opacity: 0.8;
+      transition: all var(--transition-fast);
+    }
+    
+    .tutor-chip .remove-btn:hover {
+      opacity: 1;
+      color: #ffcccc;
+      transform: scale(1.1);
+    }
+    
+    /* Dropdown Styling */
+    .dropdown-item.tutor-option {
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-radius: var(--radius-sm);
+      margin: 0.1rem;
+    }
+    
+    .dropdown-item.tutor-option:hover {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      transform: translateX(4px);
+    }
+    
+    .dark-mode .dropdown-item.tutor-option:hover {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+    }
+    
+    /* Advanced Filters Section - Enhanced */
+    .advanced-filters-section {
+      border-left: 4px solid var(--primary-color);
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .dark-mode .advanced-filters-section {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      border-left-color: var(--primary-light);
+    }
+    
+    .filter-section-header {
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.5rem;
+      font-size: var(--font-size-lg);
+    }
+    
+    .dark-mode .filter-section-header {
+      color: var(--text-primary);
+      border-bottom-color: #444;
+    }
+    
+    .advanced-filter-toggle {
+      transition: all var(--transition-normal);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .advanced-filter-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Metrics Summary - Enhanced */
+    .metrics-summary {
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .dark-mode .metrics-summary {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+      border-color: #444;
+    }
+    
+    .metric-card {
+      transition: all var(--transition-normal);
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-color);
+    }
+    
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: var(--font-bold);
+      color: var(--text-primary);
+      line-height: var(--leading-tight);
+    }
+    
+    .metric-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: var(--font-medium);
+    }
+    
+    .dark-mode .metric-label {
+      color: var(--text-muted);
+    }
+    
+    .metric-trend {
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-semibold);
+    }
+    
+    .trend-up {
+      color: var(--success-color);
+    }
+    
+    .trend-down {
+      color: var(--danger-color);
+    }
+    
+    /* Chart Container Styling */
+    .chart-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+      overflow: hidden;
+    }
+    
+    .chart-container:hover {
+      box-shadow: var(--shadow-md);
+    }
+    
+    .dark-mode .chart-container {
+      background: #2a2a2a;
+      border-color: #444;
+    }
+    
+    .chart-header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+    }
+    
+    .dark-mode .chart-header {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+      border-bottom-color: #444;
+    }
+    
+    .chart-title {
+      color: var(--text-primary);
+      font-weight: var(--font-semibold);
+      font-size: var(--font-size-lg);
+      margin: 0;
+    }
+    
+    .chart-body {
+      padding: 1.5rem;
+      background: var(--bg-card);
+    }
+    
+    .dark-mode .chart-body {
+      background: #2a2a2a;
+    }
+    
+    /* Comparison Mode Styling */
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    
+    .comparison-chart {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    
+    .dark-mode .comparison-chart {
+      background: #2a2a2a;
+      border-color: #444;
+    }
+    
+    .comparison-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      padding: 0.75rem 1rem;
+      font-weight: var(--font-semibold);
+      text-align: center;
+    }
+    
+    .comparison-body {
+      padding: 1rem;
+    }
+    
+    /* Loading States */
+    .chart-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+    
+    .dark-mode .chart-loading {
+      background: #2a2a2a;
+      border-color: #444;
+    }
+    
+    .loading-spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid var(--border-light);
+      border-top: 3px solid var(--primary-color);
+      border-radius: var(--radius-full);
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .comparison-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .chart-header {
+        padding: 0.75rem 1rem;
+      }
+      
+      .chart-body {
+        padding: 1rem;
+      }
+      
+      .metric-value {
+        font-size: 1.5rem;
+      }
+    }
     .trend-neutral { color: #6c757d; }
     
     /* Punctuality Section Styling */
@@ -85,21 +423,32 @@
     }
   </style>
 </head>
-<body class="bg-light charts-page">
-<script src="/static/js/admin_navbar_tailwind.js"></script>
+<body class="charts-page">
+<script src="/static/js/admin_navbar.js"></script>
 
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="/" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
-    <h2 class="text-primary fw-bold text-center flex-grow-1 mb-0">📊 Tutor Check-In Analytics</h2>
+  <div class="analytics-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <a href="/" class="action-btn">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </a>
+      <h2 class="text-gradient fw-bold text-center flex-grow-1 mb-0">📊 Tutor Check-In Analytics</h2>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loadingIndicator" class="alert alert-info text-center" style="display: none;">
+    <i class="fas fa-spinner fa-spin me-2"></i>
+    Loading chart data...
   </div>
 
   <!-- Enhanced Filter Controls -->
-  <div class="card mb-4 shadow-sm fade-in">
-    <div class="card-header bg-primary text-white">
-      <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Analytics Controls & Filters</h6>
+  <div class="card mb-4 shadow-sm fade-in" style="overflow: visible;">
+    <div class="chart-header">
+      <h6 class="chart-title"><i class="fas fa-filter me-2"></i>Analytics Controls & Filters</h6>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="overflow: visible;">
       <form id="filterForm">
         <!-- Primary Filters Row -->
         <div class="row g-3 mb-3">
@@ -107,9 +456,9 @@
             <label for="tutor_id" class="form-label fw-semibold">
               <i class="fas fa-users me-1"></i>Select Tutors
             </label>
-            <div class="dropdown">
+            <div class="dropdown" style="position: relative; z-index: 1050;">
               <input type="text" name="tutor_id" id="tutor_id" class="form-control" placeholder="Search and select tutors..." autocomplete="off" data-bs-toggle="dropdown" aria-expanded="false">
-              <div class="dropdown-menu w-100" id="tutorDropdown" style="max-height: 200px; overflow-y: auto;">
+              <div class="dropdown-menu w-100" id="tutorDropdown" style="max-height: 200px; overflow-y: auto; z-index: 1051; position: absolute; left: 0; right: 0;">
                 <div class="px-2 py-1 text-muted small">Loading tutors...</div>
               </div>
             </div>
@@ -241,11 +590,11 @@
               </button>
               
               <!-- Quick Date Ranges -->
-              <div class="btn-group">
+              <div class="btn-group" style="position: relative; z-index: 1050;">
                 <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="fas fa-calendar-alt me-1"></i>Quick Ranges
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 180px;">
                   <li><button type="button" id="todayBtn" class="dropdown-item">Today</button></li>
                   <li><button type="button" id="thisWeekBtn" class="dropdown-item">This Week</button></li>
                   <li><button type="button" id="thisMonthBtn" class="dropdown-item">This Month</button></li>
@@ -258,11 +607,11 @@
               </div>
               
               <!-- Export Options -->
-              <div class="btn-group">
+              <div class="btn-group" style="position: relative; z-index: 1050;">
                 <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="fas fa-download me-1"></i>Export
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
                   <li><button type="button" class="dropdown-item" onclick="downloadChartImage()">
                     <i class="fas fa-image me-2"></i>Chart as PNG
                   </button></li>
@@ -308,27 +657,54 @@
             <div class="row g-3">
               <div class="col-md-4">
                 <label class="form-label fw-semibold">Comparison Type</label>
-                <select id="comparisonType" class="form-select">
+                <select id="comparisonType" class="form-select" onchange="toggleComparisonInputs()">
                   <option value="time_periods">Time Periods</option>
                   <option value="tutors">Tutors</option>
                   <option value="day_types">Day Types</option>
                   <option value="duration_ranges">Duration Ranges</option>
                 </select>
               </div>
-              <div class="col-md-4">
+              
+              <!-- Time Periods Inputs -->
+              <div id="timePeriodInputs" class="col-md-8">
+                <div class="row g-2">
+                  <div class="col-md-6">
                 <label class="form-label fw-semibold">Period 1 (Primary)</label>
                 <div class="input-group">
-                  <input type="date" id="period1Start" class="form-control">
+                      <input type="date" id="period1Start" class="form-control" placeholder="Start date">
                   <span class="input-group-text">to</span>
-                  <input type="date" id="period1End" class="form-control">
+                      <input type="date" id="period1End" class="form-control" placeholder="End date">
                 </div>
               </div>
-              <div class="col-md-4">
+                  <div class="col-md-6">
                 <label class="form-label fw-semibold">Period 2 (Compare)</label>
                 <div class="input-group">
-                  <input type="date" id="period2Start" class="form-control">
+                      <input type="date" id="period2Start" class="form-control" placeholder="Start date">
                   <span class="input-group-text">to</span>
-                  <input type="date" id="period2End" class="form-control">
+                      <input type="date" id="period2End" class="form-control" placeholder="End date">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Tutors Inputs -->
+              <div id="tutorsInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Select tutors from the main filter above. The system will automatically split them into two groups for comparison.</small>
+                </div>
+              </div>
+              
+              <!-- Day Types Inputs -->
+              <div id="dayTypesInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Automatically compares weekdays (Mon-Fri) vs weekends (Sat-Sun) using your current date range and filters.</small>
+                </div>
+              </div>
+              
+              <!-- Duration Ranges Inputs -->
+              <div id="durationRangesInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Automatically compares short sessions (≤2 hours) vs long sessions (>2 hours) using your current data.</small>
                 </div>
               </div>
             </div>
@@ -461,11 +837,11 @@
               <button type="button" class="btn btn-outline-info" onclick="saveFilterPreset()">
                 <i class="fas fa-save me-1"></i>Save Preset
               </button>
-              <div class="btn-group">
+              <div class="btn-group" style="position: relative; z-index: 1050;">
                 <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="fas fa-bookmark me-1"></i>Load Preset
                 </button>
-                <ul class="dropdown-menu" id="filterPresets">
+                <ul class="dropdown-menu" id="filterPresets" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
                   <li><span class="dropdown-item-text text-muted">No saved presets</span></li>
                 </ul>
               </div>
@@ -478,24 +854,46 @@
 
   <div class="mb-3" id="filterChips"></div>
 
+  <style>
+    .filter-chip {
+      display: inline-block;
+      background: var(--bs-primary);
+      color: white;
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+    
+    .filter-chip.advanced-chip {
+      background: var(--bs-warning);
+      color: var(--bs-dark);
+    }
+    
+    .filter-chip.advanced-chip::before {
+      content: "⚙️ ";
+      margin-right: 4px;
+    }
+  </style>
+
 
 
   <!-- Punctuality Analysis Section -->
-  <div class="card punctuality-section mb-4 fade-in">
-    <div class="card-header">
-      <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Punctuality Analysis</h6>
+  <div class="card punctuality-section mb-4 fade-in" style="overflow: visible;">
+    <div class="chart-header">
+      <h6 class="chart-title"><i class="fas fa-clock me-2"></i>Punctuality Analysis</h6>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="overflow: visible;">
       <div class="d-flex justify-content-between align-items-center">
         <small class="text-muted">
           <i class="fas fa-info-circle me-1"></i>
           Punctuality calculated based on expected vs actual check-in times
         </small>
-        <div class="dropdown">
+        <div class="dropdown" style="position: relative; z-index: 1050;">
           <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="punctualityDetailsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fas fa-chart-pie me-1"></i>View Details
           </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="punctualityDetailsDropdown">
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="punctualityDetailsDropdown" style="z-index: 1051; position: absolute; right: 0; left: auto; min-width: 200px;">
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('breakdown')"><i class="fas fa-list me-1"></i>Breakdown</a></li>
             
             <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('daytime')"><i class="fas fa-clock me-1"></i>By Day & Time</a></li>
@@ -590,24 +988,44 @@
     <div class="p-3">
       <!-- Single Chart Layout -->
       <div id="singleChartLayout" class="chart-layout">
-        <div id="tutorChartContainer" class="chart-container" style="position: relative; height: 60vh; min-height: 500px;">
-          <canvas id="tutorChart"></canvas>
+        <div class="chart-container">
+          <div class="chart-header">
+            <h5 class="chart-title" id="chartTitle">
+              <i class="fas fa-chart-bar me-2"></i>
+              Select a dataset to view chart
+            </h5>
+          </div>
+          <div class="chart-body">
+            <div id="tutorChartContainer" style="position: relative; height: 60vh; min-height: 500px;">
+              <canvas id="tutorChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Split Chart Layout (for comparison) -->
       <div id="splitChartLayout" class="chart-layout" style="display: none;">
-        <div class="row">
-          <div class="col-md-6">
-            <h6 class="text-center mb-3">Primary Dataset</h6>
-            <div id="primaryChartContainer" class="chart-container" style="position: relative; height: 50vh; min-height: 400px;">
-              <canvas id="primaryChart"></canvas>
+        <div class="comparison-container">
+          <div class="comparison-chart">
+            <div class="comparison-header">
+              <i class="fas fa-chart-line me-2"></i>
+              Primary Dataset
+            </div>
+            <div class="comparison-body">
+              <div id="primaryChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                <canvas id="primaryChart"></canvas>
+              </div>
             </div>
           </div>
-          <div class="col-md-6">
-            <h6 class="text-center mb-3">Comparison Dataset</h6>
-            <div id="comparisonChartContainer" class="chart-container" style="position: relative; height: 50vh; min-height: 400px;">
-              <canvas id="comparisonChart"></canvas>
+          <div class="comparison-chart">
+            <div class="comparison-header">
+              <i class="fas fa-chart-bar me-2"></i>
+              Comparison Dataset
+            </div>
+            <div class="comparison-body">
+              <div id="comparisonChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                <canvas id="comparisonChart"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -617,48 +1035,60 @@
       <div id="gridChartLayout" class="chart-layout" style="display: none;">
         <div class="row g-3">
           <div class="col-lg-6">
-            <div class="card">
-              <div class="card-header py-2">
-                <h6 class="mb-0">Check-ins Overview</h6>
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-users me-2"></i>
+                  Check-ins Overview
+                </h6>
               </div>
-              <div class="card-body p-2">
-                <div id="gridChart1Container" class="chart-container" style="position: relative; height: 300px;">
+              <div class="chart-body">
+                <div id="gridChart1Container" style="position: relative; height: 300px;">
                   <canvas id="gridChart1"></canvas>
                 </div>
               </div>
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="card">
-              <div class="card-header py-2">
-                <h6 class="mb-0">Hours Analysis</h6>
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-clock me-2"></i>
+                  Hours Analysis
+                </h6>
               </div>
-              <div class="card-body p-2">
-                <div id="gridChart2Container" class="chart-container" style="position: relative; height: 300px;">
+              <div class="chart-body">
+                <div id="gridChart2Container" style="position: relative; height: 300px;">
                   <canvas id="gridChart2"></canvas>
                 </div>
               </div>
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="card">
-              <div class="card-header py-2">
-                <h6 class="mb-0">Time Distribution</h6>
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-chart-pie me-2"></i>
+                  Time Distribution
+                </h6>
               </div>
-              <div class="card-body p-2">
-                <div id="gridChart3Container" class="chart-container" style="position: relative; height: 300px;">
+              <div class="chart-body">
+                <div id="gridChart3Container" style="position: relative; height: 300px;">
                   <canvas id="gridChart3"></canvas>
                 </div>
               </div>
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="card">
-              <div class="card-header py-2">
-                <h6 class="mb-0">Performance Metrics</h6>
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-tachometer-alt me-2"></i>
+                  Performance Metrics
+                </h6>
               </div>
-              <div class="card-body p-2">
-                <div id="gridChart4Container" class="chart-container" style="position: relative; height: 300px;">
+              <div class="chart-body">
+                <div id="gridChart4Container" style="position: relative; height: 300px;">
                   <canvas id="gridChart4"></canvas>
                 </div>
               </div>
@@ -859,6 +1289,9 @@
     
     // Setup new date range buttons
     setupNewDateRangeButtons();
+    
+    // Initialize comparison inputs
+    toggleComparisonInputs();
   });
 
   function toggleComparisonSection(show) {
@@ -866,7 +1299,53 @@
     if (section) {
       section.style.display = show ? 'block' : 'none';
     }
+    
+    // Also expand the advanced filters section when showing comparison
+    if (show) {
+      const advancedFilters = document.getElementById('advancedFilters');
+      if (advancedFilters && !advancedFilters.classList.contains('show')) {
+        const collapse = new bootstrap.Collapse(advancedFilters, { show: true });
+      }
+    }
+    
+    // Destroy existing charts when switching modes
+    destroyAllCharts();
+    
+    // Update chart layout based on comparison mode
+    if (show) {
+      toggleChartLayout('split');
+    } else {
+      toggleChartLayout('single');
+    }
   }
+  
+  function destroyAllCharts() {
+    // Destroy main chart
+    if (window.chartInstance) {
+      window.chartInstance.destroy();
+      window.chartInstance = null;
+    }
+    
+    // Destroy comparison chart
+    if (window.comparisonChartInstance) {
+      window.comparisonChartInstance.destroy();
+      window.comparisonChartInstance = null;
+    }
+    
+    // Clear any canvas elements
+    const canvases = document.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  }
+  
+  // Expose functions to global scope
+  window.toggleComparisonSection = toggleComparisonSection;
+  window.updateComparisonChart = updateComparisonChart;
+  window.updateFilterChips = updateFilterChips;
+  window.toggleChartLayout = toggleChartLayout;
+  window.switchChartType = switchChartType;
 
   // Chart Layout Management
   function toggleChartLayout(layout) {
@@ -946,12 +1425,6 @@
     setTimeout(() => showLoadingIndicator(false), 1000);
   }
 
-  function showLoadingIndicator(show) {
-    const indicator = document.getElementById('chartLoadingIndicator');
-    if (indicator) {
-      indicator.style.display = show ? 'inline-block' : 'none';
-    }
-  }
 
   function zoomChart(direction) {
     Object.values(currentChartInstances).forEach(chart => {
@@ -990,23 +1463,28 @@
     }
   }
 
+  // Centralized function to collect all advanced filters
+  function collectAdvancedFilters() {
+    return {
+      minHours: document.getElementById('minHours')?.value || '',
+      maxHours: document.getElementById('maxHours')?.value || '',
+      minSessions: document.getElementById('minSessions')?.value || '',
+      maxSessions: document.getElementById('maxSessions')?.value || '',
+      sessionPattern: document.getElementById('sessionPattern')?.value || '',
+      timeOfDay: document.getElementById('timeOfDay')?.value || '',
+      punctualityFilter: document.getElementById('punctualityFilter')?.value || '',
+      excludeWeekends: document.getElementById('excludeWeekends')?.checked || false,
+      excludeHolidays: document.getElementById('excludeHolidays')?.checked || false,
+      outlierHandling: document.getElementById('outlierHandling')?.value || 'include',
+      aggregationMethod: document.getElementById('aggregationMethod')?.value || 'sum',
+      confidenceLevel: document.getElementById('confidenceLevel')?.value || 95
+    };
+  }
+
   // Advanced Filters
   function applyAdvancedFilters() {
     // Collect advanced filter values
-    const advancedFilters = {
-      minHours: document.getElementById('minHours').value,
-      maxHours: document.getElementById('maxHours').value,
-      minSessions: document.getElementById('minSessions').value,
-      maxSessions: document.getElementById('maxSessions').value,
-      sessionPattern: document.getElementById('sessionPattern').value,
-      timeOfDay: document.getElementById('timeOfDay').value,
-      punctualityFilter: document.getElementById('punctualityFilter').value,
-      excludeWeekends: document.getElementById('excludeWeekends').checked,
-      excludeHolidays: document.getElementById('excludeHolidays').checked,
-      outlierHandling: document.getElementById('outlierHandling').value,
-      aggregationMethod: document.getElementById('aggregationMethod').value,
-      confidenceLevel: document.getElementById('confidenceLevel').value
-    };
+    const advancedFilters = collectAdvancedFilters();
 
     console.log('Advanced filters being applied:', advancedFilters); // Debug log
 
@@ -1014,8 +1492,7 @@
     sessionStorage.setItem('advancedFilters', JSON.stringify(advancedFilters));
     
     // Update filter chips
-    updateFilterChips(); // Use the main filter chips function
-    updateAdvancedFilterChips(advancedFilters);
+    updateFilterChips(); // This now includes both normal and advanced filters
     
     // Refresh chart by triggering form submission
     const form = document.getElementById('filterForm');
@@ -1046,7 +1523,7 @@
     // Clear from session storage
     sessionStorage.removeItem('advancedFilters');
     
-    // Update filter chips
+    // Update filter chips (this now includes both normal and advanced filters)
     updateFilterChips();
     
     // Refresh chart by triggering form submission
@@ -1197,19 +1674,6 @@
     });
   }
 
-  function updateAdvancedFilterChips(filters) {
-    const chipsDiv = document.getElementById('filterChips');
-    
-    // Add advanced filter chips
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== '' && value !== false) {
-        const chip = document.createElement('span');
-        chip.className = 'filter-chip advanced-chip';
-        chip.innerHTML = `${formatFilterLabel(key)}: ${formatFilterValue(key, value)} <span class="remove-btn" onclick="removeAdvancedFilter('${key}')">&times;</span>`;
-        chipsDiv.appendChild(chip);
-      }
-    });
-  }
 
   function formatFilterLabel(key) {
     const labels = {
@@ -1239,19 +1703,399 @@
     return value;
   }
 
-  function updateFilterChips() { /* ... same as before ... */
-    const form = document.getElementById('filterForm'); const chipsDiv = document.getElementById('filterChips');
-    chipsDiv.innerHTML = ''; 
-    const createChip = (label, value, displayValue = null) => {
-      if (value && String(value).trim() !== '') { const chip = document.createElement('span'); chip.className = 'filter-chip';
-        chip.textContent = `${label}: ${displayValue || value}`; chipsDiv.appendChild(chip);}};
-    createChip("Tutor(s)", form.tutor_id.value); createChip("From", form.start_date.value); createChip("To", form.end_date.value);
-    const durationSelect = form.duration; if (durationSelect.value) createChip("Duration", durationSelect.options[durationSelect.selectedIndex].text);
-    const dayTypeSelect = form.day_type; if (dayTypeSelect.value) createChip("Day Type", dayTypeSelect.options[dayTypeSelect.selectedIndex].text);
-    const shiftStartHour = document.getElementById('shift_start_hour').value; const shiftEndHour = document.getElementById('shift_end_hour').value;
-    if (shiftStartHour !== "0" || shiftEndHour !== "23") createChip("Check-In Time", `${String(shiftStartHour).padStart(2,'0')}:00 - ${String(shiftEndHour).padStart(2,'0')}:00`);
+  document.addEventListener('DOMContentLoaded', () => { 
+    updateFilterChips(); 
+    document.getElementById('filterForm').addEventListener('submit', handleFormSubmit); 
+    initializeTutorSelector(); 
+    
+    // Load initial chart data
+    console.log('Loading initial chart data...');
+    console.log('renderChart function available:', typeof window.renderChart);
+    loadChartData();
+  });
+
+  // Handle form submission with debouncing
+  const debouncedHandleFormSubmit = debounce(function(event) {
+    event.preventDefault();
+    updateFilterChips();
+    
+    // Check if comparison mode is enabled
+    const comparisonMode = document.querySelector('input[name="analysisMode"]:checked')?.value === 'comparison';
+    
+    if (comparisonMode) {
+      loadComparisonData();
+    } else {
+      loadChartData();
+    }
+  }, 300);
+
+  function handleFormSubmit(event) {
+    debouncedHandleFormSubmit(event);
   }
-  document.addEventListener('DOMContentLoaded', () => { updateFilterChips(); document.getElementById('filterForm').addEventListener('submit', updateFilterChips); initializeTutorSelector(); });
+
+  // Loading state management
+  let isLoading = false;
+
+  // Chart titles mapping is defined in chart.js
+
+  // Load chart data with current form values
+  function loadChartData() {
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      console.log('Request already in progress, skipping...');
+      return;
+    }
+    
+    isLoading = true;
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to object
+    const payload = {};
+    for (let [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+    
+    // Debug: Log all form data
+    console.log('Form data entries:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
+    // Add dataset parameter
+    payload.dataset = 'checkins_per_tutor';
+    
+    // Add advanced filters to payload using centralized collection
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        payload[key] = value;
+      }
+    });
+    
+    console.log('Submitting form with payload:', payload);
+    console.log('Selected tutors:', selectedTutors);
+    console.log('Tutor IDs string:', document.getElementById('tutor_id')?.getAttribute('data-selected-ids'));
+    
+    // Show loading indicator
+    showLoadingIndicator(true);
+    
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Chart data received:', data);
+      updateChart(data);
+      showLoadingIndicator(false);
+      isLoading = false;
+    })
+    .catch(error => {
+      console.error('Error loading chart data:', error);
+      showError('Failed to load chart data: ' + error.message);
+      showLoadingIndicator(false);
+      isLoading = false;
+    });
+  }
+
+  // Toggle comparison input fields based on comparison type
+  function toggleComparisonInputs() {
+    const comparisonType = document.getElementById('comparisonType')?.value || 'time_periods';
+    
+    // Hide all input sections
+    document.getElementById('timePeriodInputs').style.display = 'none';
+    document.getElementById('tutorsInputs').style.display = 'none';
+    document.getElementById('dayTypesInputs').style.display = 'none';
+    document.getElementById('durationRangesInputs').style.display = 'none';
+    
+    // Show relevant input section
+    switch(comparisonType) {
+      case 'time_periods':
+        document.getElementById('timePeriodInputs').style.display = 'block';
+        break;
+      case 'tutors':
+        document.getElementById('tutorsInputs').style.display = 'block';
+        break;
+      case 'day_types':
+        document.getElementById('dayTypesInputs').style.display = 'block';
+        break;
+      case 'duration_ranges':
+        document.getElementById('durationRangesInputs').style.display = 'block';
+        break;
+    }
+  }
+
+  // Load comparison data
+  function loadComparisonData() {
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      console.log('Request already in progress, skipping...');
+      return;
+    }
+    
+    isLoading = true;
+    
+    // Ensure comparison section is visible
+    const comparisonSection = document.getElementById('comparisonSection');
+    if (comparisonSection) {
+      comparisonSection.style.display = 'block';
+    }
+    
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to object
+    const payload = {};
+    for (let [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+    
+    // Add dataset parameter
+    payload.dataset = 'checkins_per_tutor';
+    payload.mode = 'comparison';
+    
+    // Add comparison parameters - get values directly from elements
+    const comparisonType = document.getElementById('comparisonType')?.value || 'time_periods';
+    payload.comparisonType = comparisonType;
+    
+    // Handle different comparison types
+    if (comparisonType === 'time_periods') {
+      const period1Start = document.getElementById('period1Start')?.value;
+      const period1End = document.getElementById('period1End')?.value;
+      const period2Start = document.getElementById('period2Start')?.value;
+      const period2End = document.getElementById('period2End')?.value;
+      
+      // Check if required parameters are present
+      if (!period1Start || !period1End || !period2Start || !period2End) {
+        showError('Please fill in all comparison date fields (Period 1 and Period 2)');
+        return;
+      }
+      
+      payload.period1Start = period1Start;
+      payload.period1End = period1End;
+      payload.period2Start = period2Start;
+      payload.period2End = period2End;
+      
+    } else if (comparisonType === 'tutors') {
+      // Get selected tutors from the main filter
+      const tutorIds = document.getElementById('tutor_id')?.getAttribute('data-selected-ids') || '';
+      if (!tutorIds || tutorIds.split(',').length < 2) {
+        showError('Please select at least 2 tutors for comparison');
+        return;
+      }
+      payload.tutor_ids = tutorIds;
+      
+    } else if (comparisonType === 'day_types' || comparisonType === 'duration_ranges') {
+      // These comparison types use the current date range and filters
+      // No additional parameters needed
+    }
+    
+    // Add advanced filters to payload using centralized collection
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        payload[key] = value;
+      }
+    });
+    
+    console.log('Submitting comparison data with payload:', payload);
+    
+    // Show loading indicator
+    showLoadingIndicator(true);
+    
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Comparison data received:', data);
+      updateComparisonChart(data);
+      showLoadingIndicator(false);
+      isLoading = false;
+    })
+    .catch(error => {
+      console.error('Error loading comparison data:', error);
+      showError('Failed to load comparison data: ' + error.message);
+      showLoadingIndicator(false);
+      isLoading = false;
+    });
+  }
+
+  // Update comparison chart with new data (throttled)
+  const throttledUpdateComparisonChart = throttle(function(data) {
+    console.log('Updating comparison chart with data:', data);
+    
+    // Update metrics if available
+    if (data.raw_records_for_chart_context) {
+      updateChartMetrics(data);
+    }
+    
+    // Update punctuality analysis if available
+    if (data.punctuality_analysis) {
+      updatePunctualityAnalysis(data.punctuality_analysis);
+    }
+    
+    // Check for errors
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+    
+    // Render comparison charts
+    if (data.primary_data && data.comparison_data) {
+      // Switch to split layout for comparison
+      if (typeof window.toggleComparisonSection === 'function') {
+        window.toggleComparisonSection(true);
+      }
+      
+      // Render primary chart
+      if (data.primary_data.chart_data && data.primary_data.chart_type) {
+        if (typeof window.renderChart === 'function') {
+          window.renderChart(data.primary_data.chart_type, data.primary_data.chart_data, data.primary_data.title || 'Primary Dataset', true);
+        } else {
+          console.error('renderChart function not found in global scope');
+          showError('Chart rendering function not available');
+        }
+      }
+      
+      // Render comparison chart in the second container
+      if (data.comparison_data.chart_data && data.comparison_data.chart_type) {
+        // Find the comparison chart container
+        const comparisonCtx = document.getElementById('comparisonChart')?.getContext('2d');
+        if (comparisonCtx && typeof window.createChartInstance === 'function') {
+          // Destroy existing comparison chart
+          if (window.comparisonChartInstance) {
+            window.comparisonChartInstance.destroy();
+          }
+          
+          // Create new comparison chart
+          window.comparisonChartInstance = window.createChartInstance(
+            comparisonCtx,
+            data.comparison_data.chart_type,
+            data.comparison_data.chart_data,
+            data.comparison_data.title || 'Comparison Dataset',
+            true
+          );
+        } else {
+          console.log('Comparison chart container not found or createChartInstance not available');
+        }
+      }
+    } else {
+      console.error('Invalid comparison data structure:', data);
+      showError('Invalid comparison data received from server');
+    }
+  }, 500);
+
+  function updateComparisonChart(data) {
+    throttledUpdateComparisonChart(data);
+  }
+
+  // Update chart with new data (throttled to prevent rapid updates)
+  const throttledUpdateChart = throttle(function(data) {
+    console.log('Updating chart with data:', data);
+    console.log('Data structure check:', {
+      hasChartData: !!data.chart_data,
+      hasChartType: !!data.chart_type,
+      hasTitle: !!data.title,
+      hasDataset: !!data.dataset,
+      renderChartAvailable: typeof window.renderChart
+    });
+    
+    // Destroy existing main chart before creating new one
+    if (window.chartInstance) {
+      window.chartInstance.destroy();
+      window.chartInstance = null;
+    }
+    
+    // Update metrics if available
+    if (data.raw_records_for_chart_context) {
+      updateChartMetrics(data);
+    }
+    
+    // Update punctuality analysis if available
+    if (data.punctuality_analysis) {
+      updatePunctualityAnalysis(data.punctuality_analysis);
+    }
+    
+    // Ensure chart container exists
+    const chartContainer = document.getElementById('tutorChartContainer');
+    if (!chartContainer) {
+      console.error('Chart container not found');
+      showError('Chart container not found');
+      return;
+    }
+    
+    // Ensure canvas exists
+    let canvas = document.getElementById('tutorChart');
+    if (!canvas) {
+      console.log('Creating new canvas element');
+      canvas = document.createElement('canvas');
+      canvas.id = 'tutorChart';
+      chartContainer.innerHTML = '';
+      chartContainer.appendChild(canvas);
+    }
+    
+    // Render the chart based on the data
+    if (data.chart_data && data.chart_type && data.title) {
+      // Call renderChart from the global scope (defined in chart.js)
+      if (typeof window.renderChart === 'function') {
+        console.log('Rendering chart with data:', data.chart_type, data.title);
+        window.renderChart(data.chart_type, data.chart_data, data.title, false, data.forecast_data);
+      } else {
+        console.error('renderChart function not found in global scope');
+        showError('Chart rendering function not available');
+      }
+    } else if (data.dataset && data.chart_data) {
+      // Fallback for different data structure
+      const chartType = data.chart_type || 'bar';
+      const title = data.title || window.chartTitles?.[data.dataset] || 'Chart';
+      if (typeof window.renderChart === 'function') {
+        console.log('Rendering chart with fallback data:', chartType, title);
+        window.renderChart(chartType, data.chart_data, title, false, data.forecast_data);
+      } else {
+        console.error('renderChart function not found in global scope');
+        showError('Chart rendering function not available');
+      }
+    } else {
+      console.error('Invalid chart data structure:', data);
+      showError('Invalid chart data received from server');
+    }
+  }, 500);
+
+  function updateChart(data) {
+    throttledUpdateChart(data);
+  }
+
+  // Show/hide loading indicator
+  function showLoadingIndicator(show) {
+    const loadingDiv = document.getElementById('loadingIndicator');
+    const chartIndicator = document.getElementById('chartLoadingIndicator');
+    
+    if (loadingDiv) {
+      loadingDiv.style.display = show ? 'block' : 'none';
+    }
+    
+    if (chartIndicator) {
+      chartIndicator.style.display = show ? 'inline-block' : 'none';
+    }
+  }
+
+  // Show error message
+  function showError(message) {
+    console.error(message);
+    // You can implement a proper error display here
+    alert(message);
+  }
 
   // Multi-select tutor functionality
   let selectedTutors = [];
@@ -1387,10 +2231,10 @@
     const chipsDiv = document.getElementById('filterChips');
     chipsDiv.innerHTML = ''; 
     
-    const createChip = (label, value, displayValue = null) => {
+    const createChip = (label, value, displayValue = null, isAdvanced = false) => {
       if (value && String(value).trim() !== '') { 
         const chip = document.createElement('span'); 
-        chip.className = 'filter-chip';
+        chip.className = `filter-chip ${isAdvanced ? 'advanced-chip' : ''}`;
         chip.textContent = `${label}: ${displayValue || value}`; 
         chipsDiv.appendChild(chip);
       }
@@ -1402,6 +2246,7 @@
       createChip("Tutors", tutorNames);
     }
     
+    // Normal filters
     createChip("From", form.start_date.value); 
     createChip("To", form.end_date.value);
     const durationSelect = form.duration; 
@@ -1411,6 +2256,14 @@
     const shiftStartHour = document.getElementById('shift_start_hour').value; 
     const shiftEndHour = document.getElementById('shift_end_hour').value;
     if (shiftStartHour !== "0" || shiftEndHour !== "23") createChip("Check-In Time", `${String(shiftStartHour).padStart(2,'0')}:00 - ${String(shiftEndHour).padStart(2,'0')}:00`);
+    
+    // Advanced filters
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        createChip(formatFilterLabel(key), formatFilterValue(key, value), null, true);
+      }
+    });
   }
 
   // Enhanced Analytics Functions
@@ -1418,42 +2271,7 @@
   let punctualityChart = null;
   let punctualityTrendChart = null;
 
-  // Advanced Filters Functions
-  function applyAdvancedFilters() {
-    const minHours = document.getElementById('minHours').value;
-    const maxHours = document.getElementById('maxHours').value;
-    const minSessions = document.getElementById('minSessions').value;
-    const sessionPattern = document.getElementById('sessionPattern').value;
-    const timeOfDay = document.getElementById('timeOfDay').value;
-    const punctualityFilter = document.getElementById('punctualityFilter').value;
-    const excludeWeekends = document.getElementById('excludeWeekends').checked;
-
-    // Add advanced filter chips
-    const chipsDiv = document.getElementById('filterChips');
-    if (minHours) addFilterChip('Min Hours', minHours + 'h');
-    if (maxHours) addFilterChip('Max Hours', maxHours + 'h');
-    if (minSessions) addFilterChip('Min Sessions', minSessions);
-    if (sessionPattern) addFilterChip('Pattern', sessionPattern);
-    if (timeOfDay) addFilterChip('Time', timeOfDay);
-    if (punctualityFilter) addFilterChip('Punctuality', punctualityFilter);
-    if (excludeWeekends) addFilterChip('Exclude', 'Weekends');
-
-    // Trigger chart refresh with advanced filters
-    const form = document.getElementById('filterForm');
-    form.dispatchEvent(new Event('submit', { bubbles: true }));
-  }
-
-  function clearAdvancedFilters() {
-    ['minHours', 'maxHours', 'minSessions', 'sessionPattern', 'timeOfDay', 'punctualityFilter'].forEach(id => {
-      const element = document.getElementById(id);
-      if (element) element.value = '';
-    });
-    document.getElementById('excludeWeekends').checked = false;
-    updateFilterChips();
-    
-    const form = document.getElementById('filterForm');
-    form.dispatchEvent(new Event('submit', { bubbles: true }));
-  }
+  // Advanced Filters Functions (duplicate removed - using the one above)
 
   function addFilterChip(label, value) {
     const chipsDiv = document.getElementById('filterChips');
@@ -1667,70 +2485,32 @@
     alert('Punctuality data export functionality will be implemented here.');
   }
 
-  // Override the existing fetchChartData function to include metrics update
-  const originalFetchChartData = window.fetchChartData;
-  window.fetchChartData = function(query = '', chartType = 'bar', chartKey = 'checkins_per_tutor') {
-    const payload = Object.fromEntries(new URLSearchParams(query));
-    payload.chartKey = chartKey;
-    
-    // Add advanced filters to payload
-    const minHours = document.getElementById('minHours')?.value;
-    const maxHours = document.getElementById('maxHours')?.value;
-    const minSessions = document.getElementById('minSessions')?.value;
-    const sessionPattern = document.getElementById('sessionPattern')?.value;
-    const timeOfDay = document.getElementById('timeOfDay')?.value;
-    const punctualityFilter = document.getElementById('punctualityFilter')?.value;
-    const excludeWeekends = document.getElementById('excludeWeekends')?.checked;
+  // Debounce function to prevent rapid calls
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 
-    if (minHours) payload.minHours = minHours;
-    if (maxHours) payload.maxHours = maxHours;
-    if (minSessions) payload.minSessions = minSessions;
-    if (sessionPattern) payload.sessionPattern = sessionPattern;
-    if (timeOfDay) payload.timeOfDay = timeOfDay;
-    if (punctualityFilter) payload.punctualityFilter = punctualityFilter;
-    if (excludeWeekends) payload.excludeWeekends = 'true';
-    
-    document.getElementById('tutorChart').parentElement.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading chart data...</p></div>';
-
-    fetch(`/chart-data`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        document.getElementById('tutorChartContainer').innerHTML = '<canvas id="tutorChart"></canvas>';
-        const dataset = data[chartKey];
-        const isComparison = data.is_comparison_mode || false;
-        
-
-        if (dataset === undefined || dataset === null) {
-          console.error("Dataset key not found or is null:", chartKey, data);
-          throw new Error(`No data for chart key "${chartKey}".`);
-        }
-        
-        // Update chart header title
-        document.getElementById('chartHeaderTitle').textContent = chartTitles[chartKey] || "Analytics Dashboard";
-        
-        renderChart(chartType, dataset, chartTitles[chartKey] || "Chart", isComparison);
-        
-        // Update chart metrics
-        updateChartMetrics(data);
-      })
-      .catch(err => {
-        console.error('Chart load failed:', err);
-        document.getElementById('tutorChartContainer').innerHTML = '<canvas id="tutorChart"></canvas>';
-        const chartTitleEl = document.getElementById('chartTitle');
-        if (chartTitleEl) chartTitleEl.innerText = "Could not load chart data. " + err.message;
-        document.getElementById('totalCount').textContent = '';
-        document.getElementById('chartSummaryTable').innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
-      });
-
-
-  };
+  // Throttle function to limit calls
+  function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+      const args = arguments;
+      const context = this;
+      if (!inThrottle) {
+        func.apply(context, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }
 
 
 </script>

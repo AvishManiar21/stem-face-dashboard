@@ -12,6 +12,7 @@ from flask import session, request, jsonify, redirect, url_for, flash
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from datetime import datetime
+from auth_utils import USERS_FILE, hash_password as legacy_hash_password
 import pandas as pd
 
 # Configure logging
@@ -48,39 +49,7 @@ ROLE_HIERARCHY = {
 # Audit log file
 AUDIT_LOG_FILE = 'logs/audit_log.csv'
 
-# Demo users for when Supabase is not available
-DEMO_USERS = {
-    'admin@example.com': {
-        'id': 'demo_admin_001',
-        'email': 'admin@example.com',
-        'user_metadata': {
-            'role': 'admin',
-            'full_name': 'Demo Administrator',
-            'tutor_id': 'ADMIN001'
-        },
-        'password_hash': hashlib.sha256('admin123'.encode()).hexdigest()
-    },
-    'tutor@example.com': {
-        'id': 'demo_tutor_001',
-        'email': 'tutor@example.com',
-        'user_metadata': {
-            'role': 'tutor',
-            'full_name': 'Demo Tutor',
-            'tutor_id': 'TUTOR001'
-        },
-        'password_hash': hashlib.sha256('tutor123'.encode()).hexdigest()
-    },
-    'manager@example.com': {
-        'id': 'demo_manager_001',
-        'email': 'manager@example.com',
-        'user_metadata': {
-            'role': 'manager',
-            'full_name': 'Demo Manager',
-            'tutor_id': 'MGR001'
-        },
-        'password_hash': hashlib.sha256('manager123'.encode()).hexdigest()
-    }
-}
+DEMO_USERS = {}
 
 def get_current_user():
     """Get current authenticated user from session"""
@@ -260,7 +229,6 @@ def authenticate_user(email, password):
     # If Supabase is not available, try local CSV users
     import pandas as pd
     import os
-    from app import hash_password, USERS_FILE
     if os.path.exists(USERS_FILE):
         df = pd.read_csv(USERS_FILE)
         user_row = df[df['email'] == email]
@@ -269,36 +237,27 @@ def authenticate_user(email, password):
             if not user.get('active', True):
                 return False, "User is not active"
             stored_hash = user.get('password_hash', '')
-            if stored_hash and hash_password(password) == stored_hash:
-                session['user'] = {
-                    'id': user.get('user_id'),
-                    'email': user.get('email'),
-                    'user_metadata': {
-                        'role': user.get('role', 'tutor'),
-                        'full_name': user.get('full_name', ''),
-                        'tutor_id': user.get('user_id')
+            if stored_hash:
+                # Support both SHA-256 (64 hex) and legacy MD5 (32 hex)
+                try:
+                    if isinstance(stored_hash, str) and len(stored_hash.strip()) == 32:
+                        candidate = hashlib.md5(password.encode()).hexdigest()
+                    else:
+                        candidate = legacy_hash_password(password)
+                except Exception:
+                    candidate = legacy_hash_password(password)
+                if candidate == stored_hash:
+                    session['user'] = {
+                        'id': user.get('user_id'),
+                        'email': user.get('email'),
+                        'user_metadata': {
+                            'role': user.get('role', 'tutor'),
+                            'full_name': user.get('full_name', ''),
+                            'tutor_id': user.get('user_id')
+                        }
                     }
-                }
-                logger.info(f"User {email} authenticated via local CSV users")
-                return True, "Login successful"
-            else:
-                return False, "Invalid email or password"
-    
-    # If Supabase is not available or failed, try demo users
-    if email in DEMO_USERS:
-        user_data = DEMO_USERS[email]
-        # Simple hash comparison for demo users
-        simple_hash = hashlib.sha256(password.encode()).hexdigest()
-        if secrets.compare_digest(simple_hash, user_data['password_hash']):
-            session['user'] = {
-                'id': user_data['id'],
-                'email': user_data['email'],
-                'user_metadata': user_data['user_metadata']
-            }
-            logger.info(f"User {email} authenticated via demo users")
-            return True, "Login successful (Demo Mode)"
-        else:
-            logger.warning(f"Invalid password for demo user {email}")
+                    logger.info(f"User {email} authenticated via local CSV users")
+                    return True, "Login successful"
             return False, "Invalid email or password"
     
     return False, "Invalid email or password"

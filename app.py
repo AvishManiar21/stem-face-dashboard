@@ -10,13 +10,17 @@ from email.mime.multipart import MIMEMultipart
 from analytics import TutorAnalytics
 import shifts
 import logging
-from auto_logger import start_auto_logger, add_today_logs
-import hashlib
 from auth import authenticate_user
-import simplejson as json
+from auth_utils import USERS_FILE, hash_password
+import simplejson as sjson
 from supabase import create_client
 from dotenv import load_dotenv
 from forecasting_routes import forecasting_bp
+
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -28,63 +32,24 @@ app.register_blueprint(forecasting_bp)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global flag to track if app has been initialized
+# Global flag to track if app has been initialized (no demo seeding)
 _app_initialized = False
 
 def initialize_app_once():
-    """Initialize the application once"""
+    """Initialize the application once (no demo data, no auto-logger)."""
     global _app_initialized
     if not _app_initialized:
         try:
-            # Add some today logs if none exist
-            today = datetime.now().strftime('%Y-%m-%d')
-            if os.path.exists('logs/face_log.csv'):
-                df = pd.read_csv('logs/face_log.csv')
-                today_logs = df[df['check_in'].str.startswith(today, na=False)]
-                if len(today_logs) == 0:
-                    logger.info("No today logs found, adding some...")
-                    add_today_logs(3)
-            
-            # Start auto-logger
-            start_auto_logger()
-            logger.info("Auto-logger started")
             _app_initialized = True
         except Exception as e:
             logger.error(f"Error initializing app: {e}")
 
-# Mock user data for demo purposes
-MOCK_USERS = {
-    'admin@example.com': {
-        'user_id': 'admin_001',
-        'email': 'admin@example.com',
-        'full_name': 'Admin User',
-        'role': 'admin',
-        'active': True,
-        'created_at': '2024-01-01T00:00:00Z',
-        'last_login': '2024-01-15T10:30:00Z'
-    },
-    'test@example.com': {
-        'user_id': 'tutor_001',
-        'email': 'test@example.com',
-        'full_name': 'Test Tutor',
-        'role': 'tutor',
-        'active': True,
-        'created_at': '2024-01-02T00:00:00Z',
-        'last_login': '2024-01-15T09:15:00Z'
-    }
-}
+# No mock users in production
 
 CSV_FILE = 'logs/face_log.csv'
 SNAPSHOTS_DIR = 'static/snapshots'
 
-# User management file
-USERS_FILE = 'logs/users.csv'
-
-def hash_password(password):
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
-
-def verify_password(password, hashed):
-    return hash_password(password) == hashed
+# User management via auth_utils.USERS_FILE and auth_utils.hash_password
 
 def ensure_users_file():
     """Ensure users file exists with proper structure"""
@@ -292,7 +257,7 @@ def calendar_page():
 def login_page():
     """Serve the login page"""
     # Render login.html with default email value
-    return render_template('login.html', default_email='admin@tutordashboard.com')
+    return render_template('login.html', default_email=request.args.get('email', ''))
 
 @app.route('/logout')
 def logout():
@@ -391,8 +356,21 @@ def api_admin_tutors():
     user = get_current_user()
     if not user or user['role'] not in ['admin', 'manager']:
         return jsonify({'error': 'Unauthorized'}), 403
-    tutors = [u for u in MOCK_USERS.values() if u['role'] in ['tutor', 'lead_tutor']]
-    return jsonify(tutors)
+    try:
+        # Prefer Supabase users table if available
+        if supabase:
+            resp = supabase.table('users').select('user_id,email,full_name,role,active').in_('role', ['tutor','lead_tutor']).execute()
+            records = resp.data or []
+            return jsonify(records)
+        # Fallback to CSV users file
+        df = load_users()
+        df = df[df['role'].isin(['tutor','lead_tutor'])]
+        if 'password_hash' in df.columns:
+            df = df.drop(columns=['password_hash'])
+        return jsonify(df.fillna('').to_dict(orient='records'))
+    except Exception as e:
+        logger.error(f"Error fetching tutors: {e}")
+        return jsonify([])
 
 @app.route('/api/admin/shifts')
 def api_admin_shifts():
@@ -442,7 +420,7 @@ def api_admin_audit_logs():
         }
         print(f"[DEBUG] API Response: {len(logs)} logs, total: {total}, pages: {total_pages}")
         return app.response_class(
-            response=json.dumps(response_data, ignore_nan=True),
+            response=sjson.dumps(response_data, ignore_nan=True),
             status=200,
             mimetype='application/json'
         )
@@ -770,24 +748,43 @@ def login():
     success, message = authenticate_user(email, password)
     if success:
         # Store user in session (already handled by authenticate_user)
-            return redirect('/')
+        return redirect('/')
+    # On failure, re-render login page with inline error and preserved email
     flash(message or 'Invalid credentials', 'error')
-    return redirect('/login')
+    return render_template('login.html', default_email=email), 400
 
 # Chart data endpoints
 @app.route('/chart-data', methods=['GET', 'POST'])
 def chart_data():
-    """Alias for /api/chart-data for frontend compatibility"""
+    """Handle chart data requests with proper form data support"""
     try:
+        logger.info("Chart data request received")
         if request.method == 'POST':
-            req = request.json or {}
+            # Handle both JSON and form data
+            if request.content_type and 'application/json' in request.content_type:
+                req = request.json or {}
+            else:
+                req = request.form.to_dict() or {}
+            
             dataset = req.get('dataset') or req.get('chartKey') or 'checkins_per_tutor'
             grid_mode = req.get('grid') or req.get('mode') == 'grid'
             max_date = req.get('max_date')
+            
+            # Extract filter parameters from form
+            tutor_ids = req.get('tutor_ids', '')
+            start_date = req.get('start_date')
+            end_date = req.get('end_date')
+            shift_start_hour = req.get('shift_start_hour', '0')
+            shift_end_hour = req.get('shift_end_hour', '23')
         else:
             dataset = request.args.get('dataset') or request.args.get('chartKey') or 'checkins_per_tutor'
             grid_mode = request.args.get('grid') or request.args.get('mode') == 'grid'
             max_date = request.args.get('max_date')
+            tutor_ids = request.args.get('tutor_ids', '')
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+            shift_start_hour = request.args.get('shift_start_hour', '0')
+            shift_end_hour = request.args.get('shift_end_hour', '23')
 
         # Parse max_date if provided
         if max_date:
@@ -798,7 +795,131 @@ def chart_data():
         else:
             max_date_parsed = None
 
-        analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv', max_date=max_date_parsed)
+        # Parse other filter parameters
+        tutor_ids_list = []
+        if tutor_ids:
+            try:
+                tutor_ids_list = [int(tid.strip()) for tid in tutor_ids.split(',') if tid.strip()]
+            except ValueError:
+                tutor_ids_list = []
+        
+        start_date_parsed = None
+        if start_date:
+            try:
+                start_date_parsed = pd.to_datetime(start_date)
+            except Exception:
+                start_date_parsed = None
+                
+        end_date_parsed = None
+        if end_date:
+            try:
+                end_date_parsed = pd.to_datetime(end_date)
+            except Exception:
+                end_date_parsed = None
+
+        # Check if this is a comparison mode request
+        is_comparison_mode = req.get('mode') == 'comparison'
+        comparison_type = req.get('comparisonType', 'time_period')
+        
+        # Initialize analytics with filters
+        logger.info(f"Initializing analytics with max_date: {max_date_parsed}, comparison_mode: {is_comparison_mode}")
+        try:
+            analytics = TutorAnalytics(
+                face_log_file='logs/face_log_with_expected.csv', 
+                max_date=max_date_parsed
+            )
+            logger.info(f"Analytics initialized successfully. Data shape: {analytics.data.shape if hasattr(analytics.data, 'shape') else 'No shape attribute'}")
+        except Exception as e:
+            logger.error(f"Error initializing analytics: {e}")
+            raise
+        
+        # Apply additional filters if provided
+        filter_condition = (tutor_ids_list or start_date_parsed or end_date_parsed or 
+            shift_start_hour != '0' or shift_end_hour != '23' or
+            req.get('minHours') or req.get('maxHours') or req.get('minSessions') or 
+            req.get('maxSessions') or req.get('sessionPattern') or req.get('timeOfDay') or
+            req.get('punctualityFilter') or req.get('excludeWeekends'))
+        
+        logger.info(f"Filter condition result: {filter_condition}")
+        logger.info(f"Individual conditions: tutor_ids_list={bool(tutor_ids_list)}, start_date_parsed={bool(start_date_parsed)}, end_date_parsed={bool(end_date_parsed)}")
+        logger.info(f"Hour conditions: shift_start_hour={shift_start_hour}, shift_end_hour={shift_end_hour}")
+        
+        if filter_condition:
+            
+            logger.info(f"Applying filters - Original data shape: {analytics.data.shape}")
+            logger.info(f"Filter parameters: tutor_ids={tutor_ids_list}, start_date={start_date_parsed}, end_date={end_date_parsed}")
+            logger.info(f"Advanced filters: minHours={req.get('minHours')}, maxHours={req.get('maxHours')}, timeOfDay={req.get('timeOfDay')}")
+            logger.info(f"Raw request data: {req}")
+            
+            # Filter the data based on the provided parameters
+            df = analytics.data.copy()
+            
+            if tutor_ids_list:
+                df = df[df['tutor_id'].isin(tutor_ids_list)]
+            
+            if start_date_parsed:
+                df = df[df['check_in'] >= start_date_parsed]
+                
+            if end_date_parsed:
+                df = df[df['check_in'] <= end_date_parsed]
+            
+            if shift_start_hour != '0' or shift_end_hour != '23':
+                df['check_in_hour'] = df['check_in'].dt.hour
+                df = df[(df['check_in_hour'] >= int(shift_start_hour)) & (df['check_in_hour'] <= int(shift_end_hour))]
+            
+            # Apply advanced filters
+            if req.get('minHours'):
+                try:
+                    min_hours = float(req.get('minHours'))
+                    df = df[df['shift_hours'] >= min_hours]
+                except (ValueError, TypeError):
+                    pass
+            
+            if req.get('maxHours'):
+                try:
+                    max_hours = float(req.get('maxHours'))
+                    df = df[df['shift_hours'] <= max_hours]
+                except (ValueError, TypeError):
+                    pass
+            
+            if req.get('minSessions'):
+                try:
+                    min_sessions = int(req.get('minSessions'))
+                    # Count sessions per tutor and filter
+                    tutor_session_counts = df.groupby('tutor_id').size()
+                    tutors_with_min_sessions = tutor_session_counts[tutor_session_counts >= min_sessions].index
+                    df = df[df['tutor_id'].isin(tutors_with_min_sessions)]
+                except (ValueError, TypeError):
+                    pass
+            
+            if req.get('maxSessions'):
+                try:
+                    max_sessions = int(req.get('maxSessions'))
+                    # Count sessions per tutor and filter
+                    tutor_session_counts = df.groupby('tutor_id').size()
+                    tutors_with_max_sessions = tutor_session_counts[tutor_session_counts <= max_sessions].index
+                    df = df[df['tutor_id'].isin(tutors_with_max_sessions)]
+                except (ValueError, TypeError):
+                    pass
+            
+            if req.get('timeOfDay') and req.get('timeOfDay') != 'All Times':
+                time_of_day = req.get('timeOfDay')
+                df['check_in_hour'] = df['check_in'].dt.hour
+                if time_of_day == 'Morning':
+                    df = df[(df['check_in_hour'] >= 6) & (df['check_in_hour'] < 12)]
+                elif time_of_day == 'Afternoon':
+                    df = df[(df['check_in_hour'] >= 12) & (df['check_in_hour'] < 18)]
+                elif time_of_day == 'Evening':
+                    df = df[(df['check_in_hour'] >= 18) & (df['check_in_hour'] < 22)]
+                elif time_of_day == 'Night':
+                    df = df[(df['check_in_hour'] >= 22) | (df['check_in_hour'] < 6)]
+            
+            if req.get('excludeWeekends') == 'true':
+                df = df[df['check_in'].dt.dayofweek < 5]  # Monday=0, Sunday=6
+            
+            # Create a new analytics instance with filtered data
+            logger.info(f"Filtered data shape: {df.shape}")
+            analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv', custom_data=df)
 
         if grid_mode:
             # Return all datasets needed for grid mode
@@ -809,11 +930,273 @@ def chart_data():
                 "hourly_checkins_dist": analytics.get_chart_data("hourly_checkins_dist"),
             })
         else:
-            chart_data = analytics.get_chart_data(dataset)
-            return jsonify({dataset: chart_data})
+            logger.info(f"Generating chart data for dataset: {dataset}")
+            try:
+                chart_data = analytics.get_chart_data(dataset)
+                logger.info(f"Chart data generated successfully. Keys: {list(chart_data.keys()) if isinstance(chart_data, dict) else 'Not a dict'}")
+            except Exception as e:
+                logger.error(f"Error generating chart data for dataset {dataset}: {e}")
+                raise
+            
+            # Return data in the format expected by the frontend
+            # Convert data to records, handling NaT values
+            raw_records = []
+            if hasattr(analytics.data, 'to_dict'):
+                try:
+                    # Convert NaT values to None for JSON serialization
+                    df_clean = analytics.data.copy()
+                    
+                    # Handle all datetime columns and convert NaT to None
+                    for col in df_clean.columns:
+                        if df_clean[col].dtype == 'datetime64[ns]':
+                            df_clean[col] = df_clean[col].where(pd.notna(df_clean[col]), None)
+                        elif df_clean[col].dtype == 'object':
+                            # Check if column contains datetime strings that might have NaT
+                            df_clean[col] = df_clean[col].where(pd.notna(df_clean[col]), None)
+                    
+                    # Convert to records
+                    raw_records = df_clean.to_dict('records')
+                    
+                    # Additional cleanup for any remaining NaT values
+                    for record in raw_records:
+                        for key, value in record.items():
+                            if pd.isna(value):
+                                record[key] = None
+                                
+                except Exception as e:
+                    logger.error(f"Error converting data to records: {e}")
+                    raw_records = []
+            
+            response_data = {
+                "dataset": dataset,
+                "chart_data": chart_data,
+                "chart_type": "bar",  # Default chart type
+                "title": f"{dataset.replace('_', ' ').title()}",
+                "raw_records_for_chart_context": raw_records
+            }
+            
+            # Handle comparison mode
+            if is_comparison_mode:
+                logger.info(f"Processing comparison mode: {comparison_type}")
+                
+                if comparison_type in ['time_period', 'time_periods']:
+                    # Compare two time periods
+                    period1_start = req.get('period1Start')
+                    period1_end = req.get('period1End')
+                    period2_start = req.get('period2Start')
+                    period2_end = req.get('period2End')
+                    
+                    if period1_start and period1_end and period2_start and period2_end:
+                        try:
+                            # Create analytics for period 1
+                            analytics_p1 = TutorAnalytics(
+                                face_log_file='logs/face_log_with_expected.csv',
+                                max_date=pd.to_datetime(period1_end)
+                            )
+                            analytics_p1.data = analytics_p1.data[
+                                (analytics_p1.data['check_in'].dt.date >= pd.to_datetime(period1_start).date()) &
+                                (analytics_p1.data['check_in'].dt.date <= pd.to_datetime(period1_end).date())
+                            ]
+                            
+                            # Create analytics for period 2
+                            analytics_p2 = TutorAnalytics(
+                                face_log_file='logs/face_log_with_expected.csv',
+                                max_date=pd.to_datetime(period2_end)
+                            )
+                            analytics_p2.data = analytics_p2.data[
+                                (analytics_p2.data['check_in'].dt.date >= pd.to_datetime(period2_start).date()) &
+                                (analytics_p2.data['check_in'].dt.date <= pd.to_datetime(period2_end).date())
+                            ]
+                            
+                            # Generate chart data for both periods
+                            chart_data_p1 = analytics_p1.get_chart_data(dataset)
+                            chart_data_p2 = analytics_p2.get_chart_data(dataset)
+                            
+                            # Update response with comparison data
+                            response_data = {
+                                "dataset": dataset,
+                                "primary_data": {
+                                    "chart_data": chart_data_p1,
+                                    "chart_type": "bar",
+                                    "title": f"{dataset.replace('_', ' ').title()} - Period 1 ({period1_start} to {period1_end})"
+                                },
+                                "comparison_data": {
+                                    "chart_data": chart_data_p2,
+                                    "chart_type": "bar", 
+                                    "title": f"{dataset.replace('_', ' ').title()} - Period 2 ({period2_start} to {period2_end})"
+                                },
+                                "comparison_mode": True,
+                                "comparison_type": comparison_type,
+                                "raw_records_for_chart_context": raw_records
+                            }
+                            
+                        except Exception as e:
+                            logger.error(f"Error processing time period comparison: {e}")
+                            response_data["error"] = f"Comparison failed: {str(e)}"
+                    else:
+                        response_data["error"] = "Missing time period parameters for comparison"
+                        
+                elif comparison_type == 'tutors':
+                    # Compare different tutors
+                    tutor_ids = req.get('tutor_ids', '').split(',') if req.get('tutor_ids') else []
+                    if len(tutor_ids) >= 2:
+                        try:
+                            # Split tutors into two groups
+                            mid_point = len(tutor_ids) // 2
+                            tutors_p1 = tutor_ids[:mid_point]
+                            tutors_p2 = tutor_ids[mid_point:]
+                            
+                            # Create analytics for tutor group 1
+                            analytics_p1 = TutorAnalytics(
+                                face_log_file='logs/face_log_with_expected.csv',
+                                max_date=max_date_parsed
+                            )
+                            analytics_p1.data = analytics_p1.data[analytics_p1.data['tutor_id'].isin(tutors_p1)]
+                            
+                            # Create analytics for tutor group 2
+                            analytics_p2 = TutorAnalytics(
+                                face_log_file='logs/face_log_with_expected.csv',
+                                max_date=max_date_parsed
+                            )
+                            analytics_p2.data = analytics_p2.data[analytics_p2.data['tutor_id'].isin(tutors_p2)]
+                            
+                            # Generate chart data for both groups
+                            chart_data_p1 = analytics_p1.get_chart_data(dataset)
+                            chart_data_p2 = analytics_p2.get_chart_data(dataset)
+                            
+                            # Update response with comparison data
+                            response_data = {
+                                "dataset": dataset,
+                                "primary_data": {
+                                    "chart_data": chart_data_p1,
+                                    "chart_type": "bar",
+                                    "title": f"{dataset.replace('_', ' ').title()} - Group 1 ({len(tutors_p1)} tutors)"
+                                },
+                                "comparison_data": {
+                                    "chart_data": chart_data_p2,
+                                    "chart_type": "bar", 
+                                    "title": f"{dataset.replace('_', ' ').title()} - Group 2 ({len(tutors_p2)} tutors)"
+                                },
+                                "comparison_mode": True,
+                                "comparison_type": comparison_type,
+                                "raw_records_for_chart_context": raw_records
+                            }
+                            
+                        except Exception as e:
+                            logger.error(f"Error processing tutor comparison: {e}")
+                            response_data["error"] = f"Tutor comparison failed: {str(e)}"
+                    else:
+                        response_data["error"] = "Please select at least 2 tutors for comparison"
+                        
+                elif comparison_type == 'day_types':
+                    # Compare weekdays vs weekends
+                    try:
+                        # Create analytics for weekdays
+                        analytics_weekdays = TutorAnalytics(
+                            face_log_file='logs/face_log_with_expected.csv',
+                            max_date=max_date_parsed
+                        )
+                        analytics_weekdays.data = analytics_weekdays.data[
+                            analytics_weekdays.data['day_of_week'].isin(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
+                        ]
+                        
+                        # Create analytics for weekends
+                        analytics_weekends = TutorAnalytics(
+                            face_log_file='logs/face_log_with_expected.csv',
+                            max_date=max_date_parsed
+                        )
+                        analytics_weekends.data = analytics_weekends.data[
+                            analytics_weekends.data['day_of_week'].isin(['Saturday', 'Sunday'])
+                        ]
+                        
+                        # Generate chart data for both day types
+                        chart_data_weekdays = analytics_weekdays.get_chart_data(dataset)
+                        chart_data_weekends = analytics_weekends.get_chart_data(dataset)
+                        
+                        # Update response with comparison data
+                        response_data = {
+                            "dataset": dataset,
+                            "primary_data": {
+                                "chart_data": chart_data_weekdays,
+                                "chart_type": "bar",
+                                "title": f"{dataset.replace('_', ' ').title()} - Weekdays"
+                            },
+                            "comparison_data": {
+                                "chart_data": chart_data_weekends,
+                                "chart_type": "bar", 
+                                "title": f"{dataset.replace('_', ' ').title()} - Weekends"
+                            },
+                            "comparison_mode": True,
+                            "comparison_type": comparison_type,
+                            "raw_records_for_chart_context": raw_records
+                        }
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing day types comparison: {e}")
+                        response_data["error"] = f"Day types comparison failed: {str(e)}"
+                        
+                elif comparison_type == 'duration_ranges':
+                    # Compare short vs long sessions
+                    try:
+                        # Create analytics for short sessions (<= 2 hours)
+                        analytics_short = TutorAnalytics(
+                            face_log_file='logs/face_log_with_expected.csv',
+                            max_date=max_date_parsed
+                        )
+                        analytics_short.data = analytics_short.data[analytics_short.data['shift_hours'] <= 2.0]
+                        
+                        # Create analytics for long sessions (> 2 hours)
+                        analytics_long = TutorAnalytics(
+                            face_log_file='logs/face_log_with_expected.csv',
+                            max_date=max_date_parsed
+                        )
+                        analytics_long.data = analytics_long.data[analytics_long.data['shift_hours'] > 2.0]
+                        
+                        # Generate chart data for both duration ranges
+                        chart_data_short = analytics_short.get_chart_data(dataset)
+                        chart_data_long = analytics_long.get_chart_data(dataset)
+                        
+                        # Update response with comparison data
+                        response_data = {
+                            "dataset": dataset,
+                            "primary_data": {
+                                "chart_data": chart_data_short,
+                                "chart_type": "bar",
+                                "title": f"{dataset.replace('_', ' ').title()} - Short Sessions (≤2h)"
+                            },
+                            "comparison_data": {
+                                "chart_data": chart_data_long,
+                                "chart_type": "bar", 
+                                "title": f"{dataset.replace('_', ' ').title()} - Long Sessions (>2h)"
+                            },
+                            "comparison_mode": True,
+                            "comparison_type": comparison_type,
+                            "raw_records_for_chart_context": raw_records
+                        }
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing duration ranges comparison: {e}")
+                        response_data["error"] = f"Duration ranges comparison failed: {str(e)}"
+                        
+                else:
+                    response_data["error"] = f"Unsupported comparison type: {comparison_type}"
+            
+            logger.info(f"Response data prepared successfully")
+            
+            # Add punctuality analysis if requested
+            if dataset == 'punctuality_analysis' or req.get('include_punctuality'):
+                try:
+                    punctuality_data = analytics.get_chart_data('punctuality_analysis')
+                    response_data["punctuality_analysis"] = punctuality_data
+                except Exception as e:
+                    logger.error(f"Error getting punctuality analysis: {e}")
+                    response_data["punctuality_analysis"] = None
+            
+            return jsonify(response_data)
     except Exception as e:
         logger.error(f"Error getting chart data: {e}")
-        return jsonify({'error': 'Failed to load chart data'}), 500
+        logger.error(f"Request data: {req if 'req' in locals() else 'No request data'}")
+        return jsonify({'error': f'Failed to load chart data: {str(e)}'}), 500
 
 @app.route('/upcoming-shifts')
 def upcoming_shifts():
@@ -1360,11 +1743,5 @@ def api_calendar_day_details():
 if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(CSV_FILE)): os.makedirs(os.path.dirname(CSV_FILE))
     if not os.path.exists(SNAPSHOTS_DIR): os.makedirs(SNAPSHOTS_DIR)
-    load_dotenv()
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-    supabase = None
-    if SUPABASE_URL and SUPABASE_KEY:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     app.run(debug=True, host='0.0.0.0', port=5000)
 

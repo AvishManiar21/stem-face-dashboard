@@ -1,8 +1,13 @@
 // static/js/admin_navbar.js
 // Injects the admin navbar instantly at the top of the body
 (function() {
-  document.write(`
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  function injectNavbarIfMissing() {
+    if (document.querySelector('nav.navbar')) {
+      return; // A navbar already exists on this page
+    }
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
       <i class="fas fa-user-graduate"></i> Tutor Dashboard
@@ -17,13 +22,12 @@
         <li class="nav-item"><a class="nav-link" href="/calendar"> <i class="fas fa-calendar-alt"></i> Calendar</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/users"> <i class="fas fa-users-cog"></i> Users</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/audit-logs"> <i class="fas fa-history"></i> Audit Logs</a></li>
-        <li class="nav-item admin-only"><a class="nav-link" href="/admin/shifts"> <i class="fas fa-calendar-day"></i> Shifts</a></li>
       </ul>
-      <div class="dropdown">
-        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+      <div class="dropdown" style="position: relative; z-index: 1050;">
+        <button class="btn btn-outline-light btn-user dropdown-toggle" type="button" data-bs-toggle="dropdown">
           <i class="fas fa-user-circle"></i> <span id="userDisplayName">Loading...</span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1051; position: absolute; right: 0; left: auto; min-width: 200px;">
           <li><h6 class="dropdown-header" id="userEmail">Loading...</h6></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="/profile"><i class="fas fa-user"></i> Profile</a></li>
@@ -32,9 +36,27 @@
       </div>
     </div>
   </div>
-</nav>
-  `);
-  
+</nav>`;
+    const nav = wrapper.firstElementChild;
+    document.body.insertBefore(nav, document.body.firstChild);
+
+    // Ensure theme toggle appears if theme switcher loaded before navbar
+    if (window.themeSwitcher && typeof window.themeSwitcher.createThemeToggle === 'function') {
+      try {
+        window.themeSwitcher.createThemeToggle();
+        window.themeSwitcher.updateThemeToggle();
+      } catch (e) {
+        console.warn('Theme toggle injection failed:', e);
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectNavbarIfMissing);
+  } else {
+    injectNavbarIfMissing();
+  }
+
   // Load user data with error handling
   fetch('/api/user-info')
     .then(res => {

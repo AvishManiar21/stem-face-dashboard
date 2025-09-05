@@ -4,129 +4,906 @@
   <meta charset="UTF-8" />
   <title>📋 Tutor Check-In Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/global.css">
   <script src="/static/js/theme-switcher.js"></script>
   <script src="/static/js/error_handler.js"></script>
+  <style>
+    /* Dashboard Specific Enhancements */
+    .dashboard-header {
+      background: linear-gradient(135deg, #6a77e8 0%, #7a68b6 60%, #e08cf6 100%);
+      color: white;
+      padding: 1.5rem 0;
+      margin-bottom: 1rem;
+      border-radius: 0 0 1.25rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 24px rgba(102, 126, 234, 0.25);
+    }
+    /* Dark theme override for header to match navbar */
+    [data-theme="dark"] .dashboard-header {
+      background: linear-gradient(135deg, #3730a3 0%, #5b21b6 60%, #7c3aed 100%);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+    /* Constrain header inner content */
+    .dashboard-header .text-center { max-width: 1200px; margin: 0 auto; }
+    /* Narrow container helpers */
+    .container-tight { max-width: 1200px; margin: 0 auto; }
+    .container-narrow { max-width: 900px; margin: 0 auto; }
+    .mini-hourly-card { max-width: 720px; margin: 0 auto; }
+    .mini-hourly-table, .mini-daily-table { font-size: 0.8rem; table-layout: fixed; width: 100%; }
+    .mini-hourly-table th, .mini-hourly-table td, .mini-daily-table th, .mini-daily-table td { 
+      padding: 0.35rem 0.4rem; white-space: nowrap; 
+    }
+    .mini-hourly-table th, .mini-daily-table th { 
+      background: var(--bg-card); border-bottom: 1px solid var(--border-color); 
+    }
+    .mini-hourly-table tr:nth-child(even) td, .mini-daily-table tr:nth-child(even) td { 
+      background: var(--bg-secondary); 
+    }
+    .mini-hourly-table td, .mini-daily-table td { 
+      border-bottom: 1px solid var(--border-color); 
+    }
+    .confidence-badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+    }
+    .confidence-high { background: var(--success); color: white; }
+    .confidence-medium { background: var(--warning); color: var(--text-primary); }
+    .confidence-low { background: var(--danger); color: white; }
+    .trend-up { color: var(--success); }
+    .trend-down { color: var(--danger); }
+    .trend-stable { color: var(--text-muted); }
+    /* Reduce extra section spacing */
+    .mb-4 { margin-bottom: 1rem !important; }
+    .mb-5 { margin-bottom: 1.25rem !important; }
+    
+    .dashboard-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      animation: pulse 4s ease-in-out infinite;
+      z-index: 0;
+      pointer-events: none; /* prevent overlay from blocking clicks */
+    }
+    [data-theme="dark"] .dashboard-header::before {
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    
+    .dashboard-header h2 {
+      color: var(--text-light);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+      position: relative;
+      z-index: 1;
+      font-size: 2rem;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    
+    .dashboard-header p {
+      color: rgba(255, 255, 255, 0.9);
+      position: relative;
+      z-index: 1;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+    
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.6rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: all 0.2s ease;
+      border: 1px solid #edf0f2;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: none;
+    }
+    
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    }
+    
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(102, 126, 234, 0.14);
+      border-color: #dfe4fb;
+    }
+    
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    
+    .kpi-card:hover::after {
+      opacity: 1;
+    }
+
+    /* Monthly Logs Styling */
+    .month-card {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+    .month-card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .month-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      color: white;
+    }
+    .day-card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .day-header {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      color: white;
+    }
+    .stat-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.2);
+      color: white;
+      backdrop-filter: blur(4px);
+    }
+    .stat-badge i { opacity: .9; }
+    .table-modern {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .table-modern thead th { 
+      font-size: 12px; 
+      text-transform: uppercase; 
+      letter-spacing: .5px; 
+      background: #f8f9fa;
+      border-bottom: 2px solid #dee2e6;
+      color: #495057;
+      font-weight: 600;
+    }
+    .table-modern tbody td { 
+      vertical-align: middle; 
+      border-bottom: 1px solid #e9ecef;
+    }
+    .table-modern tbody tr:hover { 
+      background-color: #f8f9fa;
+      transition: background-color 0.2s ease;
+    }
+
+    /* Tutor identity chips */
+    .name-chip { 
+      display: inline-block; padding: 6px 12px; border-radius: 20px; 
+      background: #667eea; border: 1px solid #5a6fd8; 
+      color: white; font-weight: 600; font-size: 0.9rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .avatar-chip {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+      color: white;
+      font-weight: 700; font-size: 0.9rem; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .thumb { 
+      width: 64px; 
+      height: 64px; 
+      object-fit: cover; 
+      border-radius: 12px; 
+      border: 2px solid #e9ecef; 
+      background: #f8f9fa;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    .thumb:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 1.25rem;
+      box-shadow: 0 3px 8px rgba(102, 126, 234, 0.22);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .kpi-card:hover .kpi-icon {
+      transform: scale(1.03);
+      box-shadow: 0 6px 14px rgba(102, 126, 234, 0.28);
+    }
+    
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.2rem;
+      text-shadow: none;
+      line-height: 1;
+    }
+    
+    .kpi-label {
+      font-size: 0.7rem;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    
+    .kpi-trend {
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      display: inline-block;
+    }
+    
+    .trend-up { color: var(--success-color); }
+    .trend-down { color: var(--danger-color); }
+    .trend-neutral { color: var(--text-muted); }
+    
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 0.5rem 0 0.25rem 0;
+      position: relative;
+      z-index: 1; /* ensure above decorative overlay */
+    }
+    
+    .action-btn {
+      background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      padding: 0.45rem 0.75rem;
+      color: #495057;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      position: relative;
+      overflow: hidden;
+      font-size: 0.92rem;
+    }
+    
+    .action-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .action-btn:hover::before {
+      left: 100%;
+    }
+    
+    .action-btn:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      border-color: #667eea;
+      color: #667eea;
+      text-decoration: none;
+    }
+    
+    .action-btn.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .action-btn.primary:hover {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      color: white;
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Filter toolbar UI */
+    .filter-toolbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 1px solid rgba(255,255,255,0.3);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter-input {
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      font-weight: 500;
+    }
+    .filter-input:focus {
+      border-color: rgba(255,255,255,0.8);
+      box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+    }
+    .btn-gradient {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 8px 16px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    .btn-gradient:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 8px 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.6);
+    }
+    
+    /* Enhanced Secondary KPI Cards */
+    .enhanced-secondary-card {
+      transition: all 0.3s ease;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .enhanced-secondary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .enhanced-secondary-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .enhanced-secondary-card:hover::before {
+      opacity: 1;
+    }
+    
+    .enhanced-icon {
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-secondary-card:hover .enhanced-icon {
+      transform: scale(1.1);
+    }
+    
+    /* Enhanced Top Performer Card */
+    .enhanced-top-performer {
+      transition: all 0.4s ease;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .enhanced-top-performer::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    
+    .enhanced-top-performer:hover::before {
+      opacity: 1;
+    }
+    
+    .enhanced-top-performer:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    .enhanced-trophy-icon {
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-top-performer:hover .enhanced-trophy-icon {
+      transform: scale(1.1) rotate(5deg);
+      background: rgba(255,255,255,0.3) !important;
+    }
+    
+    .enhanced-badge {
+      border-radius: 20px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-top-performer:hover .enhanced-badge {
+      background: rgba(255,255,255,0.3) !important;
+      transform: scale(1.05);
+    }
+    
+    /* Enhanced Section Header */
+    .enhanced-section-header {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .enhanced-section-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .enhanced-section-header:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+      border-color: rgba(102, 126, 234, 0.2);
+    }
+    
+    .enhanced-header-icon {
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-section-header:hover .enhanced-header-icon {
+      transform: scale(1.1);
+    }
+    
+    .top-performer-card {
+      background: var(--bg-gradient-primary);
+      color: var(--text-light);
+      border-radius: var(--radius-xl);
+      padding: var(--spacing-xl);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .top-performer-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .ai-insights-card {
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: var(--spacing-xl);
+      box-shadow: var(--shadow);
+      transition: all var(--transition-normal);
+    }
+    
+    .ai-insights-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary-color);
+    }
+    
+    .ai-icon {
+      background: var(--bg-gradient-primary);
+      color: var(--text-light);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xl);
+      margin-right: var(--spacing-md);
+    }
+    
+    .checkin-log-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+    
+    .checkin-log-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+    
+    .log-header {
+      background: var(--bg-secondary);
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .log-entry {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-light);
+      transition: background-color var(--transition-fast);
+    }
+    
+    .log-entry:hover {
+      background-color: var(--bg-secondary);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .status-badge {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--radius);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-on-time { background-color: var(--success-color); color: var(--text-light); }
+    .status-late { background-color: var(--danger-color); color: var(--text-light); }
+    .status-early { background-color: var(--info-color); color: var(--text-light); }
+    
+    /* Enhanced Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .slide-in-left {
+      animation: slideInLeft 0.6s ease-out;
+    }
+    
+    /* Enhanced Hover Effects */
+    .enhanced-hover {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .enhanced-hover:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    /* Compact sections: trends and hourly forecast */
+    .compact-card .card-body, .trends-section .card-body { padding: 0.6rem 0.6rem; }
+    .trends-section .card .fs-1 { font-size: 1.1rem !important; color: #556; }
+    .trends-section .h2, .trends-section .h3, .trends-section .h4 { margin-bottom: 0.2rem !important; }
+    .trends-section .badge { font-size: 0.65rem; }
+    .trends-section .small { font-size: 0.78rem; }
+    #hourlyForecastTable { max-height: 240px; }
+    #hourlyForecastTable table { font-size: 0.75rem; table-layout: fixed; width: 100%; }
+    #hourlyForecastTable th, #hourlyForecastTable td { padding: 0.2rem 0.35rem; }
+    /* Tighten column widths */
+    #hourlyForecastTable .hourly-forecast-table col.hour-col { width: 60px !important; }
+    #hourlyForecastTable .hourly-forecast-table col.hours-col { width: 90px !important; }
+    #hourlyForecastTable .hourly-forecast-table col.sessions-col { width: 110px !important; }
+    .hourly-forecast .card-body { padding: 0.6rem; }
+    .hourly-forecast .card-header { padding: 0.5rem 0.75rem !important; }
+    .row.g-4 { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; }
+    
+    /* Table polish for hourly forecast */
+    .table-card #hourlyForecastTable table { border-collapse: separate; border-spacing: 0; background: var(--bg-card); color: var(--text-primary); }
+    .table-card #hourlyForecastTable thead th { position: sticky; top: 0; background: var(--bg-card); z-index: 2; border-bottom: 1px solid var(--border-color); }
+    .table-card #hourlyForecastTable tbody tr { background: var(--bg-card); }
+    .table-card #hourlyForecastTable tbody tr:nth-child(even) { background: var(--bg-secondary); }
+    .table-card #hourlyForecastTable tbody tr:hover { background: var(--bg-tertiary); }
+    .table-card #hourlyForecastTable td, .table-card #hourlyForecastTable th { white-space: nowrap; border-bottom: 1px solid var(--border-color); }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+      .dashboard-header {
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .action-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+      
+      .kpi-card {
+        margin-bottom: 1.5rem;
+      }
+      
+      .enhanced-section-header {
+        padding: 1.5rem !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
-<script src="/static/js/admin_navbar_tailwind.js"></script>
+<body class="dashboard-page">
+<script src="/static/js/admin_navbar.js"></script>
 <script src="/static/js/forecasting.js"></script>
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <div class="text-center mb-8">
-    <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight drop-shadow">📋 Tutor Check-In Dashboard</h2>
-    <p class="text-lg text-gray-600 dark:text-gray-300 font-medium mb-6">Browse tutor check-ins grouped by date</p>
-    <div class="flex flex-wrap justify-center gap-4 my-8">
-      <a href="/charts" class="inline-flex items-center px-5 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg font-semibold hover:bg-blue-50 dark:hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"><i class="fas fa-chart-line mr-2"></i>View Charts</a>
-      <button class="inline-flex items-center px-5 py-2 border border-gray-400 text-gray-700 dark:text-gray-200 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 transition" id="toggleAllCollapsibleBtn" data-state="collapsed"><i class="fas fa-expand-arrows-alt mr-2"></i>Expand/Collapse Logs</button>
-      <a href="/download-log" class="inline-flex items-center px-5 py-2 border border-green-600 text-green-600 dark:text-green-400 dark:border-green-400 rounded-lg font-semibold hover:bg-green-50 dark:hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-400 transition"><i class="fas fa-file-csv mr-2"></i>Download Full CSV</a>
-      <button class="inline-flex items-center px-5 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition" data-bs-toggle="modal" data-bs-target="#manualCheckinModal"><i class="fas fa-plus-circle mr-2"></i>Manual Check-In</button>
+<div class="dashboard-header">
+  <div class="container-fluid">
+    <div class="text-center">
+      <h2 class="display-4 fw-bold mb-3">📋 Tutor Check-In Dashboard</h2>
+      <p class="lead mb-4">Browse tutor check-ins grouped by date</p>
+      <div class="action-buttons">
+        <a href="/charts" class="action-btn">
+          <i class="fas fa-chart-line"></i>
+          <span>View Charts</span>
+        </a>
+        <button class="action-btn" id="toggleAllCollapsibleBtn" data-state="collapsed">
+          <i class="fas fa-expand-arrows-alt"></i>
+          <span>Expand/Collapse Logs</span>
+        </button>
+        <a href="/download-log" class="action-btn">
+          <i class="fas fa-file-csv"></i>
+          <span>Download Full CSV</span>
+        </a>
+        <button class="action-btn primary" data-bs-toggle="modal" data-bs-target="#manualCheckinModal">
+          <i class="fas fa-plus-circle"></i>
+          <span>Manual Check-In</span>
+        </button>
+      </div>
+      
     </div>
   </div>
+</div>
+
+<div class="container-fluid py-4">
 
   <!-- Enhanced KPI Dashboard -->
-  <div class="mb-8">
-    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-      <h5 class="text-lg font-semibold flex items-center gap-2 text-gray-800 dark:text-gray-200"><i class="fas fa-tachometer-alt"></i>Key Performance Indicators</h5>
-      <small class="text-gray-500 dark:text-gray-400">Real-time dashboard metrics</small>
+  <div class="mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3">
+      <h5 class="h5 fw-semibold d-flex align-items-center gap-2"><i class="fas fa-tachometer-alt"></i>Key Performance Indicators</h5>
+      <small class="text-muted">Real-time dashboard metrics</small>
     </div>
     <!-- Primary KPI Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6" id="primaryKPIs">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300" style="animation-delay: 0.1s;">
-        <div class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full p-3 mb-3"><i class="fas fa-check-circle fa-lg"></i></div>
-        <div class="text-3xl font-bold text-gray-800 dark:text-gray-200" id="totalCheckins">-</div>
-        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Check-ins</div>
-        <div class="text-green-600 dark:text-green-400 text-sm mt-1" id="checkinsTrend">+12% vs last month</div>
+    <div class="row g-4 mb-4" id="primaryKPIs">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card fade-in" style="animation-delay: 0.1s;">
+          <div class="kpi-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="kpi-value" id="totalCheckins">-</div>
+          <div class="kpi-label">Total Check-ins</div>
+          <div class="kpi-trend trend-up" id="checkinsTrend">+12% vs last month</div>
+        </div>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300" style="animation-delay: 0.2s;">
-        <div class="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full p-3 mb-3"><i class="fas fa-clock fa-lg"></i></div>
-        <div class="text-3xl font-bold text-gray-800 dark:text-gray-200" id="totalHours">-</div>
-        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Hours</div>
-        <div class="text-green-600 dark:text-green-400 text-sm mt-1" id="hoursTrend">+8% vs last month</div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card fade-in" style="animation-delay: 0.2s;">
+          <div class="kpi-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="kpi-value" id="totalHours">-</div>
+          <div class="kpi-label">Total Hours</div>
+          <div class="kpi-trend trend-up" id="hoursTrend">+8% vs last month</div>
+        </div>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300" style="animation-delay: 0.3s;">
-        <div class="bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-300 rounded-full p-3 mb-3"><i class="fas fa-users fa-lg"></i></div>
-        <div class="text-3xl font-bold text-gray-800 dark:text-gray-200" id="activeTutors">-</div>
-        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Tutors</div>
-        <div class="text-green-600 dark:text-green-400 text-sm mt-1" id="tutorsTrend">+5% vs last month</div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card fade-in" style="animation-delay: 0.3s;">
+          <div class="kpi-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="kpi-value" id="activeTutors">-</div>
+          <div class="kpi-label">Active Tutors</div>
+          <div class="kpi-trend trend-up" id="tutorsTrend">+5% vs last month</div>
+        </div>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300" style="animation-delay: 0.4s;">
-        <div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-full p-3 mb-3"><i class="fas fa-hourglass-half fa-lg"></i></div>
-        <div class="text-3xl font-bold text-gray-800 dark:text-gray-200" id="avgSessionDuration">-</div>
-        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Avg Session</div>
-        <div class="text-red-600 dark:text-red-400 text-sm mt-1" id="sessionTrend">-3% vs last month</div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card fade-in" style="animation-delay: 0.4s;">
+          <div class="kpi-icon">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div class="kpi-value" id="avgSessionDuration">-</div>
+          <div class="kpi-label">Avg Session</div>
+          <div class="kpi-trend trend-down" id="sessionTrend">-3% vs last month</div>
+        </div>
       </div>
     </div>
     
     <!-- Secondary KPI Row -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4" id="secondaryKPIs">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 0.5s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full mb-3">
-          <i class="fas fa-calendar-day text-lg"></i>
+    <div class="row g-3 mb-4" id="secondaryKPIs">
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0 enhanced-secondary-card" style="animation-delay: 0.5s;">
+          <div class="card-body p-3">
+            <div class="enhanced-icon bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="h4 fw-bold mb-1 text-primary" id="avgDailyHours">-</div>
+            <div class="small text-uppercase text-muted fw-semibold">Daily Avg Hours</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="avgDailyHours">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">Daily Avg Hours</div>
       </div>
       
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 0.6s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full mb-3">
-          <i class="fas fa-chart-line text-lg"></i>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0" style="animation-delay: 0.6s;">
+          <div class="card-body p-3">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="h4 fw-bold mb-1" id="peakCheckinHour">-</div>
+            <div class="small text-uppercase text-muted">Peak Hour</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="peakCheckinHour">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">Peak Hour</div>
       </div>
       
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 0.7s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 rounded-full mb-3">
-          <i class="fas fa-star text-lg"></i>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0" style="animation-delay: 0.7s;">
+          <div class="card-body p-3">
+            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="h4 fw-bold mb-1" id="topDay">-</div>
+            <div class="small text-uppercase text-muted">Most Active Day</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="topDay">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">Most Active Day</div>
       </div>
       
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 0.8s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-full mb-3">
-          <i class="fas fa-percentage text-lg"></i>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0" style="animation-delay: 0.8s;">
+          <div class="card-body p-3">
+            <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="h4 fw-bold mb-1" id="attendanceRate">-</div>
+            <div class="small text-uppercase text-muted">Attendance Rate</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="attendanceRate">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">Attendance Rate</div>
       </div>
       
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 0.9s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 rounded-full mb-3">
-          <i class="fas fa-user-graduate text-lg"></i>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0" style="animation-delay: 0.9s;">
+          <div class="card-body p-3">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+              <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="h4 fw-bold mb-1" id="newTutors">-</div>
+            <div class="small text-uppercase text-muted">New This Month</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="newTutors">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">New This Month</div>
       </div>
       
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-300" style="animation-delay: 1.0s;">
-        <div class="flex items-center justify-center w-10 h-10 bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-300 rounded-full mb-3">
-          <i class="fas fa-medal text-lg"></i>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card shadow-sm h-100 text-center border-0" style="animation-delay: 1.0s;">
+          <div class="card-body p-3">
+            <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+              <i class="fas fa-medal"></i>
+            </div>
+            <div class="h4 fw-bold mb-1" id="consistency">-</div>
+            <div class="small text-uppercase text-muted">Consistency Score</div>
+          </div>
         </div>
-        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center" id="consistency">-</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wide">Consistency Score</div>
       </div>
     </div>
     
     <!-- Top Performer Highlight -->
-    <div class="w-full">
-      <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 border border-blue-200 dark:border-blue-700" style="animation-delay: 1.1s;">
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center">
-          <div class="flex items-center mb-4 md:mb-0">
-            <div class="flex items-center justify-center w-12 h-12 bg-white bg-opacity-20 text-white rounded-full mr-4">
-              <i class="fas fa-trophy text-xl"></i>
+    <div class="w-100">
+      <div class="card text-white border-0 shadow-lg enhanced-top-performer" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); animation-delay: 1.1s;">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+            <div class="d-flex align-items-center mb-3 mb-md-0">
+              <div class="enhanced-trophy-icon bg-white bg-opacity-20 text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 56px; height: 56px;">
+                <i class="fas fa-trophy fs-3"></i>
+              </div>
+              <div>
+                <h6 class="text-white mb-1 fw-semibold">🏆 Top Performer This Month</h6>
+                <h4 class="text-white fw-bold mb-0" id="topTutorMonth">Loading...</h4>
+              </div>
             </div>
-            <div>
-              <h6 class="text-white text-sm font-medium mb-1">🏆 Top Performer This Month</h6>
-              <h4 class="text-white text-2xl font-bold" id="topTutorMonth">Loading...</h4>
+            <div class="text-end">
+              <small class="text-white-50 fw-medium">Based on total hours worked</small>
+              <br>
+              <span class="enhanced-badge bg-white bg-opacity-20 text-white px-3 py-2 mt-2 d-inline-block" id="topTutorHours">- hours</span>
             </div>
-          </div>
-          <div class="text-right">
-            <small class="text-blue-100 text-xs">Based on total hours worked</small>
-            <br>
-            <span class="inline-block bg-white bg-opacity-20 text-white px-3 py-1 rounded-full text-sm font-medium mt-1" id="topTutorHours">- hours</span>
           </div>
         </div>
       </div>
@@ -134,99 +911,135 @@
   </div>
 
   <!-- AI Forecasting & Insights Section -->
-  <div class="mb-6">
-    <div class="w-full">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h4 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-          <i class="fas fa-brain mr-3 text-blue-600 dark:text-blue-400"></i>
-          AI Forecasting & Insights 
-          <span class="text-gray-500 dark:text-gray-400 text-sm font-normal ml-2">(powered by real data)</span>
-        </h4>
+  <div class="mb-4">
+    <div class="w-100">
+      <div class="card shadow border-0">
+        <div class="card-body">
+          <h4 class="h4 fw-bold mb-3 d-flex align-items-center">
+            <i class="fas fa-brain me-3 text-primary"></i>
+            AI Forecasting & Insights 
+            <span class="text-muted small fw-normal ms-2">(powered by real data)</span>
+          </h4>
+        </div>
       </div>
     </div>
   </div>
   <!-- Improved AI Forecasting Summary -->
   <div class="mb-4">
-    <div class="w-full">
-      <div class="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900 dark:to-orange-900 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 shadow-sm" id="improvedNLSummary">
-        <div class="flex items-center">
-          <i class="fas fa-lightbulb text-yellow-600 dark:text-yellow-400 mr-3 text-lg"></i>
-          <span class="text-gray-800 dark:text-gray-200 font-medium">Loading AI forecast summary...</span>
-          <i class="fas fa-info-circle ml-2 text-gray-500 dark:text-gray-400" data-bs-toggle="tooltip" title="AI-generated summary of key trends and predictions."></i>
+    <div class="w-100">
+      <div class="card border-warning bg-warning bg-opacity-10" id="improvedNLSummary">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-lightbulb text-warning me-3 fs-5"></i>
+            <span class="fw-medium">Loading AI forecast summary...</span>
+            <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="AI-generated summary of key trends and predictions."></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   <!-- New AI Forecasting Features Row -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="row g-4 mb-4">
     <!-- AI Confidence Score -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300">
-      <div class="text-center">
-        <div class="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full mx-auto mb-3">
-          <i class="fas fa-robot text-lg"></i>
-        </div>
-        <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="aiConfidenceScore">-</h4>
-        <div class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          AI Confidence Score 
-          <i class="fas fa-info-circle ml-1" data-bs-toggle="tooltip" title="How confident the AI is in its predictions (higher is better)"></i>
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card shadow h-100 text-center border-0">
+        <div class="card-body">
+          <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 48px; height: 48px;">
+            <i class="fas fa-robot fs-5"></i>
+          </div>
+          <h4 class="h3 fw-bold" id="aiConfidenceScore">-</h4>
+          <div class="small text-muted mt-2">
+            AI Confidence Score 
+            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="How confident the AI is in its predictions (higher is better)"></i>
+          </div>
         </div>
       </div>
     </div>
     <!-- Forecast Accuracy -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300">
-      <div class="text-center">
-        <div class="flex items-center justify-center w-12 h-12 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full mx-auto mb-3">
-          <i class="fas fa-bullseye text-lg"></i>
-        </div>
-        <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="forecastAccuracy">-</h4>
-        <div class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          Forecast Accuracy 
-          <i class="fas fa-info-circle ml-1" data-bs-toggle="tooltip" title="How close last week's forecast was to reality"></i>
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card shadow h-100 text-center border-0">
+        <div class="card-body">
+          <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 48px; height: 48px;">
+            <i class="fas fa-bullseye fs-5"></i>
+          </div>
+          <h4 class="h3 fw-bold" id="forecastAccuracy">-</h4>
+          <div class="small text-muted mt-2">
+            Forecast Accuracy 
+            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="How close last week's forecast was to reality"></i>
+          </div>
         </div>
       </div>
     </div>
     <!-- Top Growth Opportunities -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300">
-      <div class="text-center">
-        <div class="flex items-center justify-center w-12 h-12 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-full mx-auto mb-3">
-          <i class="fas fa-arrow-up text-lg"></i>
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card shadow h-100 text-center border-0">
+        <div class="card-body">
+          <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 48px; height: 48px;">
+            <i class="fas fa-arrow-up fs-5"></i>
+          </div>
+          <div class="small text-muted mb-3">
+            Top Growth Opportunities 
+            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="Where the most growth is expected"></i>
+          </div>
+          <ul class="small text-start list-unstyled" id="topGrowthOpportunities"></ul>
         </div>
-        <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Top Growth Opportunities 
-          <i class="fas fa-info-circle ml-1" data-bs-toggle="tooltip" title="Where the most growth is expected"></i>
-        </div>
-        <ul class="text-sm text-gray-700 dark:text-gray-300 text-left space-y-1" id="topGrowthOpportunities"></ul>
       </div>
     </div>
     <!-- Scenario Simulation -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300">
-      <div class="text-center">
-        <div class="flex items-center justify-center w-12 h-12 bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-300 rounded-full mx-auto mb-3">
-          <i class="fas fa-users-cog text-lg"></i>
-        </div>
-        <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Scenario Simulation 
-          <i class="fas fa-info-circle ml-1" data-bs-toggle="tooltip" title="Impact of adding more tutors"></i>
-        </div>
-        <div class="text-sm text-gray-700 dark:text-gray-300 text-left space-y-1" id="scenarioSimulationTable">
-          <div class="flex justify-between"><span>+2 tutors</span><span id="simTutors2">-</span></div>
-          <div class="flex justify-between"><span>+5 tutors</span><span id="simTutors5">-</span></div>
-          <div class="flex justify-between"><span>+10 tutors</span><span id="simTutors10">-</span></div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card shadow h-100 text-center border-0">
+        <div class="card-body">
+          <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 48px; height: 48px;">
+            <i class="fas fa-users-cog fs-5"></i>
+          </div>
+          <div class="small text-muted mb-3">
+            Scenario Simulation 
+            <i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="Impact of adding more tutors"></i>
+          </div>
+        <div class="small text-start" id="scenarioSimulationTable">
+          <div class="d-flex justify-content-between"><span>+2 tutors</span><span id="simTutors2">-</span></div>
+          <div class="d-flex justify-content-between"><span>+5 tutors</span><span id="simTutors5">-</span></div>
+          <div class="d-flex justify-content-between"><span>+10 tutors</span><span id="simTutors10">-</span></div>
         </div>
       </div>
     </div>
   </div>
-  <!-- Hourly Forecast Bar Chart/Table -->
-  <div class="mb-6">
-    <div class="w-full">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center">
-          <i class="fas fa-clock mr-3 text-blue-600 dark:text-blue-400"></i>
-          <span class="text-lg font-semibold text-gray-800 dark:text-gray-200">Hourly Forecast</span>
-          <i class="fas fa-info-circle ml-2 text-gray-500 dark:text-gray-400" data-bs-toggle="tooltip" title="Predicted hours and sessions for each hour of the day"></i>
+  <!-- Enhanced Forecasting Section - Side by Side -->
+  <div class="mb-4">
+    <div class="row g-3">
+      <!-- Hourly Forecast -->
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header py-2" style="background: var(--bg-card);">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-clock text-primary"></i>
+                <strong class="mb-0" style="font-size:.95rem;">Hourly Forecast</strong>
+              </div>
+              <small class="text-muted" id="hourlyConfidence">Loading...</small>
+            </div>
+          </div>
+          <div class="card-body py-2">
+            <div id="miniHourlyForecast" class="table-responsive"></div>
+          </div>
         </div>
-        <div class="p-6">
-          <div id="hourlyForecastTable" class="overflow-x-auto"></div>
+      </div>
+      
+      <!-- Daily Forecast -->
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header py-2" style="background: var(--bg-card);">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-calendar-day text-success"></i>
+                <strong class="mb-0" style="font-size:.95rem;">Daily Forecast</strong>
+              </div>
+              <small class="text-muted" id="dailyConfidence">Loading...</small>
+            </div>
+          </div>
+          <div class="card-body py-2">
+            <div id="miniDailyForecast" class="table-responsive"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -239,112 +1052,126 @@
 </div>
 
 <!-- Forecasting & Trends Section -->
-<div class="mb-6">
-  <div class="w-full">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-          <i class="fas fa-chart-line mr-3 text-blue-600 dark:text-blue-400"></i> 
+<div class="mb-4">
+  <div class="w-100">
+    <div class="card shadow border-0">
+      <div class="card-header">
+        <h5 class="h5 fw-semibold mb-0 d-flex align-items-center">
+          <i class="fas fa-chart-line me-3 text-primary"></i> 
           Forecasting & Trends
         </h5>
       </div>
-      <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="card-body">
+        <div class="row g-4 mb-4">
           <!-- Next Week Prediction Card -->
-          <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-            <div class="text-center">
-              <i class="fas fa-calendar-alt text-blue-600 dark:text-blue-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="nextWeekHours">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Expected Hours Next Week</h6>
-              <span class="inline-block bg-blue-600 text-white px-2 py-1 rounded text-xs mb-1" id="nextWeekConfidence">-</span>
-              <span class="inline-block bg-green-600 text-white px-2 py-1 rounded text-xs mb-1 ml-1" id="nextWeekTrend">-</span>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="nextWeekCI">-</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" id="nextWeekMethods">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-primary bg-opacity-10 border-primary h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-calendar-alt text-primary fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="nextWeekHours">-</h4>
+                <h6 class="text-muted mb-2">Expected Hours Next Week</h6>
+                <span class="badge bg-primary mb-1" id="nextWeekConfidence">-</span>
+                <span class="badge bg-success mb-1 ms-1" id="nextWeekTrend">-</span>
+                <div class="small text-muted mt-2" id="nextWeekCI">-</div>
+                <div class="small text-muted" id="nextWeekMethods">-</div>
+              </div>
             </div>
           </div>
           <!-- Next Month Prediction Card -->
-          <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900 rounded-lg p-4 border border-green-200 dark:border-green-700">
-            <div class="text-center">
-              <i class="fas fa-calendar text-green-600 dark:text-green-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="nextMonthHours">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Expected Hours Next Month</h6>
-              <span class="inline-block bg-cyan-600 text-white px-2 py-1 rounded text-xs mb-1" id="nextMonthConfidence">-</span>
-              <span class="inline-block bg-green-600 text-white px-2 py-1 rounded text-xs mb-1 ml-1" id="nextMonthTrend">-</span>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="nextMonthCI">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-success bg-opacity-10 border-success h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-calendar text-success fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="nextMonthHours">-</h4>
+                <h6 class="text-muted mb-2">Expected Hours Next Month</h6>
+                <span class="badge bg-info mb-1" id="nextMonthConfidence">-</span>
+                <span class="badge bg-success mb-1 ms-1" id="nextMonthTrend">-</span>
+                <div class="small text-muted mt-2" id="nextMonthCI">-</div>
+              </div>
             </div>
           </div>
           <!-- Tutor Demand Forecast Card -->
-          <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900 dark:to-pink-900 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
-            <div class="text-center">
-              <i class="fas fa-users text-purple-600 dark:text-purple-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="tutorDemandWeek">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Expected Tutors Next Week</h6>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="tutorDemandMonth">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-warning bg-opacity-10 border-warning h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-users text-warning fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="tutorDemandWeek">-</h4>
+                <h6 class="text-muted mb-2">Expected Tutors Next Week</h6>
+                <div class="small text-muted mt-2" id="tutorDemandMonth">-</div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="row g-4">
           <!-- Seasonal Pattern Card -->
-          <div class="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900 dark:to-orange-900 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
-            <div class="text-center">
-              <i class="fas fa-sun text-yellow-600 dark:text-yellow-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="busiestDay">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Busiest Day & Hour</h6>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="busiestHour">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-warning bg-opacity-10 border-warning h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-sun text-warning fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="busiestDay">-</h4>
+                <h6 class="text-muted mb-2">Busiest Day & Hour</h6>
+                <div class="small text-muted mt-2" id="busiestHour">-</div>
+              </div>
             </div>
           </div>
           <!-- Anomaly Detection Card -->
-          <div class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900 dark:to-pink-900 rounded-lg p-4 border border-red-200 dark:border-red-700">
-            <div class="text-center">
-              <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="anomalyStatus">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Anomaly Detection</h6>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="anomalyPercent">-</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" id="anomalyLastWeek">-</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" id="anomalyPrevAvg">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-danger bg-opacity-10 border-danger h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle text-danger fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="anomalyStatus">-</h4>
+                <h6 class="text-muted mb-2">Anomaly Detection</h6>
+                <div class="small text-muted mt-2" id="anomalyPercent">-</div>
+                <div class="small text-muted" id="anomalyLastWeek">-</div>
+                <div class="small text-muted" id="anomalyPrevAvg">-</div>
+              </div>
             </div>
           </div>
           <!-- Historical vs Forecast Card -->
-          <div class="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <div class="text-center">
-              <i class="fas fa-history text-gray-600 dark:text-gray-400 text-2xl mb-3"></i>
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="histLastWeek">-</h4>
-              <h6 class="text-gray-600 dark:text-gray-300 mb-2">Last Week vs Forecast</h6>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="histForecastWeek">-</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" id="histLastMonth">-</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" id="histForecastMonth">-</div>
+          <div class="col-12 col-md-4">
+            <div class="card bg-secondary bg-opacity-10 border-secondary h-100">
+              <div class="card-body text-center">
+                <i class="fas fa-history text-secondary fs-1 mb-3"></i>
+                <h4 class="h2 fw-bold" id="histLastWeek">-</h4>
+                <h6 class="text-muted mb-2">Last Week vs Forecast</h6>
+                <div class="small text-muted mt-2" id="histForecastWeek">-</div>
+                <div class="small text-muted" id="histLastMonth">-</div>
+                <div class="small text-muted" id="histForecastMonth">-</div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="text-right mt-4">
-          <small class="text-gray-500 dark:text-gray-400">Last updated: <span id="forecastLastUpdated">-</span></small>
+        <div class="text-end mt-4">
+          <small class="text-muted">Last updated: <span id="forecastLastUpdated">-</span></small>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Upcoming Shifts Section -->
-<div class="mb-6">
-  <div class="w-full">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-          <i class="fas fa-calendar-alt mr-3 text-blue-600 dark:text-blue-400"></i> 
-          Upcoming Shifts
-        </h5>
+<!-- Upcoming Shifts Section removed -->
+
+<!-- Monthly Logs Section -->
+<div class="mb-5">
+  <div class="filter-toolbar d-flex flex-wrap gap-3 justify-content-center align-items-center p-3 rounded-3 mb-4">
+    <input id="filterTutor" class="form-control filter-input" style="max-width:240px" placeholder="Filter by tutor name or ID">
+    <input id="filterFrom" type="date" class="form-control filter-input" style="max-width:200px" title="From">
+    <input id="filterTo" type="date" class="form-control filter-input" style="max-width:200px" title="To">
+    <button id="applyFilters" class="btn btn-gradient"><i class="fas fa-filter me-1"></i> Apply</button>
+    <button id="clearFilters" class="btn btn-ghost"><i class="fas fa-times me-1"></i> Clear</button>
+  </div>
+  
+  <div class="text-center mb-4">
+    <div class="enhanced-section-header bg-gradient-light rounded-4 p-4 border-0 shadow-sm">
+      <div class="enhanced-header-icon mb-3">
+        <i class="fas fa-chart-bar text-primary fs-1"></i>
       </div>
-      <div class="p-6">
-        <div id="upcomingShiftsContainer"></div>
-      </div>
+      <h4 class="h2 fw-bold text-primary mb-2">📊 Monthly Log Entries</h4>
+      <p class="text-muted mb-0 fw-medium">Browse and filter tutor check-ins organized by month and date</p>
     </div>
   </div>
-</div>
-
-<hr class="my-6 border-gray-300 dark:border-gray-600">
-<div class="mb-6">
-  <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-200 text-center mb-4">Grouped Log Entries</h4>
-  <div id="logContainerCollapsible" class="space-y-4">
+  
+  <div id="logContainerCollapsible">
     <!-- Original collapsible log view (all logs) will be populated here -->
   </div>
 </div>
@@ -420,14 +1247,16 @@
         console.log('Dashboard data received');
         
         // Update all KPI values
+        if (data && data.summary) {
         updateKPIValues(data.summary);
+        } else {
+          throw new Error('Missing summary in dashboard response');
+        }
         
-        displayAlerts(data.alerts);
-        populateCollapsibleLogs(data.logs_for_collapsible_view || []);
+        displayAlerts(Array.isArray(data.alerts) ? data.alerts : []);
+        populateCollapsibleLogs(Array.isArray(data.logs_for_collapsible_view) ? data.logs_for_collapsible_view : []);
         
-        // Load upcoming shifts
-        console.log('Calling loadUpcomingShifts...');
-            await loadUpcomingShifts();
+        // Upcoming shifts removed
 
     // Load forecasting data
     console.log('Loading forecasting data...');
@@ -582,6 +1411,9 @@
     }
   }
   
+  // Expose for inline onclick handlers
+  window.loadUpcomingShifts = loadUpcomingShifts;
+
   function displayUpcomingShifts(shifts, pagination) {
     console.log('displayUpcomingShifts called with:', shifts);
     const container = document.getElementById('upcomingShiftsContainer');
@@ -663,10 +1495,9 @@
   function groupLogsByMonthAndDate(logs) { 
     const grouped = {};
     (logs || []).forEach(log => {
-      // Ensure check_in is valid before creating Date object
       if (!log.check_in || isNaN(new Date(log.check_in).getTime())) {
           console.warn("Invalid check_in date found in log:", log);
-          return; // Skip this log entry
+          return;
       }
       const dateObj = new Date(log.check_in);
       const monthStr = dateObj.toLocaleString("default", { month: "long", year: "numeric" });
@@ -677,10 +1508,64 @@
     });
     return grouped;
   }
+
+  function applyCurrentFilters(logs) {
+    try {
+      const tutorVal = (document.getElementById('filterTutor')?.value || '').toLowerCase().trim();
+      const fromVal = document.getElementById('filterFrom')?.value || '';
+      const toVal = document.getElementById('filterTo')?.value || '';
+      if (!tutorVal && !fromVal && !toVal) return logs;
+      const fromTime = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : null;
+      const toTime = toVal ? new Date(toVal + 'T23:59:59').getTime() : null;
+      return (logs || []).filter(row => {
+        // Tutor filter
+        const name = (row.tutor_name || '').toLowerCase();
+        const id = String(row.tutor_id || '');
+        const tutorOk = tutorVal ? (name.includes(tutorVal) || id.includes(tutorVal)) : true;
+        // Date filter: check_in string parsable
+        let dateOk = true;
+        if (fromTime || toTime) {
+          const t = row.check_in ? new Date(row.check_in).getTime() : NaN;
+          if (!isNaN(t)) {
+            if (fromTime && t < fromTime) dateOk = false;
+            if (toTime && t > toTime) dateOk = false;
+          }
+        }
+        return tutorOk && dateOk;
+      });
+    } catch (e) {
+      console.warn('applyCurrentFilters error', e);
+      return logs;
+    }
+  }
+
+  function summarizeMonth(monthLogsObj) {
+    let sessions = 0;
+    let hours = 0;
+    const tutorsSet = new Set();
+    Object.values(monthLogsObj).forEach(dayLogs => {
+      sessions += dayLogs.length;
+      dayLogs.forEach(entry => {
+        if (entry.tutor_id) tutorsSet.add(entry.tutor_id);
+        const val = parseFloat(entry.shift_hours);
+        if (!isNaN(val)) hours += val;
+      });
+    });
+    return { sessions, hours: Math.round(hours * 10) / 10, tutors: tutorsSet.size };
+  }
+
+  function summarizeDay(dayLogs) {
+    let hours = 0;
+    dayLogs.forEach(entry => {
+      const val = parseFloat(entry.shift_hours);
+      if (!isNaN(val)) hours += val;
+    });
+    return { sessions: dayLogs.length, hours: Math.round(hours * 10) / 10 };
+  }
   function monthNameToNumber(monthName) { return new Date(Date.parse(monthName +" 1, 2012")).getMonth(); }
 
   function populateCollapsibleLogs(logs) {
-    const grouped = groupLogsByMonthAndDate(logs);
+    const grouped = groupLogsByMonthAndDate((typeof applyCurrentFilters === 'function') ? applyCurrentFilters(logs) : logs);
     const container = document.getElementById("logContainerCollapsible");
     container.innerHTML = '';
     const isDark = document.documentElement.classList.contains('dark');
@@ -691,14 +1576,20 @@
     }
 
     Object.keys(grouped).sort((a,b) => new Date(b.split(" ")[1], monthNameToNumber(b.split(" ")[0]), 1) - new Date(a.split(" ")[1], monthNameToNumber(a.split(" ")[0]), 1)).forEach((month, i) => {
+        const monthSummary = summarizeMonth(grouped[month]);
         const monthCard = document.createElement('div');
-        monthCard.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden';
+        monthCard.className = 'month-card';
         monthCard.innerHTML = `
-            <div class="bg-gray-50 dark:bg-gray-700 p-4 cursor-pointer log-month-header hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200" data-bs-toggle="collapse" data-bs-target="#collapsible-month-${i}" aria-expanded="${i === 0 ? 'true' : 'false'}">
-                <div class="flex justify-between items-center">
-                    <strong class="text-gray-800 dark:text-gray-200">${month}</strong>
+            <div class="month-header p-4 cursor-pointer log-month-header transition-colors position-sticky top-0" style="z-index:2" data-bs-toggle="collapse" data-bs-target="#collapsible-month-${i}" aria-expanded="${i === 0 ? 'true' : 'false'}">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <strong class="text-gray-800 dark:text-gray-200 h5 m-0"><i class="fas fa-calendar-alt me-2"></i>${month}</strong>
+                  <span class="stat-badge"><i class="fas fa-list"></i> ${monthSummary.sessions} sessions</span>
+                  <span class="stat-badge"><i class="fas fa-clock"></i> ${monthSummary.hours}h</span>
+                  <span class="stat-badge"><i class="fas fa-user-friends"></i> ${monthSummary.tutors} tutors</span>
+                </div>
                     <span class="chevron-indicator text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-chevron-down transition-transform duration-200"></i>
+                  <i class="fas fa-chevron-down transition-transform"></i>
                     </span>
                 </div>
             </div>
@@ -708,42 +1599,52 @@
         container.appendChild(monthCard);
         const dateContainer = document.getElementById(`collapsible-month-body-${i}`);
         Object.keys(grouped[month]).sort((a,b) => new Date(b) - new Date(a)).forEach((date, j) => {
+            const daySummary = summarizeDay(grouped[month][date]);
             const rows = grouped[month][date].map(entry => {
                 // Check for valid dates before toLocaleString
                 const checkInDate = entry.check_in && !isNaN(new Date(entry.check_in).getTime()) ? new Date(entry.check_in).toLocaleString() : 'Invalid Date';
                 const checkOutDate = entry.check_out && !isNaN(new Date(entry.check_out).getTime()) ? new Date(entry.check_out).toLocaleString() : '—';
+                const name = entry.tutor_name || 'N/A';
+                const initials = (name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '?';
                 return `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-                            <span class="inline-block bg-blue-600 text-white px-2 py-1 rounded text-sm">${entry.tutor_name || 'N/A'}</span>
+                            <div class="d-flex align-items-center gap-2">
+                              <span class="avatar-chip">${initials}</span>
+                              <span class="name-chip">${name}</span>
+                            </div>
                         </td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300">${entry.tutor_id}</td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300">${checkInDate}</td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-                            ${entry.snapshot_in ? `<img src="/static/${entry.snapshot_in}" class="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onclick="showSnapshotModal('${entry.snapshot_in}')" alt="In">` : '—'}
+                            ${entry.snapshot_in ? `<img src="/static/${entry.snapshot_in}" class="thumb cursor-pointer hover:opacity-80 transition-opacity" onclick="showSnapshotModal('${entry.snapshot_in}')" alt="In">` : '—'}
                         </td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300">${checkOutDate}</td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-                            ${entry.snapshot_out ? `<img src="/static/${entry.snapshot_out}" class="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onclick="showSnapshotModal('${entry.snapshot_out}')" alt="Out">` : '—'}
+                            ${entry.snapshot_out ? `<img src="/static/${entry.snapshot_out}" class="thumb cursor-pointer hover:opacity-80 transition-opacity" onclick="showSnapshotModal('${entry.snapshot_out}')" alt="Out">` : '—'}
                         </td>
                         <td class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300">${entry.shift_hours ? parseFloat(entry.shift_hours).toFixed(2) : '—'}</td>
                     </tr>`;
                 }).join('');
             const dateCard = document.createElement('div');
-            dateCard.className = 'bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden';
+            dateCard.className = 'day-card';
             dateCard.innerHTML = `
-            <div class="p-3 cursor-pointer log-date-header hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200" data-bs-toggle="collapse" data-bs-target="#collapsible-date-${i}-${j}">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-700 dark:text-gray-300 font-medium">${date}</span>
+            <div class="day-header p-3 cursor-pointer log-date-header transition-colors" data-bs-toggle="collapse" data-bs-target="#collapsible-date-${i}-${j}">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-gray-700 dark:text-gray-300 fw-semibold"><i class="fas fa-calendar-day me-2"></i>${date}</span>
+                  <span class="stat-badge"><i class="fas fa-list"></i> ${daySummary.sessions} sessions</span>
+                  <span class="stat-badge"><i class="fas fa-clock"></i> ${daySummary.hours}h</span>
+                </div>
                     <span class="chevron-indicator text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-chevron-down transition-transform duration-200"></i>
+                  <i class="fas fa-chevron-down transition-transform"></i>
                     </span>
                 </div>
             </div>
             <div id="collapsible-date-${i}-${j}" class="collapse">
                 <div class="p-4">
                     <div class="overflow-x-auto">
-                        <table class="w-full">
+                        <table class="w-full table-modern">
                             <thead class="bg-gray-100 dark:bg-gray-600">
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tutor</th>
@@ -793,6 +1694,20 @@
       });
       btn.dataset.state = expand ? 'expanded' : 'collapsed';
       btn.innerHTML = `<i class="fas ${expand ? 'fa-compress-arrows-alt' : 'fa-expand-arrows-alt'}"></i> ${expand ? 'Collapse All' : 'Expand All'} Logs`;
+    });
+
+    // Filters events
+    const applyBtn = document.getElementById('applyFilters');
+    const clearBtn = document.getElementById('clearFilters');
+    if (applyBtn) applyBtn.addEventListener('click', () => loadDashboardSummaryAndCollapsibleLogs());
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      const tutor = document.getElementById('filterTutor');
+      const from = document.getElementById('filterFrom');
+      const to = document.getElementById('filterTo');
+      if (tutor) tutor.value = '';
+      if (from) from.value = '';
+      if (to) to.value = '';
+      loadDashboardSummaryAndCollapsibleLogs();
     });
 
     const now = new Date();

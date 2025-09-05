@@ -79,10 +79,13 @@ class TutorAnalytics:
     Analytics for tutor face recognition data.
     All KPIs and analytics are computed up to 'max_date' (default: today).
     """
-    def __init__(self, face_log_file='logs/face_log_with_expected.csv', max_date=None):
+    def __init__(self, face_log_file='logs/face_log_with_expected.csv', max_date=None, custom_data=None):
         self.face_log_file = face_log_file
         self.max_date = max_date or pd.Timestamp.now().normalize()
-        self.data = self.load_data()
+        if custom_data is not None:
+            self.data = custom_data
+        else:
+            self.data = self.load_data()
     
     def _convert_numpy_types(self, obj):
         """Convert numpy types to native Python types for JSON serialization"""
@@ -144,20 +147,27 @@ class TutorAnalytics:
             df['check_in'] = pd.to_datetime(df['check_in'], format='mixed', errors='coerce')
             df['check_out'] = pd.to_datetime(df['check_out'], format='mixed', errors='coerce')
             
-            # Filter to max_date if set
+            # Filter to max_date if set (only for valid dates)
             if self.max_date is not None:
-                df = df[df['check_in'].dt.date <= self.max_date.date()]
+                valid_checkin_mask = df['check_in'].notna()
+                df = df[~valid_checkin_mask | (df['check_in'].dt.date <= self.max_date.date())]
             
-            # Add derived columns
-            df['date'] = df['check_in'].dt.date
-            # Ensure 'date' is always a datetime.date object
-            df['date'] = df['date'].apply(lambda d: d if isinstance(d, date) else pd.to_datetime(d).date() if pd.notna(d) else None)
-            # Remove or comment out debug print of unique dates
-            # print(f"[DEBUG] Unique dates after loading: {sorted(df['date'].unique())}")
-            df['day_of_week'] = df['check_in'].dt.day_name()
-            df['hour'] = df['check_in'].dt.hour
-            df['week'] = df['check_in'].dt.isocalendar().week
-            df['month'] = df['check_in'].dt.month
+            # Add derived columns (only for valid dates)
+            valid_checkin_mask = df['check_in'].notna()
+            df['date'] = None
+            df.loc[valid_checkin_mask, 'date'] = df.loc[valid_checkin_mask, 'check_in'].dt.date
+            
+            df['day_of_week'] = None
+            df.loc[valid_checkin_mask, 'day_of_week'] = df.loc[valid_checkin_mask, 'check_in'].dt.day_name()
+            
+            df['hour'] = None
+            df.loc[valid_checkin_mask, 'hour'] = df.loc[valid_checkin_mask, 'check_in'].dt.hour
+            
+            df['week'] = None
+            df.loc[valid_checkin_mask, 'week'] = df.loc[valid_checkin_mask, 'check_in'].dt.isocalendar().week
+            
+            df['month'] = None
+            df.loc[valid_checkin_mask, 'month'] = df.loc[valid_checkin_mask, 'check_in'].dt.month
             
             return df.sort_values('check_in')
         except FileNotFoundError:
@@ -218,8 +228,7 @@ class TutorAnalytics:
             # Load audit logs from CSV
             audit_file = 'logs/audit_log.csv'
             if not os.path.exists(audit_file):
-                # Create sample audit logs if file doesn't exist
-                self._create_sample_audit_logs()
+                return {'logs': [], 'total': 0}
             df = pd.read_csv(audit_file)
             print(f"[DEBUG] audit_log.csv columns: {df.columns.tolist()}")
             
@@ -267,38 +276,8 @@ class TutorAnalytics:
             return {'logs': [], 'total': 0}
 
     def _create_sample_audit_logs(self):
-        """Create sample audit logs for testing"""
-        import random
-        from datetime import datetime, timedelta
-        
-        audit_data = []
-        actions = ['login', 'logout', 'check_in', 'check_out', 'manual_entry', 'data_export']
-        users = ['admin@example.com', 'manager@example.com', 'tutor1@example.com', 'tutor2@example.com']
-        
-        # Generate 100 sample audit entries
-        for i in range(100):
-            timestamp = datetime.now() - timedelta(days=random.randint(0, 30), 
-                                                 hours=random.randint(0, 23),
-                                                 minutes=random.randint(0, 59))
-            
-            action = random.choice(actions)
-            user = random.choice(users)
-            
-            audit_data.append({
-                'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                'user_email': user,
-                'action': action,
-                'details': f'Sample {action} action',
-                'ip_address': f'192.168.1.{random.randint(1, 255)}',
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
-        
-        # Create directory if it doesn't exist
-        os.makedirs('logs', exist_ok=True)
-        
-        # Save to CSV
-        df = pd.DataFrame(audit_data)
-        df.to_csv('logs/audit_log.csv', index=False)
+        """Deprecated: demo data generation removed."""
+        return
 
     def populate_audit_logs(self):
         """Populate audit logs with current data"""
@@ -307,19 +286,15 @@ class TutorAnalytics:
     def get_shifts_data(self):
         """Get shifts data for admin management"""
         try:
-            # Load shifts from CSV
+            # Load shifts from CSV (no seeding)
             shifts_file = 'logs/shifts.csv'
             if not os.path.exists(shifts_file):
-                # Create sample shifts if file doesn't exist
-                self._create_sample_shifts()
-            
+                return {'shifts': [], 'assignments': [], 'tutors': []}
             df_shifts = pd.read_csv(shifts_file)
-            
             # Load assignments
             assignments_file = 'logs/shift_assignments.csv'
             if not os.path.exists(assignments_file):
-                self._create_sample_assignments()
-            
+                return {'shifts': df_shifts.to_dict('records'), 'assignments': [], 'tutors': self._get_available_tutors()}
             df_assignments = pd.read_csv(assignments_file)
             
             return {
@@ -333,78 +308,12 @@ class TutorAnalytics:
             return {'shifts': [], 'assignments': [], 'tutors': []}
 
     def _create_sample_shifts(self):
-        """Create sample shifts for testing"""
-        shifts_data = [
-            {
-                'shift_id': 1,
-                'shift_name': 'Morning Shift',
-                'start_time': '08:00',
-                'end_time': '12:00',
-                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
-                'status': 'active'
-            },
-            {
-                'shift_id': 2,
-                'shift_name': 'Afternoon Shift',
-                'start_time': '12:00',
-                'end_time': '16:00',
-                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
-                'status': 'active'
-            },
-            {
-                'shift_id': 3,
-                'shift_name': 'Evening Shift',
-                'start_time': '16:00',
-                'end_time': '20:00',
-                'days_of_week': 'Monday,Tuesday,Wednesday,Thursday,Friday',
-                'status': 'active'
-            },
-            {
-                'shift_id': 4,
-                'shift_name': 'Weekend Shift',
-                'start_time': '10:00',
-                'end_time': '18:00',
-                'days_of_week': 'Saturday,Sunday',
-                'status': 'active'
-            }
-        ]
-        
-        os.makedirs('logs', exist_ok=True)
-        df = pd.DataFrame(shifts_data)
-        df.to_csv('logs/shifts.csv', index=False)
+        """Deprecated: demo data generation removed."""
+        return
 
     def _create_sample_assignments(self):
-        """Create sample shift assignments for testing"""
-        assignments_data = [
-            {
-                'assignment_id': 1,
-                'shift_id': 1,
-                'tutor_id': 'T001',
-                'tutor_name': 'John Doe',
-                'assigned_date': '2024-01-01',
-                'status': 'active'
-            },
-            {
-                'assignment_id': 2,
-                'shift_id': 2,
-                'tutor_id': 'T002',
-                'tutor_name': 'Jane Smith',
-                'assigned_date': '2024-01-01',
-                'status': 'active'
-            },
-            {
-                'assignment_id': 3,
-                'shift_id': 3,
-                'tutor_id': 'T003',
-                'tutor_name': 'Bob Johnson',
-                'assigned_date': '2024-01-01',
-                'status': 'active'
-            }
-        ]
-        
-        os.makedirs('logs', exist_ok=True)
-        df = pd.DataFrame(assignments_data)
-        df.to_csv('logs/shift_assignments.csv', index=False)
+        """Deprecated: demo data generation removed."""
+        return
 
     def _get_available_tutors(self):
         """Get list of available tutors"""
@@ -558,7 +467,8 @@ class TutorAnalytics:
             top_day = '—'
         # Top tutor this month
         now = pd.Timestamp.now()
-        month_df = df[(df['check_in'].dt.month == now.month) & (df['check_in'].dt.year == now.year)]
+        valid_checkin_mask = df['check_in'].notna()
+        month_df = df[valid_checkin_mask & (df['check_in'].dt.month == now.month) & (df['check_in'].dt.year == now.year)]
         if not month_df.empty:
             top_tutor_row = month_df.groupby(['tutor_id', 'tutor_name'])['shift_hours'].sum().idxmax()
             top_tutor_current_month = top_tutor_row[1] if isinstance(top_tutor_row, tuple) and len(top_tutor_row) > 1 else str(top_tutor_row)
@@ -712,7 +622,13 @@ class TutorAnalytics:
                         'deviation_distribution': {}
                     }
                 # Calculate deviation in minutes
-                df['deviation'] = (pd.to_datetime(df['check_in']) - pd.to_datetime(df['expected_check_in'])).dt.total_seconds() / 60
+                check_in_dt = pd.to_datetime(df['check_in'], errors='coerce')
+                expected_check_in_dt = pd.to_datetime(df['expected_check_in'], errors='coerce')
+                
+                # Only calculate deviation for rows where both dates are valid
+                valid_mask = check_in_dt.notna() & expected_check_in_dt.notna()
+                df['deviation'] = np.nan
+                df.loc[valid_mask, 'deviation'] = (check_in_dt[valid_mask] - expected_check_in_dt[valid_mask]).dt.total_seconds() / 60
                 # Categorize
                 def categorize(dev):
                     if pd.isna(dev):
@@ -742,14 +658,14 @@ class TutorAnalytics:
                         'avg_deviation': avg_dev_str
                     }
                 # Trends (by day)
-                df['day'] = pd.to_datetime(df['check_in']).dt.day_name()
+                df['day'] = check_in_dt.dt.day_name()
                 trends = {}
                 for cat in ['Early', 'On Time', 'Late']:
                     trends[cat] = df[df['punctuality'] == cat].groupby('day').size().reindex([
                         'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
                     ], fill_value=0).tolist()
                 # Day-of-week & time-of-day
-                df['hour'] = pd.to_datetime(df['check_in']).dt.hour
+                df['hour'] = check_in_dt.dt.hour
                 def time_slot(h):
                     if 5 <= h < 12: return 'Morning'
                     if 12 <= h < 17: return 'Afternoon'

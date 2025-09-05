@@ -77,6 +77,7 @@ def get_forecasting_data():
             
             # Additional data for charts and tables
             'hourly_forecast': forecast_summary.get('hourly_forecast', {}),
+            'daily_forecast': forecast_summary.get('daily_forecast', {}),
             'per_tutor_forecast': forecast_summary.get('per_tutor_forecast', {}),
             'scenario_simulation': forecast_summary.get('scenario_simulation', {}),
             

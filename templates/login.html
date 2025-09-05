@@ -3,33 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
     <title>🔐 Login - Tutor Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/global.css">
     <script src="/static/js/theme-switcher.js"></script>
     <style>
+        /* Login Page Specific Styles */
         body {
             background: var(--bg-gradient-primary);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            position: relative;
+        }
+        
+        body.login-page {
+            background: var(--bg-gradient-primary);
+        }
+        
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(120deg); }
+            66% { transform: translateY(10px) rotate(240deg); }
         }
         
         .login-container {
             background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl), var(--shadow-glow);
             padding: var(--spacing-xxl);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             border: 1px solid var(--border-color);
             transition: all var(--transition-normal);
             position: relative;
             overflow: hidden;
+            z-index: 1;
         }
         
         .login-container::before {
@@ -45,8 +73,8 @@
         }
         
         .login-container:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-xl), var(--shadow-glow);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl), 0 0 40px rgba(102, 126, 234, 0.4);
         }
         
         .login-header {
@@ -58,19 +86,24 @@
         
         .login-header h1 {
             color: var(--text-primary);
-            font-weight: 700;
+            font-weight: 800;
             margin-bottom: var(--spacing-sm);
-            transition: color var(--transition-normal);
+            font-size: var(--font-size-3xl);
+            background: var(--bg-gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .login-header p {
             color: var(--text-secondary);
             margin: 0;
-            transition: color var(--transition-normal);
+            font-size: var(--font-size-lg);
+            font-weight: 500;
         }
         
         .form-floating {
-            margin-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
             position: relative;
             z-index: 1;
         }
@@ -81,32 +114,38 @@
             background: var(--bg-secondary);
             color: var(--text-primary);
             transition: all var(--transition-normal);
+            font-size: var(--font-size-base);
+            padding: var(--spacing-lg);
         }
         
         .form-control:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            box-shadow: 0 0 0 0.3rem rgba(102, 126, 234, 0.25);
             background: var(--bg-card);
+            transform: translateY(-2px);
         }
         
         .form-floating label {
             color: var(--text-secondary);
+            font-weight: 500;
         }
         
         .btn-login {
             background: var(--bg-gradient-primary);
             border: none;
             border-radius: var(--radius-lg);
-            padding: var(--spacing-md);
-            font-weight: 600;
+            padding: var(--spacing-lg);
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
             transition: all var(--transition-normal);
             width: 100%;
             color: var(--text-light);
             position: relative;
             z-index: 1;
             overflow: hidden;
+            font-size: var(--font-size-lg);
+            margin-top: var(--spacing-md);
         }
         
         .btn-login::before {
@@ -116,8 +155,8 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left var(--transition-normal);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left var(--transition-slow);
         }
         
         .btn-login:hover::before {
@@ -125,78 +164,131 @@
         }
         
         .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn-login:active {
+            transform: translateY(-1px);
         }
         
         .role-info {
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-lg);
-            font-size: 0.875rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+            font-size: var(--font-size-sm);
             position: relative;
             z-index: 1;
             border: 1px solid var(--border-light);
+            backdrop-filter: blur(10px);
         }
         
         .role-info h6 {
             color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: var(--spacing-sm);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-base);
         }
         
         .role-info ul {
             margin: 0;
-            padding-left: 1.2rem;
+            padding-left: 1.5rem;
         }
         
         .role-info li {
             color: var(--text-secondary);
-            margin-bottom: var(--spacing-xs);
+            margin-bottom: var(--spacing-sm);
             transition: color var(--transition-normal);
+            font-weight: 500;
+        }
+        
+        .role-info li strong {
+            color: var(--text-primary);
         }
         
         .demo-credentials {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-md);
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            margin-top: var(--spacing-lg);
             border-left: 4px solid var(--primary-color);
             position: relative;
             z-index: 1;
             transition: all var(--transition-normal);
+            backdrop-filter: blur(10px);
         }
         
         .demo-credentials:hover {
-            transform: translateX(4px);
-            box-shadow: var(--shadow-sm);
+            transform: translateX(6px);
+            box-shadow: var(--shadow);
         }
         
         .demo-credentials h6 {
             color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: var(--spacing-sm);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-base);
         }
         
         .demo-credentials code {
             background: var(--bg-tertiary);
             color: var(--text-primary);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            font-size: 0.8rem;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+        
+        .demo-credentials .small {
+            color: var(--text-secondary);
+            font-weight: 500;
         }
         
         /* Theme toggle for login page */
         .login-theme-toggle {
             position: absolute;
-            top: var(--spacing-md);
-            right: var(--spacing-md);
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
             z-index: 10;
+        }
+        
+        .login-theme-toggle .btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-light);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-sm) var(--spacing-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .login-theme-toggle .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        /* Responsive design */
+        @media (max-width: 576px) {
+            .login-container {
+                margin: var(--spacing-lg);
+                padding: var(--spacing-xl);
+                max-width: none;
+            }
+            
+            .login-header h1 {
+                font-size: var(--font-size-2xl);
+            }
+            
+            .login-theme-toggle {
+                top: var(--spacing-md);
+                right: var(--spacing-md);
+            }
         }
     </style>
 </head>
-<body>
+<body class="login-page">
     <!-- Theme Toggle Button for Login Page -->
     <div class="login-theme-toggle">
         <button class="btn btn-outline-light btn-sm" onclick="window.themeSwitcher.toggleTheme()">
@@ -211,6 +303,16 @@
             <p>Sign in to access your dashboard</p>
         </div>
         
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alert alert-danger" role="alert">
+            {% for category, message in messages %}
+            {{ message }}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <form method="POST">
             <div class="form-floating">
                 <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required value="{{ default_email|default('') }}">
@@ -236,19 +338,7 @@
             </ul>
         </div>
 
-        <div class="demo-credentials">
-            <h6><i class="fas fa-key"></i> Demo Credentials</h6>
-            <div class="small">
-                <strong>Admin Access:</strong><br>
-                Email: <code>admin@tutordashboard.com</code><br>
-                Password: <code>admin123</code>
-            </div>
-            <div class="small mt-2">
-                <strong>Test User:</strong><br>
-                Email: <code>test@example.com</code><br>
-                Password: <code>test12345</code>
-            </div>
-        </div>
+        
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -158,7 +158,17 @@ def get_upcoming_shifts(days_ahead=7, page=1, per_page=12, exclude_today=True):
         assignments_df = load_shift_assignments()
         
         if shifts_df.empty or assignments_df.empty:
-            return []
+            return {
+                'shifts': [],
+                'pagination': {
+                    'current_page': page,
+                    'per_page': per_page,
+                    'total_shifts': 0,
+                    'total_pages': 0,
+                    'has_next': False,
+                    'has_prev': False
+                }
+            }
         
         # Filter active shifts and assignments
         active_shifts = shifts_df[shifts_df['active'] == True]
@@ -204,15 +214,24 @@ def get_upcoming_shifts(days_ahead=7, page=1, per_page=12, exclude_today=True):
         # Sort by date and time
         upcoming_shifts = sorted(upcoming_shifts, key=lambda x: (x['date'], x['start_time']))
         
-        # Apply pagination
+        # Pagination calculations
         total_shifts = len(upcoming_shifts)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
+        total_pages = (total_shifts + per_page - 1) // per_page if per_page > 0 else 0
+
+        # Clamp page into valid range when there are results
+        if total_pages > 0:
+            if page < 1:
+                page = 1
+            if page > total_pages:
+                page = total_pages
+        else:
+            # No results; normalize page to 1
+            page = 1
+
+        start_idx = (page - 1) * per_page if per_page > 0 else 0
+        end_idx = start_idx + per_page if per_page > 0 else 0
         paginated_shifts = upcoming_shifts[start_idx:end_idx]
-        
-        # Add pagination metadata
-        total_pages = (total_shifts + per_page - 1) // per_page
-        
+
         return {
             'shifts': paginated_shifts,
             'pagination': {
@@ -220,8 +239,8 @@ def get_upcoming_shifts(days_ahead=7, page=1, per_page=12, exclude_today=True):
                 'per_page': per_page,
                 'total_shifts': total_shifts,
                 'total_pages': total_pages,
-                'has_next': page < total_pages,
-                'has_prev': page > 1
+                'has_next': total_pages > 0 and page < total_pages,
+                'has_prev': total_pages > 0 and page > 1
             }
         }
         

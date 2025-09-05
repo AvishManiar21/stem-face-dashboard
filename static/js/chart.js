@@ -49,6 +49,9 @@ const chartTitles = {
   session_duration_vs_checkin_hour: "Session Duration vs. Check-in Hour"
 };
 
+// Expose chartTitles to global scope
+window.chartTitles = chartTitles;
+
 function renderChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
   // Get current layout from global variable (defined in charts.html)
   const layout = typeof currentChartLayout !== 'undefined' ? currentChartLayout : 'single';
@@ -70,7 +73,19 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
   const summaryTableDiv = document.getElementById('chartSummaryTable');
   const chartTitleEl = document.getElementById('chartTitle');
 
+  // Destroy existing chart instances
   if (tutorChart) tutorChart.destroy();
+  if (window.chartInstance) window.chartInstance.destroy();
+  if (window.comparisonChartInstance) window.comparisonChartInstance.destroy();
+  
+  // Clear currentChartInstances
+  if (typeof currentChartInstances !== 'undefined') {
+    Object.values(currentChartInstances).forEach(chart => {
+      if (chart && chart.destroy) chart.destroy();
+    });
+    currentChartInstances = {};
+  }
+  
   if (summaryTableDiv) summaryTableDiv.innerHTML = '';
 
   let labels, datasetsArray;
@@ -214,6 +229,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
         }
       }
     });
+    window.chartInstance = tutorChart;
     return;
   }
 
@@ -252,6 +268,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
   });
   
   // Store the chart instance for zoom functionality
+  window.chartInstance = tutorChart;
   if (typeof currentChartInstances !== 'undefined') {
     currentChartInstances.singleChart = tutorChart;
   }
@@ -263,6 +280,19 @@ function renderSplitChart(chartType, rawData, title, isComparisonMode = false, f
   const comparisonCtx = document.getElementById('comparisonChart')?.getContext('2d');
   
   if (!primaryCtx || !comparisonCtx) return;
+  
+  // Destroy all existing chart instances
+  if (tutorChart) tutorChart.destroy();
+  if (window.chartInstance) window.chartInstance.destroy();
+  if (window.comparisonChartInstance) window.comparisonChartInstance.destroy();
+  
+  // Clear currentChartInstances
+  if (typeof currentChartInstances !== 'undefined') {
+    Object.values(currentChartInstances).forEach(chart => {
+      if (chart && chart.destroy) chart.destroy();
+    });
+    currentChartInstances = {};
+  }
   
   // Clear existing charts
   if (currentChartInstances.primaryChart) currentChartInstances.primaryChart.destroy();
@@ -292,7 +322,7 @@ function renderSplitChart(chartType, rawData, title, isComparisonMode = false, f
     comparisonTitle = title + " (Pie View)";
   }
   
-  currentChartInstances.comparisonChart = createChartInstance(comparisonCtx, 'pie', comparisonData, comparisonTitle, false);
+  currentChartInstances.comparisonChart = createChartInstance(comparisonCtx, 'pie', comparisonData, comparisonTitle, true);
 }
 
 function renderGridChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
@@ -361,7 +391,7 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
     tension: 0.4
   }];
   
-  return new Chart(ctx, {
+  const chartInstance = new Chart(ctx, {
     type: chartType === 'area' ? 'line' : chartType,
     data: { labels: labels, datasets: datasets },
     options: {
@@ -398,6 +428,15 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
       }
     }
   });
+  
+  // Store chart instance in global variables for proper cleanup
+  if (isComparison) {
+    window.comparisonChartInstance = chartInstance;
+  } else {
+    window.chartInstance = chartInstance;
+  }
+  
+  return chartInstance;
 }
 
 async function fetchGridChartData() {
@@ -467,7 +506,7 @@ function updateChartTypeOptions(selectedDataset) { /* ... same as before ... */
 
 function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_tutor') {
   const payload = Object.fromEntries(new URLSearchParams(query));
-  payload.chartKey = chartKey; 
+  payload.dataset = chartKey; // Use 'dataset' to match backend expectation 
   
   // Include advanced filters from sessionStorage
   const advancedFilters = JSON.parse(sessionStorage.getItem('advancedFilters') || '{}');
@@ -475,7 +514,10 @@ function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_
   
   console.log('Sending payload to backend:', payload); // Debug log
   
-  document.getElementById('tutorChart').parentElement.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading chart data...</p></div>'; // Replace canvas with spinner
+  const tutorChartElement = document.getElementById('tutorChart');
+  if (tutorChartElement && tutorChartElement.parentElement) {
+    tutorChartElement.parentElement.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading chart data...</p></div>'; // Replace canvas with spinner
+  }
 
   fetch(`/chart-data`, {
     method: "POST",
@@ -489,15 +531,35 @@ function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_
     .then(data => {
       // Re-create canvas before rendering
       document.getElementById('tutorChartContainer').innerHTML = '<canvas id="tutorChart"></canvas>';
-      const dataset = data[chartKey];
-      const isComparison = data.is_comparison_mode || false;
-      const forecast = data.forecast_daily_checkins || null;
+      
+      // Handle new structured response format
+      let dataset, chartType, title, isComparison, forecast;
+      
+      if (data.chart_data && data.chart_type && data.title) {
+        // New structured format
+        dataset = data.chart_data;
+        chartType = data.chart_type;
+        title = data.title;
+        isComparison = data.comparison_mode || false;
+        forecast = data.forecast_data || null;
+      } else if (data[chartKey]) {
+        // Legacy format (fallback)
+        dataset = data[chartKey];
+        chartType = chartType;
+        title = chartTitles[chartKey] || "Chart";
+        isComparison = data.is_comparison_mode || false;
+        forecast = data.forecast_daily_checkins || null;
+      } else {
+        console.error("No valid data found in response:", data);
+        throw new Error(`No data for chart key "${chartKey}".`);
+      }
 
       if (dataset === undefined || dataset === null) {
-          console.error("Dataset key not found or is null:", chartKey, data);
+          console.error("Dataset is null or undefined:", dataset);
           throw new Error(`No data for chart key "${chartKey}".`);
       }
-      renderChart(chartType, dataset, chartTitles[chartKey] || "Chart", isComparison, forecast);
+      
+      renderChart(chartType, dataset, title, isComparison, forecast);
       // raw_records_for_chart_context can be used here if a chart needs to display some of its underlying points,
       // but not for rendering a full table anymore.
       // Example: you might update a small div with top 5 records relevant to the chart.
@@ -518,6 +580,15 @@ function showSnapshotModal(src) {
     document.getElementById('chartsModalImage').src = src.startsWith('http') || src.startsWith('/') ? src : `/static/${src}`;
     modal.show();
 }
+
+// Expose functions to global scope
+window.renderChart = renderChart;
+window.renderSingleChart = renderSingleChart;
+window.renderSplitChart = renderSplitChart;
+window.renderGridChart = renderGridChart;
+window.createChartInstance = createChartInstance;
+window.updateChartTypeOptions = updateChartTypeOptions;
+window.fetchChartData = fetchChartData;
 
 function downloadChartImage() { /* ... same as before ... */
   if (!tutorChart || !tutorChart.canvas) { alert("No chart to download."); return; }
@@ -969,7 +1040,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (this.shift_end_hour.value !== '23') params.append('shift_end_hour', this.shift_end_hour.value);
     
     fetchChartData(params.toString(), this.chartTypeSelect.value, this.dataset.value);
-    updateFilterChips();
+    if (typeof updateFilterChips === 'function') {
+      updateFilterChips();
+    }
     loadPunctualityAnalysis(params.toString());
   });
 
@@ -1028,7 +1101,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   updateChartTypeOptions(datasetSelect.value); 
-  updateFilterChips();
+  if (typeof updateFilterChips === 'function') {
+    updateFilterChips();
+  }
 
   if (shouldSubmit) form.dispatchEvent(new Event('submit', { bubbles: true }));
   else form.dispatchEvent(new Event('submit', { bubbles: true })); // Initial load

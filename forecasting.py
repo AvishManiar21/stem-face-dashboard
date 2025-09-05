@@ -284,32 +284,159 @@ class TutorForecasting:
             return {'last_week': 0, 'last_month': 0}
     
     def get_hourly_forecast(self):
-        """Predict hourly patterns"""
+        """Predict hourly patterns with improved ML-based forecasting"""
         if self.data.empty:
             return {}
         
         try:
-            # Calculate average hours per hour of day
-            hourly_avg = self.data.groupby('hour')['shift_hours'].mean()
+            # Get recent data (last 30 days) for better accuracy
+            recent_data = self.data[self.data['date'] >= (self.max_date - pd.Timedelta(days=30))]
+            if recent_data.empty:
+                recent_data = self.data
             
-            # Predict next day's hourly pattern
-            hourly_forecast = {}
+            # Calculate hourly patterns with trend analysis
+            hourly_stats = recent_data.groupby('hour')['shift_hours'].agg(['mean', 'std', 'count']).fillna(0)
+            
+            # Calculate day-of-week patterns for each hour
+            hourly_dow_patterns = {}
             for hour in range(24):
-                if hour in hourly_avg.index:
+                hour_data = recent_data[recent_data['hour'] == hour]
+                if not hour_data.empty:
+                    dow_avg = hour_data.groupby('day_of_week')['shift_hours'].mean()
+                    hourly_dow_patterns[hour] = dow_avg.to_dict()
+            
+            # Predict with confidence intervals
+            hourly_forecast = {}
+            current_dow = pd.Timestamp.now().day_name()
+            
+            for hour in range(24):
+                if hour in hourly_stats.index:
+                    base_hours = hourly_stats.loc[hour, 'mean']
+                    std_hours = hourly_stats.loc[hour, 'std']
+                    count = hourly_stats.loc[hour, 'count']
+                    
+                    # Adjust for day of week pattern
+                    if hour in hourly_dow_patterns and current_dow in hourly_dow_patterns[hour]:
+                        dow_multiplier = hourly_dow_patterns[hour][current_dow] / base_hours if base_hours > 0 else 1
+                        predicted_hours = base_hours * dow_multiplier
+                    else:
+                        predicted_hours = base_hours
+                    
+                    # Calculate confidence based on data availability and variance
+                    confidence = min(0.95, max(0.3, 1 - (std_hours / max(base_hours, 0.1)) if base_hours > 0 else 0.3))
+                    confidence = confidence * min(1.0, count / 10)  # More data = higher confidence
+                    
+                    # Add some trend-based adjustment
+                    if count >= 5:
+                        recent_hours = recent_data[recent_data['hour'] == hour].tail(5)['shift_hours']
+                        if len(recent_hours) >= 3:
+                            trend = recent_hours.iloc[-1] - recent_hours.iloc[0]
+                            predicted_hours += trend * 0.1  # Small trend adjustment
+                    
+                    predicted_hours = max(0, predicted_hours)
+                    predicted_sessions = predicted_hours / 2.0  # Assume 2 hours per session
+                    
                     hourly_forecast[hour] = {
-                        'predicted_hours': round(hourly_avg[hour], 1),
-                        'predicted_sessions': round(hourly_avg[hour] / 2, 1)  # Assume 2 hours per session
+                        'predicted_hours': round(predicted_hours, 1),
+                        'predicted_sessions': round(predicted_sessions, 1),
+                        'confidence': round(confidence, 2),
+                        'data_points': int(count),
+                        'trend': 'increasing' if predicted_hours > base_hours else 'decreasing' if predicted_hours < base_hours else 'stable'
                     }
                 else:
                     hourly_forecast[hour] = {
                         'predicted_hours': 0,
-                        'predicted_sessions': 0
+                        'predicted_sessions': 0,
+                        'confidence': 0.1,
+                        'data_points': 0,
+                        'trend': 'stable'
                     }
             
             return hourly_forecast
             
         except Exception as e:
             logger.error(f"Error in hourly forecast: {e}")
+            return {}
+    
+    def get_daily_forecast(self, days_ahead=7):
+        """Predict daily patterns for the next week with ML enhancement"""
+        if self.data.empty:
+            return {}
+        
+        try:
+            # Get recent data for better accuracy
+            recent_data = self.data[self.data['date'] >= (self.max_date - pd.Timedelta(days=60))]
+            if recent_data.empty:
+                recent_data = self.data
+            
+            # Calculate daily patterns
+            daily_stats = recent_data.groupby(['day_of_week', 'date'])['shift_hours'].sum().reset_index()
+            dow_avg = daily_stats.groupby('day_of_week')['shift_hours'].agg(['mean', 'std', 'count']).fillna(0)
+            
+            # Calculate trend over time
+            daily_totals = recent_data.groupby('date')['shift_hours'].sum().reset_index()
+            daily_totals['date'] = pd.to_datetime(daily_totals['date'])
+            daily_totals = daily_totals.sort_values('date')
+            
+            # Simple linear trend
+            if len(daily_totals) >= 7:
+                X = np.arange(len(daily_totals)).reshape(-1, 1)
+                y = daily_totals['shift_hours'].values
+                model = LinearRegression()
+                model.fit(X, y)
+                trend_slope = model.coef_[0]
+            else:
+                trend_slope = 0
+            
+            # Predict next week
+            daily_forecast = {}
+            current_date = self.max_date
+            
+            for i in range(days_ahead):
+                forecast_date = current_date + pd.Timedelta(days=i+1)
+                dow = forecast_date.day_name()
+                
+                if dow in dow_avg.index:
+                    base_hours = dow_avg.loc[dow, 'mean']
+                    std_hours = dow_avg.loc[dow, 'std']
+                    count = dow_avg.loc[dow, 'count']
+                    
+                    # Apply trend
+                    trend_adjustment = trend_slope * (i + 1)
+                    predicted_hours = base_hours + trend_adjustment
+                    
+                    # Calculate confidence
+                    confidence = min(0.95, max(0.3, 1 - (std_hours / max(base_hours, 0.1)) if base_hours > 0 else 0.3))
+                    confidence = confidence * min(1.0, count / 5)
+                    
+                    # Weekend adjustment
+                    if dow in ['Saturday', 'Sunday']:
+                        predicted_hours *= 0.7  # Reduce weekend predictions
+                        confidence *= 0.8
+                    
+                    predicted_hours = max(0, predicted_hours)
+                    predicted_sessions = predicted_hours / 2.0
+                    
+                    daily_forecast[forecast_date.strftime('%Y-%m-%d')] = {
+                        'predicted_hours': round(predicted_hours, 1),
+                        'predicted_sessions': round(predicted_sessions, 1),
+                        'confidence': round(confidence, 2),
+                        'day_of_week': dow,
+                        'trend': 'increasing' if trend_slope > 0.5 else 'decreasing' if trend_slope < -0.5 else 'stable'
+                    }
+                else:
+                    daily_forecast[forecast_date.strftime('%Y-%m-%d')] = {
+                        'predicted_hours': 0,
+                        'predicted_sessions': 0,
+                        'confidence': 0.1,
+                        'day_of_week': dow,
+                        'trend': 'stable'
+                    }
+            
+            return daily_forecast
+            
+        except Exception as e:
+            logger.error(f"Error in daily forecast: {e}")
             return {}
     
     def get_per_tutor_forecast(self):
@@ -381,6 +508,7 @@ class TutorForecasting:
                 'anomaly_detection': anomalies,
                 'historical_comparison': historical,
                 'hourly_forecast': hourly,
+                'daily_forecast': self.get_daily_forecast(7),
                 'per_tutor_forecast': per_tutor,
                 'scenario_simulation': scenarios,
                 'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')

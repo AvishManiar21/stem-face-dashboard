@@ -103,6 +103,8 @@ poetry.lock
 logs/*.log
 logs/*.csv
 logs/*.json
+logs/
 
 # Ignore snapshots if not needed
 static/snapshots/ 
+static/snapshots/*
