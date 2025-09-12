@@ -599,10 +599,23 @@ class TutorAnalytics:
                 daily_counts = self.data.groupby('day_of_week').size()
                 return {str(day): int(count) for day, count in daily_counts.items()}
             elif dataset == 'hourly_activity_by_day':
-                # Create hourly activity heatmap data
-                hourly_by_day = self.data.groupby(['day_of_week', 'hour']).size().unstack(fill_value=0)
-                return {str(day): {str(hour): int(count) for hour, count in day_data.items()} 
-                       for day, day_data in hourly_by_day.items()}
+                # Create hourly activity data structured as {Day -> {"HH:00" -> count}}
+                grouped = self.data.groupby(['day_of_week', 'hour']).size().unstack(fill_value=0)
+                if grouped is None or grouped.empty:
+                    return {}
+                # Ensure all 24 hours are present as columns
+                full_hours = list(range(24))
+                for h in full_hours:
+                    if h not in grouped.columns:
+                        grouped[h] = 0
+                # Sort columns by hour
+                grouped = grouped[sorted(grouped.columns)]
+                # Build nested dict day -> hourLabel -> count
+                result = {}
+                for day in grouped.index.tolist():
+                    day_series = grouped.loc[day]
+                    result[str(day)] = {f"{int(hour):02d}:00": int(day_series[hour]) for hour in grouped.columns}
+                return result
             elif dataset == 'session_duration_distribution':
                 # Create session duration distribution
                 duration_ranges = pd.cut(self.data['shift_hours'], 

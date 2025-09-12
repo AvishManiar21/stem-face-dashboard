@@ -10,22 +10,23 @@ function isDarkMode() {
 }
 
 const chartOptions = {
-  checkins_per_tutor: ['bar', 'pie'],
-  hours_per_tutor: ['bar', 'pie'],
-  daily_checkins: ['bar', 'line'],
-  daily_hours: ['bar', 'line', 'area'],
+  checkins_per_tutor: ['bar', 'pie', 'doughnut'],
+  hours_per_tutor: ['bar', 'pie', 'doughnut'],
+  daily_checkins: ['bar', 'line', 'scatter'],
+  daily_hours: ['bar', 'line', 'area', 'scatter'],
   cumulative_checkins: ['line', 'area'],
   cumulative_hours: ['line', 'area'],
-  hourly_checkins_dist: ['bar', 'line'],
-  monthly_hours: ['bar', 'line'],
-  avg_hours_per_day_of_week: ['bar', 'pie'],
-  checkins_per_day_of_week: ['bar', 'pie'],
-  hourly_activity_by_day: ['bar', 'line'], // Grouped bar or multi-line
+  hourly_checkins_dist: ['bar', 'line', 'scatter'],
+  monthly_hours: ['bar', 'line', 'scatter'],
+  avg_hours_per_day_of_week: ['bar', 'pie', 'doughnut'],
+  checkins_per_day_of_week: ['bar', 'pie', 'doughnut'],
+  // hourly_activity_by_day returns nested data {Day -> {Hour -> Count}}; support bar, line, and heatmap
+  hourly_activity_by_day: ['bar', 'line', 'heatmap'],
   forecast_daily_checkins: ['line'],
-  session_duration_distribution: ['bar', 'pie'],
-  punctuality_analysis: ['bar', 'pie'],
-  avg_session_duration_per_tutor: ['bar', 'pie'],
-  tutor_consistency_score: ['bar', 'pie'],
+  session_duration_distribution: ['bar', 'pie', 'doughnut'],
+  punctuality_analysis: ['bar', 'pie', 'doughnut'],
+  avg_session_duration_per_tutor: ['bar', 'pie', 'doughnut'],
+  tutor_consistency_score: ['bar', 'pie', 'doughnut'],
   session_duration_vs_checkin_hour: ['scatter']
 };
 
@@ -117,7 +118,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     chartTitleEl.innerText = `${title} (Comparison)`;
     totalCountSpan.textContent = `Comparing ${Object.keys(rawData).length} tutors`;
 
-  } else if (chartKey === 'hourly_activity_by_day' && chartType === 'bar') {
+  } else if (chartKey === 'hourly_activity_by_day' && (chartType === 'bar' || chartType === 'line')) {
     const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
     datasetsArray = daysOrder.map((day, index) => {
@@ -125,14 +126,22 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
         const dataPoints = labels.map(hourLabel => dayData[hourLabel] || 0);
         const color = متنوعColors(daysOrder.length, false, index);
         const borderColor = متنوعColors(daysOrder.length, true, index);
-        return { label: day, data: dataPoints, backgroundColor: color, borderColor: borderColor, borderWidth: 1 };
+        return { label: day, data: dataPoints, backgroundColor: color, borderColor: borderColor, borderWidth: 1, tension: 0.3, fill: false };
     });
     chartTitleEl.innerText = title;
     let totalActivity = 0;
     Object.values(rawData).forEach(dayData => Object.values(dayData).forEach(count => totalActivity += count));
     totalCountSpan.textContent = `(Total Activity Events: ${totalActivity})`;
 
-  } else { // Standard mode or pie chart, or comparison for non-daily charts
+  } else if (!(chartKey === 'hourly_activity_by_day' && chartType === 'heatmap')) { // Standard mode or pie chart
+    // Guard: prevent incompatible chart types on nested-object datasets
+    const isNestedObject = typeof rawData === 'object' && rawData !== null && !Array.isArray(rawData) && Object.values(rawData).some(v => typeof v === 'object');
+    if (isNestedObject && (chartType === 'pie' || chartType === 'line' || chartType === 'area')) {
+        chartTitleEl.innerText = `This dataset requires a bar chart.`;
+        totalCountSpan.textContent = '';
+        if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+    }
     let displayData = rawData;
     // For comparison mode on charts like 'checkins_per_tutor', rawData itself is the {TutorA: count, TutorB: count}
     // So labels are tutor names and data is their counts.
@@ -193,17 +202,111 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
             </tbody>
             </table>`;
     }
+  } else if (chartKey === 'hourly_activity_by_day' && chartType === 'heatmap') {
+    const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+    const flatData = [];
+    daysOrder.forEach((day, y) => {
+      const byHour = rawData[day] || {};
+      hours.forEach((h, x) => {
+        flatData.push({ x, y, v: byHour[h] || 0 });
+      });
+    });
+    // Render heatmap with axes and legend
+    const canvas = ctx.canvas;
+    // Ensure canvas fills its container and accounts for device pixel ratio
+    const parent = canvas.parentElement || canvas;
+    const cssW = Math.max(300, parent.clientWidth || canvas.width);
+    const cssH = Math.max(300, parent.clientHeight || canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    const W = cssW, H = cssH;
+    ctx.clearRect(0, 0, W, H);
+    const isDark = isDarkMode && isDarkMode();
+    const margin = { top: 16, right: 24, bottom: 36, left: 80 };
+    const width = W - margin.left - margin.right;
+    const height = H - margin.top - margin.bottom;
+    const cellW = Math.max(10, Math.floor(width / hours.length));
+    const cellH = Math.max(16, Math.floor(height / daysOrder.length));
+    const x0 = margin.left;
+    const y0 = margin.top;
+    // Compute value range
+    const values = flatData.map(d => d.v);
+    const maxV = Math.max(1, Math.max(...values));
+    const minV = Math.min(0, Math.min(...values));
+    const colorFor = (val) => {
+      const t = (val - minV) / (maxV - minV || 1);
+      const r = Math.floor(255 * t);
+      const g = Math.floor(80 * (1 - t) + 20);
+      const b = Math.floor(220 * (1 - t) + 20 * t);
+      return `rgba(${r},${g},${b},0.9)`;
+    };
+    // Draw cells
+    flatData.forEach(d => {
+      const px = x0 + d.x * cellW;
+      const py = y0 + d.y * cellH;
+      ctx.fillStyle = colorFor(d.v);
+      ctx.fillRect(px, py, cellW - 1, cellH - 1);
+    });
+    // Axes labels
+    ctx.fillStyle = isDark ? '#e6e6e6' : '#333';
+    ctx.font = '12px sans-serif';
+    daysOrder.forEach((day, i) => {
+      const ty = y0 + i * cellH + cellH * 0.65;
+      ctx.fillText(day.substring(0, 3), 10, ty);
+    });
+    hours.forEach((h, i) => {
+      if (i % 2 === 0) {
+        const tx = x0 + i * cellW + 2;
+        const ty = y0 + height + 18;
+        ctx.fillText(h.slice(0, 2), tx, ty);
+      }
+    });
+    // Color legend
+    const lgW = 140, lgH = 12;
+    const lgX = x0 + width - lgW;
+    const lgY = y0 + height + 4;
+    const grad = ctx.createLinearGradient(lgX, lgY, lgX + lgW, lgY);
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      const r = Math.floor(255 * t);
+      const g = Math.floor(80 * (1 - t) + 20);
+      const b = Math.floor(220 * (1 - t) + 20 * t);
+      grad.addColorStop(t, `rgba(${r},${g},${b},0.9)`);
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(lgX, lgY, lgW, lgH);
+    ctx.fillStyle = isDark ? '#e6e6e6' : '#333';
+    ctx.font = '11px sans-serif';
+    ctx.fillText(String(Math.round(minV)), lgX - 4 - ctx.measureText(String(Math.round(minV))).width, lgY + lgH);
+    ctx.fillText(String(Math.round(maxV)), lgX + lgW + 4, lgY + lgH);
+    chartTitleEl.innerText = title + ' (Heatmap)';
+    totalCountSpan.textContent = '';
+    return;
   }
 
   // Special handling for scatter plot
-  if (chartType === 'scatter' && Array.isArray(rawData)) {
-    const data = rawData;
+  if (chartType === 'scatter') {
+    // Accept either array of {x,y} or object map -> convert to points
+    let points = [];
+    if (Array.isArray(rawData)) {
+      points = rawData;
+    } else if (rawData && typeof rawData === 'object') {
+      const xs = Object.keys(rawData);
+      const ys = Object.values(rawData);
+      points = xs.map((x, i) => ({ x: isNaN(Number(x)) ? i : Number(x), y: Number(ys[i]) }));
+    }
     const datasetsArray = [{
       label: title,
-      data: data,
+      data: points,
       backgroundColor: isDarkMode() ? 'rgba(255, 159, 64, 0.7)' : 'rgba(0, 188, 212, 0.7)',
       borderColor: isDarkMode() ? 'rgba(255, 159, 64, 1)' : 'rgba(0, 188, 212, 1)',
-      pointRadius: 5
+      pointRadius: 4
     }];
     tutorChart = new Chart(ctx, {
       type: 'scatter',
@@ -235,7 +338,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
 
   // Create chart with zoom plugin enabled for all chart types
   tutorChart = new Chart(ctx, {
-    type: chartType,
+    type: chartType === 'area' ? 'line' : chartType,
     data: { labels: labels, datasets: datasetsArray },
     options: {
       responsive: true,
@@ -475,15 +578,18 @@ async function fetchGridChartData() {
 }
 
 function متنوعColors(num, border = false, index = -1) { /* ... same as before ... */
+    // Improved palette: 20-color Set3-like with better contrast for doughnut/pie
     const baseColors = [
-        'rgba(255, 99, 132, DYNAMIC_ALPHA)', 'rgba(54, 162, 235, DYNAMIC_ALPHA)',
-        'rgba(255, 206, 86, DYNAMIC_ALPHA)', 'rgba(75, 192, 192, DYNAMIC_ALPHA)',
-        'rgba(153, 102, 255, DYNAMIC_ALPHA)', 'rgba(255, 159, 64, DYNAMIC_ALPHA)',
-        'rgba(201, 203, 207, DYNAMIC_ALPHA)', 'rgba(50, 205, 50, DYNAMIC_ALPHA)',
-        'rgba(255, 0, 255, DYNAMIC_ALPHA)', 'rgba(0, 255, 255, DYNAMIC_ALPHA)',
-        'rgba(128, 0, 0, DYNAMIC_ALPHA)', 'rgba(0, 128, 0, DYNAMIC_ALPHA)', 
-        'rgba(0, 0, 128, DYNAMIC_ALPHA)', 'rgba(128, 128, 0, DYNAMIC_ALPHA)',
-        'rgba(128, 0, 128, DYNAMIC_ALPHA)'
+        'rgba(141, 211, 199, DYNAMIC_ALPHA)', 'rgba(255, 255, 179, DYNAMIC_ALPHA)',
+        'rgba(190, 186, 218, DYNAMIC_ALPHA)', 'rgba(251, 128, 114, DYNAMIC_ALPHA)',
+        'rgba(128, 177, 211, DYNAMIC_ALPHA)', 'rgba(253, 180, 98, DYNAMIC_ALPHA)',
+        'rgba(179, 222, 105, DYNAMIC_ALPHA)', 'rgba(252, 205, 229, DYNAMIC_ALPHA)',
+        'rgba(217, 217, 217, DYNAMIC_ALPHA)', 'rgba(188, 128, 189, DYNAMIC_ALPHA)',
+        'rgba(204, 235, 197, DYNAMIC_ALPHA)', 'rgba(255, 237, 111, DYNAMIC_ALPHA)',
+        'rgba(166, 206, 227, DYNAMIC_ALPHA)', 'rgba(31, 120, 180, DYNAMIC_ALPHA)',
+        'rgba(178, 223, 138, DYNAMIC_ALPHA)', 'rgba(251, 154, 153, DYNAMIC_ALPHA)',
+        'rgba(227, 26, 28, DYNAMIC_ALPHA)', 'rgba(253, 191, 111, DYNAMIC_ALPHA)',
+        'rgba(255, 127, 0, DYNAMIC_ALPHA)', 'rgba(202, 178, 214, DYNAMIC_ALPHA)'
     ];
     const alpha = border ? '1' : '0.7';
     if (index !== -1) return baseColors[index % baseColors.length].replace('DYNAMIC_ALPHA', alpha);
@@ -507,6 +613,13 @@ function updateChartTypeOptions(selectedDataset) { /* ... same as before ... */
 function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_tutor') {
   const payload = Object.fromEntries(new URLSearchParams(query));
   payload.dataset = chartKey; // Use 'dataset' to match backend expectation 
+  // Include the currently selected chart type so backend can echo it back
+  const chartTypeSelectEl = document.getElementById('chartTypeSelect');
+  if (chartTypeSelectEl && chartTypeSelectEl.value) {
+    payload.chart_type = chartTypeSelectEl.value;
+  } else if (chartType) {
+    payload.chart_type = chartType;
+  }
   
   // Include advanced filters from sessionStorage
   const advancedFilters = JSON.parse(sessionStorage.getItem('advancedFilters') || '{}');
@@ -552,6 +665,11 @@ function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_
       } else {
         console.error("No valid data found in response:", data);
         throw new Error(`No data for chart key "${chartKey}".`);
+      }
+
+      // If the caller requested a specific chart type, prefer it
+      if (payload.chart_type) {
+        chartType = payload.chart_type;
       }
 
       if (dataset === undefined || dataset === null) {

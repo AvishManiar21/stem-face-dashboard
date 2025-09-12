@@ -1386,3 +1386,4 @@ timestamp,user_email,action,details,ip_address,user_agent,admin_email,target_use
 2025-07-22 09:00:00,,TUTOR_CHECK_IN,David Kim (87654323) checked in,,Automated Script,,,
 2025-08-22 09:00:00,,TUTOR_CHECK_IN,David Kim (87654323) checked in,,Automated Script,,,
 2025-09-04 12:27:25,,daily_update,Daily data update completed successfully,,,,,completed
+2025-09-05 10:58:05,,create_user,Created user with role tutor,127.0.0.1,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",admin@tutordashboard.com,prathambiren2618@gmail.com,

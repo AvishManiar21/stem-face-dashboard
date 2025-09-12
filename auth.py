@@ -15,6 +15,36 @@ from datetime import datetime
 from auth_utils import USERS_FILE, hash_password as legacy_hash_password
 import pandas as pd
 
+# Unified API error helper
+def error_response(message, status_code=400, code=None, details=None):
+    """Return a consistent JSON error payload.
+
+    message: Human-readable error message
+    status_code: HTTP status code to return
+    code: Optional short machine code (e.g., AUTH_REQUIRED)
+    details: Optional dict with extra context
+    """
+    payload = {"error": {"message": message}}
+    if code:
+        payload["error"]["code"] = code
+    if details is not None:
+        payload["error"]["details"] = details
+    return jsonify(payload), status_code
+
+# Bridge to analytics audit logger
+try:
+    from analytics import analytics as _analytics
+except Exception:
+    _analytics = None
+
+def log_admin_action(action, target_user_email=None, details=""):
+    """Proxy to analytics.log_admin_action; fail-safe if analytics not available."""
+    try:
+        if _analytics:
+            _analytics.log_admin_action(action, target_user_email=target_user_email, details=details)
+    except Exception as e:
+        logger.error(f"Failed to log admin action '{action}': {e}")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -111,7 +141,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if not get_current_user():
             if request.is_json:
-                return jsonify({'error': 'Authentication required'}), 401
+                return error_response("Authentication required", status_code=401, code="AUTH_REQUIRED")
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -123,12 +153,12 @@ def role_required(required_role):
         def decorated_function(*args, **kwargs):
             if not get_current_user():
                 if request.is_json:
-                    return jsonify({'error': 'Authentication required'}), 401
+                    return error_response("Authentication required", status_code=401, code="AUTH_REQUIRED")
                 return redirect(url_for('login'))
             
             if not has_role_access(required_role):
                 if request.is_json:
-                    return jsonify({'error': 'Insufficient permissions'}), 403
+                    return error_response("Insufficient permissions", status_code=403, code="FORBIDDEN", details={"required_role": required_role})
                 flash('You do not have permission to access this page.', 'error')
                 return redirect(url_for('index'))
             
@@ -157,7 +187,7 @@ def authenticate_user(email, password):
     Hybrid authentication - tries Supabase Auth first, then custom users table, then demo users, then local CSV users
     """
     if not email or not password:
-        return False, "Email and password are required"
+        return False, "Email and password are required."
     
     # First try Supabase Auth if available
     if supabase:
@@ -217,25 +247,29 @@ def authenticate_user(email, password):
                         return True, "Login successful"
                     else:
                         logger.warning(f"Invalid password for user {email}")
-                        return False, "Invalid email or password"
+                        return False, "Invalid email or password."
                 else:
                     logger.warning(f"User {email} not found in custom users table")
-                    return False, "Invalid email or password"
+                    return False, "Invalid email or password."
                     
             except Exception as custom_error:
                 logger.error(f"Custom authentication error for {email}: {custom_error}")
-                return False, f"Authentication error: {str(custom_error)}"
+                return False, "Authentication temporarily unavailable. Please try again later."
     
     # If Supabase is not available, try local CSV users
     import pandas as pd
     import os
     if os.path.exists(USERS_FILE):
-        df = pd.read_csv(USERS_FILE)
+        try:
+            df = pd.read_csv(USERS_FILE)
+        except Exception as csv_error:
+            logger.error(f"Failed to read USERS_FILE {USERS_FILE}: {csv_error}")
+            return False, "Authentication temporarily unavailable. Please try again later."
         user_row = df[df['email'] == email]
         if not user_row.empty:
             user = user_row.iloc[0]
             if not user.get('active', True):
-                return False, "User is not active"
+                return False, "User account is inactive."
             stored_hash = user.get('password_hash', '')
             if stored_hash:
                 # Support both SHA-256 (64 hex) and legacy MD5 (32 hex)
@@ -258,9 +292,9 @@ def authenticate_user(email, password):
                     }
                     logger.info(f"User {email} authenticated via local CSV users")
                     return True, "Login successful"
-            return False, "Invalid email or password"
+            return False, "Invalid email or password."
     
-    return False, "Invalid email or password"
+    return False, "Invalid email or password."
 
 def logout_user():
     """Logout current user"""
@@ -307,17 +341,17 @@ def register_user(email, password, role='tutor', tutor_id=None, full_name=None):
     # Validate input
     validation_errors = validate_user_input(email, password, role, tutor_id, full_name)
     if validation_errors:
-        return False, f"Validation errors: {'; '.join(validation_errors)}"
+        return False, "; ".join(validation_errors)
     
     # If Supabase is not available, return demo mode message
     if not supabase:
-        return False, "User registration is not available in demo mode. Please set up Supabase environment variables for full functionality."
+        return False, "Registration is unavailable in demo mode. Configure Supabase to enable this."
     
     try:
         # Check if user already exists
         existing_user = supabase.table('users').select('id').eq('email', email).execute()
         if existing_user.data and len(existing_user.data) > 0:
-            return False, f"User {email} already exists"
+            return False, "A user with this email already exists."
         
         # Hash password with salt
         salt, password_hash = hash_password(password)
@@ -352,20 +386,20 @@ def register_user(email, password, role='tutor', tutor_id=None, full_name=None):
                 details=f"Created user with role: {role}, tutor_id: {tutor_id or 'None'}"
             )
             logger.info(f"User {email} created successfully")
-            return True, f"User {email} created successfully"
+            return True, "User created successfully."
         else:
             logger.error(f"Failed to create user {email}")
-            return False, "Failed to create user"
+            return False, "Failed to create user."
             
     except Exception as e:
         logger.error(f"Registration error for {email}: {e}")
-        return False, f"Registration error: {str(e)}"
+        return False, "Registration failed due to a server error. Please try again later."
 
 def update_user_role(user_id, new_role, tutor_id=None):
     """Update user role (admin only function)"""
     # If Supabase is not available, return demo mode message
     if not supabase:
-        return False, "User role updates are not available in demo mode. Please set up Supabase environment variables for full functionality."
+        return False, "Role updates are unavailable in demo mode. Configure Supabase to enable this."
     
     try:
         user_metadata = {'role': new_role}
@@ -384,12 +418,13 @@ def update_user_role(user_id, new_role, tutor_id=None):
                 target_user_email="Unknown",  # We'll improve this later
                 details=f"Changed role to {new_role}, tutor_id: {tutor_id or 'None'}"
             )
-            return True, "User role updated successfully"
+            return True, "User role updated successfully."
         else:
-            return False, "Failed to update user role"
+            return False, "Failed to update user role."
             
     except Exception as e:
-        return False, f"Update error: {str(e)}"
+        logger.error(f"Update user role error for {user_id}: {e}")
+        return False, "Unable to update user role at this time."
 
 def get_all_users():
     """Get all users (admin only function)"""

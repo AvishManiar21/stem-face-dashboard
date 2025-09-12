@@ -21,6 +21,7 @@
         <li class="nav-item"><a class="nav-link" href="/charts"> <i class="fas fa-chart-bar"></i> Charts</a></li>
         <li class="nav-item"><a class="nav-link" href="/calendar"> <i class="fas fa-calendar-alt"></i> Calendar</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/users"> <i class="fas fa-users-cog"></i> Users</a></li>
+        <li class="nav-item admin-only"><a class="nav-link" href="/admin/shifts"> <i class="fas fa-business-time"></i> Shifts</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/audit-logs"> <i class="fas fa-history"></i> Audit Logs</a></li>
       </ul>
       <div class="dropdown" style="position: relative; z-index: 1050;">

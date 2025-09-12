@@ -583,6 +583,8 @@ small {
   box-shadow: var(--shadow-md);
   border-bottom: 1px solid var(--border-color);
   padding: var(--spacing-md) 0;
+  position: relative;
+  z-index: 2000;
 }
 
 /* App Navbar - theme-aware styles matching dashboard */
@@ -595,13 +597,15 @@ small {
   overflow: visible !important;
   min-height: auto !important;
   height: auto !important;
+  position: relative;
+  z-index: 2100;
 }
 .app-navbar .navbar-brand, .app-navbar .nav-link { color: rgba(255,255,255,0.95) !important; }
 .app-navbar .nav-link:hover, .app-navbar .nav-link:focus { color: #ffffff !important; background: rgba(255,255,255,0.12); border-radius: 8px; }
 .app-navbar .dropdown-menu { 
   background: #ffffff; 
   border: 1px solid #e2e8f0; 
-  z-index: 1051 !important;
+  z-index: 9999 !important;
   position: absolute !important;
 }
 .app-navbar .dropdown { 

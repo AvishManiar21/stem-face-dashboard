@@ -1,3 +1,4 @@
 user_id,email,full_name,role,created_at,last_login,active,password_hash
 ADMIN001,admin@example.com,System Administrator,admin,2025-06-28 16:52:11.554005,2025-06-28 16:53:35.977291,True,0192023a7bbd73250516f069df18b500c339d95c7a0216ee7437e2c3f0b0b2c6
-U1751642435,reslife@gannon.edu,Avish,manager,2025-07-04T11:20:35.462986,,True,f100cb160cf7b48b5dec576128d00868ad97a58ea557a1b23d4d665a4c40da8d
+U1751642435,reslife@gannon.edu,Avish,manager,,,True,f100cb160cf7b48b5dec576128d00868ad97a58ea557a1b23d4d665a4c40da8d
+U1757084285,prathambiren2618@gmail.com,Pratham,tutor,2025-09-05T10:58:05.028258,,True,537d26965fd30bf9ebe78b86a8b56ca954cd886ed6d57e43fd37924f1dc2fcbf

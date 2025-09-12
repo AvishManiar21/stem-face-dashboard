@@ -769,6 +769,7 @@ def chart_data():
             dataset = req.get('dataset') or req.get('chartKey') or 'checkins_per_tutor'
             grid_mode = req.get('grid') or req.get('mode') == 'grid'
             max_date = req.get('max_date')
+            requested_chart_type = req.get('chart_type')
             
             # Extract filter parameters from form
             tutor_ids = req.get('tutor_ids', '')
@@ -780,6 +781,7 @@ def chart_data():
             dataset = request.args.get('dataset') or request.args.get('chartKey') or 'checkins_per_tutor'
             grid_mode = request.args.get('grid') or request.args.get('mode') == 'grid'
             max_date = request.args.get('max_date')
+            requested_chart_type = request.args.get('chart_type')
             tutor_ids = request.args.get('tutor_ids', '')
             start_date = request.args.get('start_date')
             end_date = request.args.get('end_date')
@@ -967,10 +969,34 @@ def chart_data():
                     logger.error(f"Error converting data to records: {e}")
                     raw_records = []
             
+            # Default chart type map aligning with frontend chartOptions
+            default_chart_types = {
+                'checkins_per_tutor': 'bar',
+                'hours_per_tutor': 'bar',
+                'daily_checkins': 'bar',
+                'daily_hours': 'bar',
+                'cumulative_checkins': 'line',
+                'cumulative_hours': 'line',
+                'hourly_checkins_dist': 'bar',
+                'monthly_hours': 'bar',
+                'avg_hours_per_day_of_week': 'bar',
+                'checkins_per_day_of_week': 'bar',
+                'hourly_activity_by_day': 'bar',
+                'forecast_daily_checkins': 'line',
+                'session_duration_distribution': 'bar',
+                'punctuality_analysis': 'bar',
+                'avg_session_duration_per_tutor': 'bar',
+                'tutor_consistency_score': 'bar',
+                'session_duration_vs_checkin_hour': 'scatter'
+            }
+
+            # Choose chart type: requested if provided, else sensible default
+            chosen_chart_type = requested_chart_type or default_chart_types.get(dataset, 'bar')
+
             response_data = {
                 "dataset": dataset,
                 "chart_data": chart_data,
-                "chart_type": "bar",  # Default chart type
+                "chart_type": chosen_chart_type,
                 "title": f"{dataset.replace('_', ' ').title()}",
                 "raw_records_for_chart_context": raw_records
             }
