@@ -68,18 +68,46 @@ if supabase_url and supabase_key:
 else:
     logger.warning("Supabase environment variables not set. Running in demo mode with local authentication.")
 
-# Role hierarchy for access control
+# Role normalization and hierarchy
+def normalize_role(role: str) -> str:
+    if not role:
+        return 'tutor'
+    return str(role).strip().lower().replace(' ', '_')
+
 ROLE_HIERARCHY = {
     'tutor': 1,
     'lead_tutor': 2, 
     'manager': 3,
-    'admin': 3  # Admin same level as manager
+    'admin': 4
 }
 
 # Audit log file
 AUDIT_LOG_FILE = 'logs/audit_log.csv'
 
 DEMO_USERS = {}
+
+def _resolve_tutor_id_from_logs_by_name(full_name: str):
+    """Resolve a numeric tutor_id by matching full_name in face_log_with_expected.csv.
+    Returns the most frequent tutor_id as a string, or None.
+    """
+    try:
+        logs_path = 'logs/face_log_with_expected.csv'
+        if not os.path.exists(logs_path):
+            return None
+        df_logs = pd.read_csv(logs_path)
+        if 'tutor_name' not in df_logs.columns or 'tutor_id' not in df_logs.columns:
+            return None
+        mask = df_logs['tutor_name'].astype(str).str.strip().str.lower() == (full_name or '').strip().lower()
+        subset = df_logs[mask]
+        if subset.empty:
+            return None
+        mode_series = subset['tutor_id'].astype(str).mode()
+        if mode_series.empty:
+            return None
+        return mode_series.iloc[0]
+    except Exception as e:
+        logger.warning(f"Could not resolve tutor_id from logs: {e}")
+        return None
 
 def get_current_user():
     """Get current authenticated user from session"""
@@ -93,11 +121,11 @@ def get_user_role(email=None):
         # Demo mode - use local users
         if email:
             if email in DEMO_USERS:
-                return DEMO_USERS[email]['user_metadata'].get('role', 'tutor')
+                return normalize_role(DEMO_USERS[email]['user_metadata'].get('role', 'tutor'))
         else:
             user = get_current_user()
             if user and 'user_metadata' in user:
-                return user['user_metadata'].get('role', 'tutor')
+                return normalize_role(user['user_metadata'].get('role', 'tutor'))
         return 'tutor'
     
     # Supabase mode
@@ -106,7 +134,7 @@ def get_user_role(email=None):
         try:
             response = supabase.table('users').select('role').eq('email', email).execute()
             if response.data:
-                return response.data[0].get('role', 'tutor')
+                return normalize_role(response.data[0].get('role', 'tutor'))
         except Exception as e:
             logger.error(f"Error getting user role for {email}: {e}")
             return 'tutor'
@@ -114,14 +142,23 @@ def get_user_role(email=None):
         # Get current user's role
         user = get_current_user()
         if user and 'user_metadata' in user:
-            return user['user_metadata'].get('role', 'tutor')
+            return normalize_role(user['user_metadata'].get('role', 'tutor'))
     return 'tutor'
 
 def get_user_tutor_id():
     """Get current user's tutor_id for data filtering"""
     user = get_current_user()
     if user and 'user_metadata' in user:
-        return user['user_metadata'].get('tutor_id')
+        tid = user['user_metadata'].get('tutor_id')
+        # If missing or looks like a CSV user_id (starts with 'U'), try resolving from logs by name
+        if not tid or (isinstance(tid, str) and tid.upper().startswith('U')):
+            full_name = user['user_metadata'].get('full_name') or user.get('full_name')
+            resolved = _resolve_tutor_id_from_logs_by_name(full_name) if full_name else None
+            if resolved:
+                user['user_metadata']['tutor_id'] = str(resolved)
+                session['user'] = user
+                return str(resolved)
+        return tid
     return None
 
 def has_role_access(required_role):
@@ -130,8 +167,8 @@ def has_role_access(required_role):
     if not current_role:
         return False
     
-    current_level = ROLE_HIERARCHY.get(current_role, 0)
-    required_level = ROLE_HIERARCHY.get(required_role, 999)
+    current_level = ROLE_HIERARCHY.get(normalize_role(current_role), 0)
+    required_level = ROLE_HIERARCHY.get(normalize_role(required_role), 999)
     
     return current_level >= required_level
 
@@ -188,6 +225,44 @@ def authenticate_user(email, password):
     """
     if not email or not password:
         return False, "Email and password are required."
+    
+    # Helper: local CSV fallback auth
+    def _try_csv_auth():
+        import os
+        if os.path.exists(USERS_FILE):
+            try:
+                df_local = pd.read_csv(USERS_FILE)
+            except Exception as csv_error:
+                logger.error(f"Failed to read USERS_FILE {USERS_FILE}: {csv_error}")
+                return False, "Authentication temporarily unavailable. Please try again later."
+            user_row = df_local[df_local['email'] == email]
+            if not user_row.empty:
+                user = user_row.iloc[0]
+                if not user.get('active', True):
+                    return False, "User account is inactive."
+                stored_hash = user.get('password_hash', '')
+                if stored_hash:
+                    try:
+                        if isinstance(stored_hash, str) and len(stored_hash.strip()) == 32:
+                            candidate = hashlib.md5(password.encode()).hexdigest()
+                        else:
+                            candidate = legacy_hash_password(password)
+                    except Exception:
+                        candidate = legacy_hash_password(password)
+                    if candidate == stored_hash:
+                        session['user'] = {
+                            'id': user.get('user_id'),
+                            'email': user.get('email'),
+                            'user_metadata': {
+                                'role': user.get('role', 'tutor'),
+                                'full_name': user.get('full_name', ''),
+                                'tutor_id': user.get('user_id')
+                            }
+                        }
+                        logger.info(f"User {email} authenticated via local CSV users")
+                        return True, "Login successful"
+            return False, "Invalid email or password."
+        return False, "Invalid email or password."
     
     # First try Supabase Auth if available
     if supabase:
@@ -254,47 +329,15 @@ def authenticate_user(email, password):
                     
             except Exception as custom_error:
                 logger.error(f"Custom authentication error for {email}: {custom_error}")
-                return False, "Authentication temporarily unavailable. Please try again later."
+                # Fall back to local CSV if available
+                csv_ok, csv_msg = _try_csv_auth()
+                return (csv_ok, csv_msg)
     
-    # If Supabase is not available, try local CSV users
-    import pandas as pd
-    import os
-    if os.path.exists(USERS_FILE):
-        try:
-            df = pd.read_csv(USERS_FILE)
-        except Exception as csv_error:
-            logger.error(f"Failed to read USERS_FILE {USERS_FILE}: {csv_error}")
-            return False, "Authentication temporarily unavailable. Please try again later."
-        user_row = df[df['email'] == email]
-        if not user_row.empty:
-            user = user_row.iloc[0]
-            if not user.get('active', True):
-                return False, "User account is inactive."
-            stored_hash = user.get('password_hash', '')
-            if stored_hash:
-                # Support both SHA-256 (64 hex) and legacy MD5 (32 hex)
-                try:
-                    if isinstance(stored_hash, str) and len(stored_hash.strip()) == 32:
-                        candidate = hashlib.md5(password.encode()).hexdigest()
-                    else:
-                        candidate = legacy_hash_password(password)
-                except Exception:
-                    candidate = legacy_hash_password(password)
-                if candidate == stored_hash:
-                    session['user'] = {
-                        'id': user.get('user_id'),
-                        'email': user.get('email'),
-                        'user_metadata': {
-                            'role': user.get('role', 'tutor'),
-                            'full_name': user.get('full_name', ''),
-                            'tutor_id': user.get('user_id')
-                        }
-                    }
-                    logger.info(f"User {email} authenticated via local CSV users")
-                    return True, "Login successful"
-            return False, "Invalid email or password."
-    
-    return False, "Invalid email or password."
+    # Local CSV fallback (runs whether or not Supabase is configured)
+    csv_ok, csv_msg = _try_csv_auth()
+    if csv_ok:
+        return True, csv_msg
+    return False, csv_msg
 
 def logout_user():
     """Logout current user"""
@@ -395,36 +438,65 @@ def register_user(email, password, role='tutor', tutor_id=None, full_name=None):
         logger.error(f"Registration error for {email}: {e}")
         return False, "Registration failed due to a server error. Please try again later."
 
-def update_user_role(user_id, new_role, tutor_id=None):
-    """Update user role (admin only function)"""
-    # If Supabase is not available, return demo mode message
-    if not supabase:
-        return False, "Role updates are unavailable in demo mode. Configure Supabase to enable this."
-    
-    try:
-        user_metadata = {'role': new_role}
-        if tutor_id:
-            user_metadata['tutor_id'] = tutor_id
-            
-        response = supabase.auth.admin.update_user_by_id(
-            user_id,
-            {"user_metadata": user_metadata}
-        )
-        
-        if response.user:
-            # Log admin action
-            log_admin_action(
-                action="UPDATE_USER_ROLE",
-                target_user_email="Unknown",  # We'll improve this later
-                details=f"Changed role to {new_role}, tutor_id: {tutor_id or 'None'}"
+def update_user_role(user_id, new_role, tutor_id=None, full_name=None, email=None):
+    """Update user role (admin only function) and keep CSV/session in sync."""
+    # Update Supabase if available
+    if supabase:
+        try:
+            user_metadata = {'role': new_role}
+            if tutor_id:
+                user_metadata['tutor_id'] = tutor_id
+            if full_name:
+                user_metadata['full_name'] = full_name
+            response = supabase.auth.admin.update_user_by_id(
+                user_id,
+                {"user_metadata": user_metadata}
             )
-            return True, "User role updated successfully."
-        else:
-            return False, "Failed to update user role."
-            
+            if not getattr(response, 'user', None):
+                return False, "Failed to update user role."
+        except Exception as e:
+            logger.error(f"Update user role error for {user_id}: {e}")
+            return False, "Unable to update user role at this time."
+
+    # Update local CSV users file
+    try:
+        if os.path.exists(USERS_FILE):
+            df = pd.read_csv(USERS_FILE)
+            if email:
+                mask = df['email'] == email
+            else:
+                mask = df['user_id'].astype(str) == str(user_id)
+            if mask.any():
+                df.loc[mask, 'role'] = new_role
+                if tutor_id is not None:
+                    if 'tutor_id' in df.columns:
+                        df.loc[mask, 'tutor_id'] = tutor_id
+                if full_name:
+                    if 'full_name' in df.columns:
+                        df.loc[mask, 'full_name'] = full_name
+                df.to_csv(USERS_FILE, index=False)
     except Exception as e:
-        logger.error(f"Update user role error for {user_id}: {e}")
-        return False, "Unable to update user role at this time."
+        logger.warning(f"Failed to update local users CSV for role change: {e}")
+
+    # If the target is the current session user, refresh session metadata
+    current = session.get('user')
+    if current and (current.get('email') == email or str(current.get('id')) == str(user_id)):
+        meta = current.get('user_metadata', {})
+        meta['role'] = new_role
+        if tutor_id is not None:
+            meta['tutor_id'] = tutor_id
+        if full_name:
+            meta['full_name'] = full_name
+        current['user_metadata'] = meta
+        session['user'] = current
+
+    # Log admin action
+    log_admin_action(
+        action="UPDATE_USER_ROLE",
+        target_user_email=email or "Unknown",
+        details=f"Changed role to {new_role}, tutor_id: {tutor_id or 'None'}"
+    )
+    return True, "User role updated successfully."
 
 def get_all_users():
     """Get all users (admin only function)"""
@@ -440,24 +512,48 @@ def get_all_users():
         return []
 
 def filter_data_by_role(df, user_role=None, user_tutor_id=None):
-    """Filter dataframe based on user role and permissions"""
-    if not user_role:
-        user_role = get_user_role()
-    if not user_tutor_id:
-        user_tutor_id = get_user_tutor_id()
-    
-    # Managers and admins see all data
-    if user_role in ['manager', 'admin']:
-        return df
-    
-    # Lead tutors see all data (can be restricted if needed)
-    if user_role == 'lead_tutor':
-        return df
-    
-    # Regular tutors only see their own data
-    if user_role == 'tutor' and user_tutor_id:
-        if 'tutor_id' in df.columns:
-            return df[df['tutor_id'].astype(str) == str(user_tutor_id)]
-    
-    # If no matching conditions, return empty dataframe
-    return df.iloc[0:0]  # Empty dataframe with same structure
+    """Filter dataframe based on user role and permissions (legacy function)"""
+    # Import the new permission system
+    try:
+        from permissions import filter_data_by_permissions
+        from permission_middleware import get_user_capabilities
+        
+        # Get current user context
+        user = get_current_user()
+        user_email = user.get('email') if user else None
+        
+        # Use the new permission-based filtering
+        return filter_data_by_permissions(df, user_role, user_tutor_id, user_email)
+    except ImportError:
+        # Fallback to original logic if new system not available
+        if not user_role:
+            user_role = get_user_role()
+        if not user_tutor_id:
+            user_tutor_id = get_user_tutor_id()
+        
+        # Managers and admins see all data
+        if user_role in ['manager', 'admin']:
+            return df
+        
+        # Lead tutors see all data (can be restricted if needed)
+        if user_role == 'lead_tutor':
+            return df
+        
+        # Regular tutors only see their own data
+        if user_role == 'tutor':
+            # Primary: filter by tutor_id when available
+            if user_tutor_id and 'tutor_id' in df.columns:
+                scoped = df[df['tutor_id'].astype(str) == str(user_tutor_id)]
+                if not scoped.empty:
+                    return scoped
+            # Fallback: filter by full_name matching
+            user = get_current_user()
+            full_name = None
+            if user and 'user_metadata' in user:
+                full_name = user['user_metadata'].get('full_name')
+            if full_name and 'tutor_name' in df.columns:
+                scoped = df[df['tutor_name'].astype(str).str.strip().str.lower() == full_name.strip().lower()]
+                return scoped
+        
+        # If no matching conditions, return empty dataframe
+        return df.iloc[0:0]  # Empty dataframe with same structure

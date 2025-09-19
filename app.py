@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, redirect, url_for, flash, session, send_from_directory, make_response, render_template
+from flask import Flask, request, jsonify, send_file, redirect, url_for, flash, session, send_from_directory, make_response, render_template, g
 import pandas as pd
 from datetime import datetime, timedelta
 import os
@@ -10,7 +10,9 @@ from email.mime.multipart import MIMEMultipart
 from analytics import TutorAnalytics
 import shifts
 import logging
-from auth import authenticate_user
+from auth import authenticate_user, role_required
+from permissions import Permission, PermissionManager, permission_required, permissions_required, role_required as new_role_required
+from permission_middleware import permission_context, api_permission_required, require_data_access, audit_permission_action, get_user_capabilities
 from auth_utils import USERS_FILE, hash_password
 import simplejson as sjson
 from supabase import create_client
@@ -27,6 +29,10 @@ app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
 # Register forecasting blueprint
 app.register_blueprint(forecasting_bp)
+
+# Initialize permission middleware
+from permission_middleware import init_permission_middleware
+init_permission_middleware(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -231,21 +237,21 @@ def charts_page():
     return send_from_directory('templates', 'charts.html')
 
 @app.route('/admin/users')
+@role_required('manager')
 def admin_users():
-    """Serve the users page for all roles (admin, manager, lead_tutor, tutor)"""
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('dashboard'))
-    return render_template('admin_users.html', user=user)
+    """Users management page – Manager/Admin only"""
+    return render_template('admin_users.html', user=get_current_user())
 
 @app.route('/admin/audit-logs')
+@role_required('manager')
 def admin_audit_logs():
-    """Serve the admin audit logs page"""
+    """Audit logs – Manager/Admin only"""
     return send_from_directory('templates', 'admin_audit_logs.html')
 
 @app.route('/admin/shifts')
+@role_required('lead_tutor')
 def admin_shifts():
-    """Serve the admin shifts page"""
+    """Shifts management – Lead Tutor and above"""
     return send_from_directory('templates', 'admin_shifts.html')
 
 @app.route('/calendar')
@@ -273,19 +279,29 @@ def api_user_info():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'Not authenticated'}), 401
-    
+    # Normalize session structure from auth.py (user_metadata)
+    meta = user.get('user_metadata', {}) if isinstance(user, dict) else {}
     return jsonify({
-        'user_id': user['user_id'],
-        'email': user['email'],
-        'full_name': user['full_name'],
-        'role': user['role']
+        'user_id': user.get('id') or user.get('user_id') or meta.get('user_id'),
+        'email': user.get('email'),
+        'full_name': meta.get('full_name') or user.get('full_name'),
+        'role': meta.get('role') or user.get('role'),
+        'tutor_id': meta.get('tutor_id')
     })
 
 @app.route('/api/dashboard-data')
 def api_dashboard_data():
     """Get dashboard data"""
     try:
+        from auth import filter_data_by_role, get_user_role, get_user_tutor_id
         analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        # Scope data to current user if needed
+        try:
+            role = get_user_role()
+            tid = get_user_tutor_id()
+            analytics.data = filter_data_by_role(analytics.data, role, tid)
+        except Exception:
+            pass
         # Get logs for collapsible view
         logs_for_collapsible_view = analytics.get_logs_for_collapsible_view()
         # Get summary data
@@ -320,42 +336,96 @@ def api_upcoming_shifts():
 # Admin API Endpoints
 
 @app.route('/api/admin/users')
+@permission_context
+@api_permission_required(Permission.VIEW_USERS)
 def api_admin_users():
-    """Get users list based on role:
-    - admin/manager: all users
-    - lead_tutor: all users (read-only)
-    - tutor: only their own info
+    """Get users list based on permissions:
+    - Users with VIEW_USERS permission can see users
+    - Lead tutors see all users (read-only)
+    - Regular tutors see only their own info
     """
-    user = get_current_user()
-    if not user:
-        return jsonify({'error': 'Unauthorized'}), 403
+    context = g.permission_context
     df = load_users()
     if 'password_hash' in df.columns:
         df = df.drop(columns=['password_hash'])
     for col in ['created_at', 'last_login']:
         if col in df.columns:
             df[col] = df[col].apply(lambda x: x.isoformat() if pd.notnull(x) else '')
-    if user['role'] in ['admin', 'manager', 'lead_tutor']:
+    
+    # Check if user can see all users or just their own
+    if PermissionManager.has_permission(context.role, Permission.VIEW_ALL_DATA):
         users = df.fillna('').to_dict(orient='records')
-        if user['role'] == 'lead_tutor':
-            # Add a flag to indicate read-only
+        # Add read-only flag for lead tutors
+        if context.role == 'lead_tutor':
             for u in users:
                 u['read_only'] = True
         return jsonify(users)
-    elif user['role'] == 'tutor':
-        user_row = df[df['email'] == user['email']]
+    else:
+        # Users can only see their own info
+        user_row = df[df['email'] == context.user['email']]
         if user_row.empty:
             return jsonify([])
         return jsonify(user_row.fillna('').to_dict(orient='records'))
-    else:
-        return jsonify({'error': 'Unauthorized'}), 403
+
+@app.route('/api/user/capabilities')
+@permission_context
+def api_user_capabilities():
+    """Get current user's capabilities and permissions"""
+    return jsonify(get_user_capabilities())
+
+@app.route('/permission-management')
+@permission_context
+@api_permission_required(Permission.VIEW_USERS)
+def permission_management():
+    """Permission management page"""
+    return render_template('permission_management.html')
+
+@app.route('/api/admin/audit-logs')
+@permission_context
+@api_permission_required(Permission.VIEW_AUDIT_LOGS)
+def api_audit_logs():
+    """Get audit logs"""
+    limit = request.args.get('limit', 100, type=int)
+    event_type = request.args.get('event_type')
+    user_email = request.args.get('user_email')
+    severity = request.args.get('severity')
+    
+    try:
+        from enhanced_audit import audit_logger, AuditEventType, AuditSeverity
+        
+        # Convert string parameters to enums if provided
+        event_type_enum = None
+        if event_type:
+            try:
+                event_type_enum = AuditEventType(event_type)
+            except ValueError:
+                pass
+        
+        severity_enum = None
+        if severity:
+            try:
+                severity_enum = AuditSeverity(severity)
+            except ValueError:
+                pass
+        
+        logs = audit_logger.get_audit_logs(
+            event_type=event_type_enum,
+            user_email=user_email,
+            severity=severity_enum,
+            limit=limit
+        )
+        
+        return jsonify(logs.to_dict('records'))
+    except Exception as e:
+        logger.error(f"Error retrieving audit logs: {e}")
+        return jsonify({'error': 'Failed to retrieve audit logs'}), 500
 
 @app.route('/api/admin/tutors')
+@permission_context
+@api_permission_required(Permission.MANAGE_SHIFTS)
 def api_admin_tutors():
     """Get all tutors for shift assignment (admin/manager only)"""
-    user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
-        return jsonify({'error': 'Unauthorized'}), 403
+    context = g.permission_context
     try:
         # Prefer Supabase users table if available
         if supabase:
@@ -556,11 +626,12 @@ def api_admin_delete_user():
     return jsonify({'message': 'User deleted successfully'})
 
 @app.route('/api/admin/change-role', methods=['POST'])
+@permission_context
+@api_permission_required(Permission.CHANGE_USER_ROLES)
+@audit_permission_action("CHANGE_USER_ROLE")
 def api_admin_change_role():
     """Change user role"""
-    user = get_current_user()
-    if not user or user['role'] not in ['admin', 'manager']:
-        return jsonify({'error': 'Unauthorized'}), 403
+    context = g.permission_context
     
     data = request.get_json()
     user_id = data.get('user_id')
@@ -796,6 +867,15 @@ def chart_data():
                 max_date_parsed = None
         else:
             max_date_parsed = None
+
+        # Role-based data scoping: Tutors see only their own records
+        try:
+            from auth import get_user_role, get_user_tutor_id, filter_data_by_role
+            scoped_role = get_user_role()
+            scoped_tutor_id = get_user_tutor_id()
+            df = filter_data_by_role(df, scoped_role, scoped_tutor_id)
+        except Exception as _e:
+            logger.warning(f"Role-based scoping failed, continuing unscoped: {_e}")
 
         # Parse other filter parameters
         tutor_ids_list = []
@@ -1433,11 +1513,39 @@ def api_profile_update():
         return jsonify({'error': 'Unauthorized'}), 401
     data = request.get_json()
     updated = False
-    # Update name
-    if 'full_name' in data and data['full_name'] != user['full_name']:
-        # Update in CSV and Supabase users table
-        # ... update logic ...
-        updated = True
+    # Update full_name in session and persistent storage
+    if 'full_name' in data and data['full_name']:
+        new_name = data['full_name'].strip()
+        if new_name and new_name != user.get('full_name', ''):
+            # Update in session
+            session_user = session.get('user', {})
+            if 'user_metadata' in session_user:
+                session_user['user_metadata']['full_name'] = new_name
+            session['user'] = session_user
+            updated = True
+            # Update in Supabase custom users table if available
+            try:
+                if supabase:
+                    supabase.table('users').update({'full_name': new_name}).eq('email', user['email']).execute()
+                    # Also update Supabase Auth user_metadata so next login has the new name
+                    try:
+                        user_id = session_user.get('id') or user.get('user_id')
+                        if user_id:
+                            supabase.auth.admin.update_user_by_id(user_id, {"user_metadata": {"full_name": new_name}})
+                    except Exception as e:
+                        logger.warning(f"Supabase Auth full_name update failed: {e}")
+            except Exception as e:
+                logger.warning(f"Supabase full_name update failed: {e}")
+            # Update in local CSV users file if present
+            try:
+                import pandas as pd
+                if os.path.exists(USERS_FILE):
+                    df = pd.read_csv(USERS_FILE)
+                    if 'email' in df.columns and 'full_name' in df.columns:
+                        df.loc[df['email'] == user['email'], 'full_name'] = new_name
+                        df.to_csv(USERS_FILE, index=False)
+            except Exception as e:
+                logger.warning(f"CSV full_name update failed: {e}")
     # Update password
     if 'password' in data and data['password']:
         # Update in Supabase Auth if enabled, else CSV
@@ -1445,8 +1553,14 @@ def api_profile_update():
         updated = True
     if updated:
         # Log audit
-        # ... audit log logic ...
-        return jsonify({'success': True})
+        try:
+            from analytics import analytics as _analytics
+            if _analytics:
+                _analytics.log_admin_action('update_profile', target_user_email=user['email'], details='Updated profile fields')
+        except Exception:
+            pass
+        # Return fresh session user so UI reflects immediately
+        return jsonify({'success': True, 'user': session.get('user')})
     return jsonify({'success': False, 'error': 'No changes'})
 
 @app.route('/api/dashboard-alerts')
@@ -1473,6 +1587,14 @@ def api_dashboard_alerts():
     today = datetime.now().date()
     # Filter logs for today - use check_in column instead of timestamp
     today_logs = face_log[pd.to_datetime(face_log['check_in']).dt.date == today]
+
+    # Scope dashboard alerts by role
+    current_user = get_current_user()
+    if current_user and current_user.get('user_metadata', {}).get('role') == 'tutor':
+        tutor_id = current_user.get('user_metadata', {}).get('tutor_id')
+        if tutor_id is not None:
+            today_logs = today_logs[today_logs['tutor_id'].astype(str) == str(tutor_id)]
+            assignments_df = assignments_df[assignments_df['tutor_id'].astype(str) == str(tutor_id)]
 
     # Only show relevant logs for non-admins
     if user['role'] not in ['admin', 'manager']:
@@ -1616,7 +1738,15 @@ def api_calendar_data():
     try:
         import calendar
         from datetime import datetime, timedelta
+        from auth import filter_data_by_role, get_user_role, get_user_tutor_id
         analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
+        # Apply role-based scoping to calendar data as well
+        try:
+            role = get_user_role()
+            tid = get_user_tutor_id()
+            analytics.data = filter_data_by_role(analytics.data, role, tid)
+        except Exception:
+            pass
         # Print first few check_in values for debugging
         logging.warning(f"First 5 check_in values: {analytics.data['check_in'].head().tolist()}")
         # Get current month and year
@@ -1631,10 +1761,18 @@ def api_calendar_data():
             end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
         else:
             end_date = datetime(year, month + 1, 1) - timedelta(days=1)
+        # Apply role scoping before monthly filter
+        from auth import filter_data_by_role, get_user_role, get_user_tutor_id
+        try:
+            role = get_user_role()
+            tid = get_user_tutor_id()
+            scoped_df = filter_data_by_role(analytics.data, role, tid)
+        except Exception:
+            scoped_df = analytics.data
         # Filter data for the month
-        month_data = analytics.data[
-            (analytics.data['check_in'] >= start_date) & 
-            (analytics.data['check_in'] <= end_date)
+        month_data = scoped_df[
+            (scoped_df['check_in'] >= start_date) & 
+            (scoped_df['check_in'] <= end_date)
         ]
         # Print number of rows after filtering
         logging.warning(f"Rows for {year}-{month:02d}: {len(month_data)}")
@@ -1739,7 +1877,11 @@ def api_calendar_day_details():
         analytics = TutorAnalytics(face_log_file='logs/face_log_with_expected.csv')
         
         # Filter data for the specific date
-        day_data = analytics.data[analytics.data['check_in'].dt.date == target_date]
+        from auth import filter_data_by_role, get_user_role, get_user_tutor_id
+        role = get_user_role()
+        tid = get_user_tutor_id()
+        scoped_df = filter_data_by_role(analytics.data, role, tid)
+        day_data = scoped_df[scoped_df['check_in'].dt.date == target_date]
         
         sessions = []
         for _, session in day_data.iterrows():

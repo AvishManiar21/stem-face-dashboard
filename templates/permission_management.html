@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permission Management - Tutor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .permission-card {
+            border-left: 4px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        .permission-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .permission-badge {
+            font-size: 0.8em;
+            padding: 0.25em 0.5em;
+        }
+        .role-hierarchy {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .capability-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .audit-log-entry {
+            border-left: 3px solid #dc3545;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+        }
+        .audit-log-entry.success {
+            border-left-color: #28a745;
+        }
+        .audit-log-entry.warning {
+            border-left-color: #ffc107;
+        }
+        .audit-log-entry.info {
+            border-left-color: #17a2b8;
+        }
+        .permission-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .permission-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="/">
+                            <i class="fas fa-shield-alt me-2"></i>Permission Management
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="/admin">Back to Admin</a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="container mt-4">
+            <!-- User Capabilities Overview -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-user-shield me-2"></i>Your Current Capabilities</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="userCapabilities">
+                                <div class="text-center">
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Hierarchy -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="role-hierarchy">
+                        <h4><i class="fas fa-sitemap me-2"></i>Role Hierarchy</h4>
+                        <div class="row">
+                            <div class="col-md-2 text-center">
+                                <div class="badge bg-light text-dark p-2">Tutor</div>
+                                <small>Level 1</small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <div class="badge bg-light text-dark p-2">Lead Tutor</div>
+                                <small>Level 2</small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <div class="badge bg-light text-dark p-2">Manager</div>
+                                <small>Level 3</small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <div class="badge bg-light text-dark p-2">Admin</div>
+                                <small>Level 4</small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <div class="badge bg-light text-dark p-2">Super Admin</div>
+                                <small>Level 5</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permission Management -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-key me-2"></i>Permission Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="capability-grid" id="permissionGrid">
+                                <!-- Permission cards will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-users me-2"></i>User Role Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="usersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Current Role</th>
+                                            <th>Permissions</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- User data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Log -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-clipboard-list me-2"></i>Recent Permission Events</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="auditLog">
+                                <div class="text-center">
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Change Modal -->
+    <div class="modal fade" id="roleChangeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change User Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="roleChangeForm">
+                        <input type="hidden" id="targetUserId">
+                        <div class="mb-3">
+                            <label for="newRole" class="form-label">New Role</label>
+                            <select class="form-select" id="newRole" required>
+                                <option value="tutor">Tutor</option>
+                                <option value="lead_tutor">Lead Tutor</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason for Change</label>
+                            <textarea class="form-control" id="reason" rows="3" placeholder="Please provide a reason for this role change"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="changeUserRole()">Change Role</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load user capabilities
+        async function loadUserCapabilities() {
+            try {
+                const response = await fetch('/api/user/capabilities');
+                const capabilities = await response.json();
+                
+                const container = document.getElementById('userCapabilities');
+                container.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6>Role</h6>
+                                <span class="badge bg-primary fs-6">${capabilities.role || 'Unknown'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6>Data Access</h6>
+                                <span class="badge bg-info fs-6">${capabilities.data_scope || 'None'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6>Permissions</h6>
+                                <span class="badge bg-success fs-6">${capabilities.permissions?.length || 0}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6>Capabilities</h6>
+                                <div class="d-flex flex-wrap justify-content-center gap-1">
+                                    ${Object.entries(capabilities.capabilities || {}).map(([key, value]) => 
+                                        `<span class="badge ${value ? 'bg-success' : 'bg-secondary'}">${key.replace('_', ' ')}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading user capabilities:', error);
+                document.getElementById('userCapabilities').innerHTML = 
+                    '<div class="alert alert-danger">Failed to load user capabilities</div>';
+            }
+        }
+
+        // Load permission grid
+        async function loadPermissionGrid() {
+            const permissions = [
+                { name: 'User Management', permissions: ['view_users', 'create_users', 'edit_users', 'delete_users'] },
+                { name: 'Data Access', permissions: ['view_all_data', 'view_team_data', 'view_own_data', 'export_data'] },
+                { name: 'Analytics', permissions: ['view_analytics', 'view_advanced_analytics', 'generate_reports'] },
+                { name: 'System Admin', permissions: ['manage_system_settings', 'view_audit_logs', 'manage_shifts'] },
+                { name: 'Face Recognition', permissions: ['manage_face_recognition', 'view_face_logs', 'manage_face_database'] }
+            ];
+
+            const container = document.getElementById('permissionGrid');
+            container.innerHTML = permissions.map(category => `
+                <div class="permission-card card">
+                    <div class="card-body">
+                        <h6 class="card-title">${category.name}</h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            ${category.permissions.map(perm => 
+                                `<span class="permission-badge badge bg-secondary">${perm.replace('_', ' ')}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load users table
+        async function loadUsersTable() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const users = await response.json();
+                
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>
+                            <div>
+                                <strong>${user.full_name || user.email}</strong><br>
+                                <small class="text-muted">${user.email}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">${user.role || 'tutor'}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">${user.permissions?.length || 0} permissions</small>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="openRoleChangeModal('${user.user_id}', '${user.role}')">
+                                <i class="fas fa-edit"></i> Change Role
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load audit log
+        async function loadAuditLog() {
+            try {
+                const response = await fetch('/api/admin/audit-logs?limit=10');
+                const logs = await response.json();
+                
+                const container = document.getElementById('auditLog');
+                if (logs.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No recent audit events</p>';
+                    return;
+                }
+                
+                container.innerHTML = logs.map(log => `
+                    <div class="audit-log-entry ${log.success ? 'success' : 'warning'}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>${log.event_type}</strong>
+                                <span class="badge bg-secondary ms-2">${log.severity}</span>
+                            </div>
+                            <small class="text-muted">${new Date(log.timestamp).toLocaleString()}</small>
+                        </div>
+                        <div class="mt-1">
+                            <small>User: ${log.user_email} | ${log.details || 'No details'}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading audit log:', error);
+                document.getElementById('auditLog').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load audit log</div>';
+            }
+        }
+
+        // Open role change modal
+        function openRoleChangeModal(userId, currentRole) {
+            document.getElementById('targetUserId').value = userId;
+            document.getElementById('newRole').value = currentRole;
+            new bootstrap.Modal(document.getElementById('roleChangeModal')).show();
+        }
+
+        // Change user role
+        async function changeUserRole() {
+            const userId = document.getElementById('targetUserId').value;
+            const newRole = document.getElementById('newRole').value;
+            const reason = document.getElementById('reason').value;
+            
+            try {
+                const response = await fetch('/api/admin/change-role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        role: newRole,
+                        reason: reason
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Role changed successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('roleChangeModal')).hide();
+                    loadUsersTable();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to change role'));
+                }
+            } catch (error) {
+                console.error('Error changing role:', error);
+                alert('Failed to change role');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserCapabilities();
+            loadPermissionGrid();
+            loadUsersTable();
+            loadAuditLog();
+        });
+    </script>
+</body>
+</html>

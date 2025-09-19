@@ -6,7 +6,7 @@ if (window.Chart && window.Chart.register && window.ChartZoom) {
 let tutorChart;
 
 function isDarkMode() {
-  return document.documentElement.classList.contains('dark-mode');
+  return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
 const chartOptions = {
@@ -50,8 +50,215 @@ const chartTitles = {
   session_duration_vs_checkin_hour: "Session Duration vs. Check-in Hour"
 };
 
+// Dark mode color schemes
+const darkModeColors = {
+  background: '#1e293b',
+  surface: '#334155',
+  primary: '#3b82f6',
+  secondary: '#64748b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#06b6d4',
+  text: '#f8fafc',
+  textSecondary: '#cbd5e1',
+  textMuted: '#94a3b8',
+  border: '#334155',
+  grid: '#475569'
+};
+
+const lightModeColors = {
+  background: '#ffffff',
+  surface: '#f8fafc',
+  primary: '#2563eb',
+  secondary: '#64748b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#06b6d4',
+  text: '#1e293b',
+  textSecondary: '#475569',
+  textMuted: '#64748b',
+  border: '#e2e8f0',
+  grid: '#f1f5f9'
+};
+
+function getChartColors() {
+  return isDarkMode() ? darkModeColors : lightModeColors;
+}
+
+function getChartColorPalette() {
+  const colors = getChartColors();
+  return [
+    colors.primary,
+    colors.success,
+    colors.warning,
+    colors.danger,
+    colors.info,
+    '#8b5cf6', // purple
+    '#f97316', // orange
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#ec4899', // pink
+    '#6366f1', // indigo
+    '#14b8a6', // teal
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#22c55e'  // green
+  ];
+}
+
 // Expose chartTitles to global scope
 window.chartTitles = chartTitles;
+
+// Function to update all existing charts with new theme colors
+function updateAllChartsForTheme() {
+  const colors = getChartColors();
+  
+  // Update Chart.js defaults
+  Chart.defaults.color = colors.text;
+  Chart.defaults.borderColor = colors.border;
+  
+  // Update all existing chart instances
+  Object.values(Chart.instances).forEach(chart => {
+    if (chart && chart.config) {
+      // Update scales
+      if (chart.config.options && chart.config.options.scales) {
+        const scales = chart.config.options.scales;
+        if (scales.x) {
+          if (scales.x.grid) scales.x.grid.color = colors.grid;
+          if (scales.x.ticks) scales.x.ticks.color = colors.textSecondary;
+          if (scales.x.border) scales.x.border.color = colors.border;
+        }
+        if (scales.y) {
+          if (scales.y.grid) scales.y.grid.color = colors.grid;
+          if (scales.y.ticks) scales.y.ticks.color = colors.textSecondary;
+          if (scales.y.border) scales.y.border.color = colors.border;
+        }
+      }
+      
+      // Update plugins
+      if (chart.config.options && chart.config.options.plugins) {
+        const plugins = chart.config.options.plugins;
+        if (plugins.legend && plugins.legend.labels) {
+          plugins.legend.labels.color = colors.text;
+        }
+        if (plugins.tooltip) {
+          plugins.tooltip.backgroundColor = colors.surface;
+          plugins.tooltip.titleColor = colors.text;
+          plugins.tooltip.bodyColor = colors.textSecondary;
+          plugins.tooltip.borderColor = colors.border;
+        }
+      }
+      
+      // Update chart background
+      if (chart.canvas) {
+        chart.canvas.style.backgroundColor = colors.background;
+      }
+      
+      chart.update('none');
+    }
+  });
+}
+
+// Listen for theme changes
+document.addEventListener('themeChanged', function(event) {
+  updateAllChartsForTheme();
+});
+
+// Get default chart configuration with theme support
+function getDefaultChartConfig() {
+  const colors = getChartColors();
+  
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: colors.text,
+          font: {
+            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            size: 12
+          }
+        }
+      },
+      tooltip: {
+        backgroundColor: colors.surface,
+        titleColor: colors.text,
+        bodyColor: colors.textSecondary,
+        borderColor: colors.border,
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true,
+        callbacks: {
+          title: function(context) {
+            return context[0].label;
+          },
+          label: function(context) {
+            return context.dataset.label + ': ' + context.parsed.y;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          color: colors.grid,
+          drawBorder: false
+        },
+        ticks: {
+          color: colors.textSecondary,
+          font: {
+            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            size: 11
+          }
+        },
+        border: {
+          color: colors.border
+        }
+      },
+      y: {
+        grid: {
+          color: colors.grid,
+          drawBorder: false
+        },
+        ticks: {
+          color: colors.textSecondary,
+          font: {
+            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            size: 11
+          }
+        },
+        border: {
+          color: colors.border
+        }
+      }
+    },
+    elements: {
+      point: {
+        borderWidth: 2,
+        hoverBorderWidth: 3
+      },
+      line: {
+        borderWidth: 2,
+        tension: 0.1
+      },
+      bar: {
+        borderWidth: 0,
+        borderRadius: 4
+      }
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index'
+    },
+    animation: {
+      duration: 750,
+      easing: 'easeInOutQuart'
+    }
+  };
+}
 
 function renderChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
   // Get current layout from global variable (defined in charts.html)
@@ -308,11 +515,12 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
       borderColor: isDarkMode() ? 'rgba(255, 159, 64, 1)' : 'rgba(0, 188, 212, 1)',
       pointRadius: 4
     }];
+    const defaultConfig = getDefaultChartConfig();
     tutorChart = new Chart(ctx, {
       type: 'scatter',
       data: { datasets: datasetsArray },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        ...defaultConfig,
         plugins: {
           zoom: {
             zoom: {
@@ -337,12 +545,12 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
   }
 
   // Create chart with zoom plugin enabled for all chart types
+  const defaultConfig = getDefaultChartConfig();
   tutorChart = new Chart(ctx, {
     type: chartType === 'area' ? 'line' : chartType,
     data: { labels: labels, datasets: datasetsArray },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...defaultConfig,
       plugins: {
         zoom: {
           zoom: {
@@ -494,12 +702,12 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
     tension: 0.4
   }];
   
+  const defaultConfig = getDefaultChartConfig();
   const chartInstance = new Chart(ctx, {
     type: chartType === 'area' ? 'line' : chartType,
     data: { labels: labels, datasets: datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...defaultConfig,
       scales: chartType === 'pie' ? {} : {
         x: { 
           ticks: { color: isDarkMode() ? '#f2f2f2' : '#111', font: { size: 10 } },
@@ -918,6 +1126,7 @@ function showPunctualityDetails(section) {
     const ctx = document.getElementById('punctualityChart');
     if (ctx) {
       if (window.punctualityChartInstance) window.punctualityChartInstance.destroy();
+      const defaultConfig = getDefaultChartConfig();
       window.punctualityChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -937,6 +1146,7 @@ function showPunctualityDetails(section) {
     if (trendCtx) {
       if (window.punctualityTrendChartInstance) window.punctualityTrendChartInstance.destroy();
       const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const defaultConfig = getDefaultChartConfig();
       window.punctualityTrendChartInstance = new Chart(trendCtx, {
         type: 'line',
         data: {
@@ -963,6 +1173,7 @@ function showPunctualityDetails(section) {
       if (window.punctualityDayTimeChartInstance) window.punctualityDayTimeChartInstance.destroy();
       const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
       const slots = ['Morning','Afternoon','Evening'];
+      const defaultConfig = getDefaultChartConfig();
       window.punctualityDayTimeChartInstance = new Chart(dayTimeCtx, {
         type: 'bar',
         data: {
@@ -995,6 +1206,7 @@ function showPunctualityDetails(section) {
       if (window.punctualityDeviationChartInstance) window.punctualityDeviationChartInstance.destroy();
       const devLabels = ['Early >15min', 'Early 5-15min', 'On Time ±5min', 'Late 5-15min', 'Late >15min'];
       const devData = devLabels.map(l => (punctualityData.deviation_distribution && punctualityData.deviation_distribution[l]) || 0);
+      const defaultConfig = getDefaultChartConfig();
       window.punctualityDeviationChartInstance = new Chart(devDistCtx, {
         type: 'bar',
         data: {

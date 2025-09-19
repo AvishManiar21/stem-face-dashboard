@@ -180,18 +180,43 @@ class ThemeSwitcher {
             
             // Update existing charts
             Object.values(Chart.instances).forEach(chart => {
-                if (chart.config.type === 'line' || chart.config.type === 'bar') {
-                    const scales = chart.config.options.scales;
-                    if (scales) {
-                        if (scales.x && scales.x.grid) {
-                            scales.x.grid.color = isDark ? '#334155' : '#e2e8f0';
+                if (chart && chart.config) {
+                    // Update scales
+                    if (chart.config.options && chart.config.options.scales) {
+                        const scales = chart.config.options.scales;
+                        if (scales.x) {
+                            if (scales.x.grid) scales.x.grid.color = isDark ? '#475569' : '#f1f5f9';
+                            if (scales.x.ticks) scales.x.ticks.color = isDark ? '#cbd5e1' : '#475569';
+                            if (scales.x.border) scales.x.border.color = isDark ? '#334155' : '#e2e8f0';
                         }
-                        if (scales.y && scales.y.grid) {
-                            scales.y.grid.color = isDark ? '#334155' : '#e2e8f0';
+                        if (scales.y) {
+                            if (scales.y.grid) scales.y.grid.color = isDark ? '#475569' : '#f1f5f9';
+                            if (scales.y.ticks) scales.y.ticks.color = isDark ? '#cbd5e1' : '#475569';
+                            if (scales.y.border) scales.y.border.color = isDark ? '#334155' : '#e2e8f0';
                         }
                     }
+                    
+                    // Update plugins
+                    if (chart.config.options && chart.config.options.plugins) {
+                        const plugins = chart.config.options.plugins;
+                        if (plugins.legend && plugins.legend.labels) {
+                            plugins.legend.labels.color = isDark ? '#f8fafc' : '#1e293b';
+                        }
+                        if (plugins.tooltip) {
+                            plugins.tooltip.backgroundColor = isDark ? '#334155' : '#f8fafc';
+                            plugins.tooltip.titleColor = isDark ? '#f8fafc' : '#1e293b';
+                            plugins.tooltip.bodyColor = isDark ? '#cbd5e1' : '#475569';
+                            plugins.tooltip.borderColor = isDark ? '#334155' : '#e2e8f0';
+                        }
+                    }
+                    
+                    // Update chart background
+                    if (chart.canvas) {
+                        chart.canvas.style.backgroundColor = 'transparent';
+                    }
+                    
+                    chart.update('none');
                 }
-                chart.update('none');
             });
         }
     }

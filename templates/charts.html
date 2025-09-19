@@ -13,6 +13,17 @@
   <style>
     /* ===== CHARTS PAGE THEME STYLING ===== */
     
+    /* Page Background */
+    body.charts-page {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    [data-theme="dark"] body.charts-page {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
     /* Form Controls - Enhanced Theme Support */
     .form-control, .form-select {
       background-color: var(--bg-card) !important;
@@ -267,15 +278,24 @@
       box-shadow: var(--shadow-sm);
       transition: all var(--transition-normal);
       overflow: hidden;
+      padding: 1rem;
     }
     
     .chart-container:hover {
       box-shadow: var(--shadow-md);
     }
     
-    .dark-mode .chart-container {
-      background: #2a2a2a;
-      border-color: #444;
+    .chart-container canvas {
+      background: transparent !important;
+    }
+    
+    [data-theme="dark"] .chart-container {
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .chart-container canvas {
+      background: transparent !important;
     }
     
     .chart-header {
@@ -404,11 +424,37 @@
     .punctuality-count { font-size: 0.9rem; opacity: 0.8; }
     
     /* Chart Enhancement */
-    .chart-container-enhanced { position: relative; background: #fff; border-radius: 0.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .dark-mode .chart-container-enhanced { background: #2a2a2a; }
-    .chart-header { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 1rem; border-radius: 0.5rem 0.5rem 0 0; }
-    .chart-controls { background: #f8f9fa; padding: 0.75rem; border-bottom: 1px solid #dee2e6; }
-    .dark-mode .chart-controls { background: #1a1a1a; border-bottom-color: #444; }
+    .chart-container-enhanced { 
+      position: relative; 
+      background: var(--bg-card); 
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); 
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    [data-theme="dark"] .chart-container-enhanced { 
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+    .chart-header { 
+      background: var(--bg-gradient-primary); 
+      color: var(--text-light); 
+      padding: 1rem; 
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .chart-controls { 
+      background: var(--bg-secondary); 
+      padding: 0.75rem; 
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .chart-controls { 
+      background: var(--bg-secondary);
+      border-bottom-color: var(--border-color);
+    }
     
     /* Animation Classes */
     .fade-in { animation: fadeIn 0.5s ease-in; }

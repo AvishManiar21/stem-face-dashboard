@@ -21,7 +21,7 @@
         <li class="nav-item"><a class="nav-link" href="/charts"> <i class="fas fa-chart-bar"></i> Charts</a></li>
         <li class="nav-item"><a class="nav-link" href="/calendar"> <i class="fas fa-calendar-alt"></i> Calendar</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/users"> <i class="fas fa-users-cog"></i> Users</a></li>
-        <li class="nav-item admin-only"><a class="nav-link" href="/admin/shifts"> <i class="fas fa-business-time"></i> Shifts</a></li>
+        <li class="nav-item lead-tutor-only"><a class="nav-link" href="/admin/shifts"> <i class="fas fa-business-time"></i> Shifts</a></li>
         <li class="nav-item admin-only"><a class="nav-link" href="/admin/audit-logs"> <i class="fas fa-history"></i> Audit Logs</a></li>
       </ul>
       <div class="dropdown" style="position: relative; z-index: 1050;">
@@ -77,16 +77,40 @@
         if (displayNameEl) displayNameEl.textContent = displayName;
         if (userEmailEl) userEmailEl.textContent = userEmail;
         
-        // Handle role-based visibility
-        if (user.role && user.role !== 'admin' && user.role !== 'manager') {
+        // Handle role-based visibility (progressive)
+        // Normalize role (case-insensitive, spaces -> underscores)
+        const role = ((user.role || 'tutor') + '').toLowerCase().replace(/\s+/g, '_');
+        // Admin-only visible only to admin
+        if (role !== 'admin') {
           document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
         }
-        if (user.role && user.role !== 'admin' && user.role !== 'manager') {
+        // Manager-only visible to manager and admin
+        if (role !== 'admin' && role !== 'manager') {
           document.querySelectorAll('.manager-only').forEach(el => el.style.display = 'none');
+        }
+        // Lead-tutor-only visible to lead_tutor, manager, admin
+        if (role !== 'admin' && role !== 'manager' && role !== 'lead_tutor') {
           document.querySelectorAll('.lead-tutor-only').forEach(el => el.style.display = 'none');
         }
-        if (user.role && (user.role === 'tutor' || user.role === 'lead_tutor')) {
-          document.querySelectorAll('.admin-only, .manager-only, .lead-tutor-only').forEach(el => el.style.display = 'none');
+
+        // If a pre-existing navbar didn't include the Shifts link, add it for eligible roles
+        if (role === 'lead_tutor' || role === 'manager' || role === 'admin') {
+          let existingShifts = document.querySelector('nav.navbar a.nav-link[href="/admin/shifts"]');
+          if (!existingShifts) {
+            const navList = document.querySelector('nav.navbar .navbar-nav') || document.querySelector('#navbarNav ul');
+            if (navList) {
+              const li = document.createElement('li');
+              li.className = 'nav-item';
+              li.innerHTML = '<a class="nav-link" href="/admin/shifts"> <i class="fas fa-business-time"></i> Shifts</a>';
+              navList.appendChild(li);
+              existingShifts = li.querySelector('a.nav-link');
+            }
+          }
+          // Ensure it is visible (in case of CSS display:none)
+          if (existingShifts) {
+            const li = existingShifts.closest('li');
+            if (li) li.style.display = '';
+          }
         }
       }
     })

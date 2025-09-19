@@ -43,9 +43,10 @@ class TutorForecasting:
             df['check_in'] = pd.to_datetime(df['check_in'], format='mixed', errors='coerce')
             df['check_out'] = pd.to_datetime(df['check_out'], format='mixed', errors='coerce')
             
-            # Filter to max_date if set
+            # Filter to max_date if set (align types to pandas Timestamp)
             if self.max_date is not None:
-                df = df[df['check_in'].dt.date <= self.max_date.date()]
+                cutoff = pd.to_datetime(self.max_date).normalize()
+                df = df[df['check_in'] <= cutoff]
             
             # Add derived columns
             df['date'] = df['check_in'].dt.date
@@ -263,11 +264,11 @@ class TutorForecasting:
         
         try:
             # Calculate last week and last month totals
-            last_week = (datetime.now() - timedelta(days=7)).date()
-            last_month = (datetime.now() - timedelta(days=30)).date()
+            last_week = pd.Timestamp.now() - pd.Timedelta(days=7)
+            last_month = pd.Timestamp.now() - pd.Timedelta(days=30)
             
-            last_week_data = self.data[self.data['date'] >= last_week]
-            last_month_data = self.data[self.data['date'] >= last_month]
+            last_week_data = self.data[self.data['check_in'] >= last_week]
+            last_month_data = self.data[self.data['check_in'] >= last_month]
             
             last_week_hours = last_week_data['shift_hours'].sum()
             last_month_hours = last_month_data['shift_hours'].sum()

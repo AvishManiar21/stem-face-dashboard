@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permission Example - Tutor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-home"></i> Dashboard
+                            </a>
+                        </li>
+                        
+                        <!-- Show user management only if user has permission -->
+                        {% if 'view_users' in g.user_permissions %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/users">
+                                <i class="fas fa-user-cog"></i> User Management
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Show group management only if user is group lead -->
+                        {% if g.user_groups %}
+                        {% set is_group_lead = g.user_groups | selectattr('lead_user_id', 'equalto', user.id) | list %}
+                        {% if is_group_lead or user.role in ['admin', 'manager'] %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/groups/">
+                                <i class="fas fa-users"></i> Group Management
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
+                        
+                        <!-- Show analytics based on permission level -->
+                        {% if 'view_analytics' in g.user_permissions %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/analytics">
+                                <i class="fas fa-chart-bar"></i> Analytics
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Show advanced analytics only if user has permission -->
+                        {% if 'view_advanced_analytics' in g.user_permissions %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/advanced-analytics">
+                                <i class="fas fa-chart-line"></i> Advanced Analytics
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Show system settings only for admins -->
+                        {% if 'manage_system_settings' in g.user_permissions %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/settings">
+                                <i class="fas fa-cog"></i> System Settings
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Permission Example Page</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <!-- Show different action buttons based on permissions -->
+                        {% if 'create_users' in g.user_permissions %}
+                        <button type="button" class="btn btn-primary me-2">
+                            <i class="fas fa-plus"></i> Create User
+                        </button>
+                        {% endif %}
+                        
+                        {% if 'export_data' in g.user_permissions %}
+                        <button type="button" class="btn btn-success me-2">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                        {% endif %}
+                        
+                        {% if 'manage_system_settings' in g.user_permissions %}
+                        <button type="button" class="btn btn-warning">
+                            <i class="fas fa-cog"></i> Settings
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- User Info Section -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">User Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Name:</strong> {{ user.full_name or 'N/A' }}</p>
+                                <p><strong>Email:</strong> {{ user.email }}</p>
+                                <p><strong>Role:</strong> 
+                                    <span class="badge bg-primary">{{ user.role.title() }}</span>
+                                </p>
+                                
+                                <!-- Show groups if user has any -->
+                                {% if g.user_groups %}
+                                <p><strong>Groups:</strong></p>
+                                <ul class="list-unstyled">
+                                    {% for group in g.user_groups %}
+                                    <li>
+                                        <span class="badge bg-info me-1">{{ group.name }}</span>
+                                        {% if group.lead_user_id == user.id %}
+                                        <span class="badge bg-warning">Lead</span>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Permissions</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if g.user_permissions %}
+                                <div class="row">
+                                    {% for permission in g.user_permissions %}
+                                    <div class="col-md-6 mb-1">
+                                        <span class="badge bg-success">{{ permission }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-muted">No permissions assigned</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Access Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Data Access</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Basic data access -->
+                                    {% if 'view_own_data' in g.user_permissions %}
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-user fa-2x text-primary mb-2"></i>
+                                                <h6>Own Data</h6>
+                                                <p class="text-muted">View your own data</p>
+                                                <button class="btn btn-sm btn-outline-primary">View</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Team data access -->
+                                    {% if 'view_team_data' in g.user_permissions %}
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-users fa-2x text-info mb-2"></i>
+                                                <h6>Team Data</h6>
+                                                <p class="text-muted">View team data</p>
+                                                <button class="btn btn-sm btn-outline-info">View</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- All data access -->
+                                    {% if 'view_all_data' in g.user_permissions %}
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-database fa-2x text-success mb-2"></i>
+                                                <h6>All Data</h6>
+                                                <p class="text-muted">View all system data</p>
+                                                <button class="btn btn-sm btn-outline-success">View</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                {% if 'view_analytics' in g.user_permissions %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Analytics</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Basic analytics -->
+                                    <div class="col-md-6">
+                                        <h6>Basic Analytics</h6>
+                                        <p class="text-muted">Standard analytics and reports</p>
+                                        <button class="btn btn-primary">View Analytics</button>
+                                    </div>
+                                    
+                                    <!-- Advanced analytics -->
+                                    {% if 'view_advanced_analytics' in g.user_permissions %}
+                                    <div class="col-md-6">
+                                        <h6>Advanced Analytics</h6>
+                                        <p class="text-muted">Advanced analytics and insights</p>
+                                        <button class="btn btn-warning">View Advanced</button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Export functionality -->
+                                {% if 'export_data' in g.user_permissions %}
+                                <hr>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6>Data Export</h6>
+                                        <p class="text-muted">Export data in various formats</p>
+                                        <div class="btn-group">
+                                            <button class="btn btn-success">Export CSV</button>
+                                            <button class="btn btn-success">Export Excel</button>
+                                            <button class="btn btn-success">Export PDF</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- User Management Section -->
+                {% if 'view_users' in g.user_permissions %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">User Management</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <h6>View Users</h6>
+                                        <p class="text-muted">Browse all users</p>
+                                        <button class="btn btn-info">View Users</button>
+                                    </div>
+                                    
+                                    {% if 'create_users' in g.user_permissions %}
+                                    <div class="col-md-3">
+                                        <h6>Create User</h6>
+                                        <p class="text-muted">Add new users</p>
+                                        <button class="btn btn-primary">Create User</button>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if 'edit_users' in g.user_permissions %}
+                                    <div class="col-md-3">
+                                        <h6>Edit Users</h6>
+                                        <p class="text-muted">Modify user information</p>
+                                        <button class="btn btn-warning">Edit Users</button>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if 'delete_users' in g.user_permissions %}
+                                    <div class="col-md-3">
+                                        <h6>Delete Users</h6>
+                                        <p class="text-muted">Remove users from system</p>
+                                        <button class="btn btn-danger">Delete Users</button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- System Administration Section -->
+                {% if 'manage_system_settings' in g.user_permissions %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">System Administration</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6>System Settings</h6>
+                                        <p class="text-muted">Configure system parameters</p>
+                                        <button class="btn btn-warning">Settings</button>
+                                    </div>
+                                    
+                                    {% if 'view_audit_logs' in g.user_permissions %}
+                                    <div class="col-md-4">
+                                        <h6>Audit Logs</h6>
+                                        <p class="text-muted">View system audit logs</p>
+                                        <button class="btn btn-info">View Logs</button>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="col-md-4">
+                                        <h6>System Status</h6>
+                                        <p class="text-muted">Monitor system health</p>
+                                        <button class="btn btn-success">Status</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Group-specific content -->
+                {% if g.user_groups %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Group Information</h5>
+                            </div>
+                            <div class="card-body">
+                                {% for group in g.user_groups %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6>{{ group.name }}</h6>
+                                        <p class="text-muted">{{ group.description or 'No description' }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <i class="fas fa-users"></i> {{ group.member_count }} members
+                                            </small>
+                                            {% if group.lead_user_id == user.id %}
+                                            <span class="badge bg-warning">You are the lead</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
