@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Settings - STEM Tutor Scheduling</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-bg: #1e293b;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .settings-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .settings-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .settings-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .settings-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .settings-header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }
+
+        .settings-body {
+            padding: 2rem;
+        }
+
+        .feature-toggle {
+            background: #f8fafc;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-toggle:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+
+        .feature-toggle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .feature-description {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: 0.3s;
+            border-radius: 30px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.toggle-slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked+.toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-enabled {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-disabled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #64748b;
+            border: 2px solid var(--border-color);
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel:hover {
+            border-color: #94a3b8;
+            color: #475569;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="settings-container">
+        <a href="{{ url_for('admin.dashboard') }}" class="back-link">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="settings-card">
+            <div class="settings-header">
+                <h1><i class="bi bi-gear-fill"></i> System Settings</h1>
+                <p>Manage feature toggles and system configuration</p>
+            </div>
+
+            <div class="settings-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <div id="feature-toggles">
+                    {% for feature_name, feature_data in features.items() %}
+                    <div class="feature-toggle" data-feature="{{ feature_name }}">
+                        <div class="feature-toggle-header">
+                            <div>
+                                <div class="feature-name">
+                                    <i
+                                        class="bi bi-{{ 'check-circle-fill' if feature_data.enabled else 'x-circle-fill' }}"></i>
+                                    {{ feature_name.replace('_', ' ').title() }}
+                                </div>
+                                <span
+                                    class="status-badge status-{{ 'enabled' if feature_data.enabled else 'disabled' }}">
+                                    {{ 'Enabled' if feature_data.enabled else 'Disabled' }}
+                                </span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="feature-checkbox" data-feature="{{ feature_name }}"
+                                    {{ 'checked' if feature_data.enabled else '' }}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="feature-description">
+                            {{ feature_data.description }}
+                        </div>
+                        <div class="feature-meta">
+                            <span><i class="bi bi-clock"></i> Last updated: {{ feature_data.last_updated }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="btn-save" id="saveButton">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                    <button type="button" class="btn-cancel" onclick="window.location.reload()">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Debug on load
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkboxes = document.querySelectorAll('.feature-checkbox');
+            console.log('DEBUG: Page loaded, found checkboxes:', checkboxes.length);
+            checkboxes.forEach(cb => console.log('DEBUG: Found checkbox for:', cb.dataset.feature));
+        });
+
+        document.getElementById('saveButton').addEventListener('click', async function () {
+            const button = this;
+            const originalText = button.innerHTML;
+
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+
+            // Collect all feature states
+            const features = {};
+            // Try multiple selectors to be safe
+            const checkboxes = document.querySelectorAll('.feature-checkbox, input[type="checkbox"][data-feature]');
+            console.log('DEBUG: Save clicked, found checkboxes:', checkboxes.length);
+
+            checkboxes.forEach(checkbox => {
+                features[checkbox.dataset.feature] = checkbox.checked;
+                console.log(`DEBUG: Setting ${checkbox.dataset.feature} = ${checkbox.checked}`);
+            });
+
+            console.log('DEBUG: Sending features payload:', features);
+
+            if (Object.keys(features).length === 0) {
+                alert('No features found to save!');
+                button.innerHTML = originalText;
+                button.disabled = false;
+                return;
+            }
+
+            try {
+                const response = await fetch('{{ url_for("admin.save_settings") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(features)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success message
+                    button.innerHTML = '<i class="bi bi-check-circle-fill"></i> Saved!';
+                    button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+
+                    // Show alert
+                    showAlert('success', 'Settings saved successfully! Some changes may require a server restart.');
+
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.background = '';
+                        button.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Failed to save settings');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('danger', 'Error saving settings: ' + error.message);
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        });
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const container = document.querySelector('.settings-body');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Update status badges when toggles change
+        document.querySelectorAll('.feature-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const toggle = this.closest('.feature-toggle');
+                const badge = toggle.querySelector('.status-badge');
+                const icon = toggle.querySelector('.bi');
+
+                if (this.checked) {
+                    badge.textContent = 'Enabled';
+                    badge.className = 'status-badge status-enabled';
+                    icon.className = 'bi bi-check-circle-fill';
+                } else {
+                    badge.textContent = 'Disabled';
+                    badge.className = 'status-badge status-disabled';
+                    icon.className = 'bi bi-x-circle-fill';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,2568 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>≡ƒôè Tutor Analytics</title>
+  <link rel="icon" href="/static/snapshots/2192067.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/global.css">
+  <script src="/static/js/theme-switcher.js"></script>
+  <script src="/static/js/error_handler.js"></script>
+  <style>
+    /* ===== CHARTS PAGE THEME STYLING ===== */
+    
+    /* Page Background */
+    body.charts-page {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    [data-theme="dark"] body.charts-page {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    /* Form Controls - Enhanced Theme Support */
+    .form-control, .form-select {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-color) !important;
+      transition: all var(--transition-normal) !important;
+    }
+    
+    .form-control::placeholder, .form-select::placeholder {
+      color: var(--text-muted) !important;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-focus) !important;
+      box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25) !important;
+    }
+    
+    /* Filter Chips - Enhanced Styling */
+    .filter-chip {
+      display: inline-block;
+      padding: 0.4em 0.8em;
+      font-size: 0.85em;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      font-weight: var(--font-medium);
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .filter-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      border-color: var(--primary-color);
+    }
+    
+    .dark-mode .filter-chip {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+      border-color: #555;
+      color: #ccc;
+    }
+    
+    .dark-mode .filter-chip:hover {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+    }
+    
+    /* Range Slider Group */
+    .range-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .range-slider-group input[type="range"] {
+      flex-grow: 1;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--border-light);
+      outline: none;
+      transition: all var(--transition-normal);
+    }
+    
+    .range-slider-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-full);
+      background: var(--primary-color);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .range-slider-group input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .range-value-display {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+      min-width: 3rem;
+      text-align: center;
+    }
+    
+    /* Tutor Chips - Enhanced Styling */
+    .tutor-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.4rem 0.8rem;
+      margin: 0.2rem;
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      border-radius: var(--radius-lg);
+      font-size: 0.85rem;
+      font-weight: var(--font-medium);
+      box-shadow: var(--shadow-xs);
+      transition: all var(--transition-normal);
+    }
+    
+    .tutor-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .tutor-chip .remove-btn {
+      margin-left: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      opacity: 0.8;
+      transition: all var(--transition-fast);
+    }
+    
+    .tutor-chip .remove-btn:hover {
+      opacity: 1;
+      color: #ffcccc;
+      transform: scale(1.1);
+    }
+    
+    /* Dropdown Styling */
+    .dropdown-item.tutor-option {
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-radius: var(--radius-sm);
+      margin: 0.1rem;
+    }
+    
+    .dropdown-item.tutor-option:hover {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      transform: translateX(4px);
+    }
+    
+    .dark-mode .dropdown-item.tutor-option:hover {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+    }
+    
+    /* Advanced Filters Section - Enhanced */
+    .advanced-filters-section {
+      border-left: 4px solid var(--primary-color);
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .dark-mode .advanced-filters-section {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      border-left-color: var(--primary-light);
+    }
+    
+    .filter-section-header {
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.5rem;
+      font-size: var(--font-size-lg);
+    }
+    
+    .dark-mode .filter-section-header {
+      color: var(--text-primary);
+      border-bottom-color: #444;
+    }
+    
+    .advanced-filter-toggle {
+      transition: all var(--transition-normal);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .advanced-filter-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Metrics Summary - Enhanced */
+    .metrics-summary {
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    .dark-mode .metrics-summary {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+      border-color: #444;
+    }
+    
+    .metric-card {
+      transition: all var(--transition-normal);
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-color);
+    }
+    
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: var(--font-bold);
+      color: var(--text-primary);
+      line-height: var(--leading-tight);
+    }
+    
+    .metric-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: var(--font-medium);
+    }
+    
+    .dark-mode .metric-label {
+      color: var(--text-muted);
+    }
+    
+    .metric-trend {
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-semibold);
+    }
+    
+    .trend-up {
+      color: var(--success-color);
+    }
+    
+    .trend-down {
+      color: var(--danger-color);
+    }
+    
+    /* Chart Container Styling */
+    .chart-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+      overflow: hidden;
+      padding: 1rem;
+    }
+    
+    .chart-container:hover {
+      box-shadow: var(--shadow-md);
+    }
+    
+    .chart-container canvas {
+      background: transparent !important;
+    }
+    
+    [data-theme="dark"] .chart-container {
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .chart-container canvas {
+      background: transparent !important;
+    }
+    
+    .chart-header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+    }
+    
+    .dark-mode .chart-header {
+      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+      border-bottom-color: #444;
+    }
+    
+    .chart-title {
+      color: var(--text-primary);
+      font-weight: var(--font-semibold);
+      font-size: var(--font-size-lg);
+      margin: 0;
+    }
+    
+    .chart-body {
+      padding: 1.5rem;
+      background: var(--bg-card);
+    }
+    
+    .dark-mode .chart-body {
+      background: #2a2a2a;
+    }
+    
+    /* Comparison Mode Styling */
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    
+    .comparison-chart {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    
+    .dark-mode .comparison-chart {
+      background: #2a2a2a;
+      border-color: #444;
+    }
+    
+    .comparison-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: var(--text-light);
+      padding: 0.75rem 1rem;
+      font-weight: var(--font-semibold);
+      text-align: center;
+    }
+    
+    .comparison-body {
+      padding: 1rem;
+    }
+    
+    /* Loading States */
+    .chart-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+    
+    .dark-mode .chart-loading {
+      background: #2a2a2a;
+      border-color: #444;
+    }
+    
+    .loading-spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid var(--border-light);
+      border-top: 3px solid var(--primary-color);
+      border-radius: var(--radius-full);
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .comparison-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .chart-header {
+        padding: 0.75rem 1rem;
+      }
+      
+      .chart-body {
+        padding: 1rem;
+      }
+      
+      .metric-value {
+        font-size: 1.5rem;
+      }
+    }
+    .trend-neutral { color: #6c757d; }
+    
+    /* Punctuality Section Styling */
+    .punctuality-section { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.5rem; }
+    .dark-mode .punctuality-section { background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); }
+    .punctuality-card { border-radius: 0.5rem; transition: all 0.3s ease; }
+    .punctuality-card:hover { transform: scale(1.02); }
+    .punctuality-early { background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left: 4px solid #28a745; }
+    .punctuality-ontime { background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-left: 4px solid #17a2b8; }
+    .punctuality-late { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-left: 4px solid #dc3545; }
+    .dark-mode .punctuality-early { background: linear-gradient(135deg, #1e3a2e 0%, #155724 100%); }
+    .dark-mode .punctuality-ontime { background: linear-gradient(135deg, #1e3a3a 0%, #117a8b 100%); }
+    .dark-mode .punctuality-late { background: linear-gradient(135deg, #3a1e1e 0%, #721c24 100%); }
+    .punctuality-percentage { font-size: 2rem; font-weight: 800; }
+    .punctuality-count { font-size: 0.9rem; opacity: 0.8; }
+    
+    /* Chart Enhancement */
+    .chart-container-enhanced { 
+      position: relative; 
+      background: var(--bg-card); 
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); 
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+    
+    [data-theme="dark"] .chart-container-enhanced { 
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+    .chart-header { 
+      background: var(--bg-gradient-primary); 
+      color: var(--text-light); 
+      padding: 1rem; 
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .chart-controls { 
+      background: var(--bg-secondary); 
+      padding: 0.75rem; 
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .chart-controls { 
+      background: var(--bg-secondary);
+      border-bottom-color: var(--border-color);
+    }
+    
+    /* Animation Classes */
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-in { animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    
+    /* Responsive Enhancements */
+    @media (max-width: 768px) {
+      .metric-card { margin-bottom: 1rem; }
+      .punctuality-card { margin-bottom: 0.75rem; }
+      .advanced-filters-section { margin-top: 1rem; }
+    }
+  </style>
+</head>
+<body class="charts-page">
+<script src="/static/js/admin_navbar.js"></script>
+
+<div class="container py-4">
+  <div class="analytics-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <a href="/" class="action-btn">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </a>
+      <h2 class="text-gradient fw-bold text-center flex-grow-1 mb-0">≡ƒôè Tutor Check-In Analytics</h2>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loadingIndicator" class="alert alert-info text-center" style="display: none;">
+    <i class="fas fa-spinner fa-spin me-2"></i>
+    Loading chart data...
+  </div>
+
+  <!-- Enhanced Filter Controls -->
+  <div class="card mb-4 shadow-sm fade-in" style="overflow: visible;">
+    <div class="chart-header">
+      <h6 class="chart-title"><i class="fas fa-filter me-2"></i>Analytics Controls & Filters</h6>
+    </div>
+    <div class="card-body" style="overflow: visible;">
+      <form id="filterForm">
+        <!-- Primary Filters Row -->
+        <div class="row g-3 mb-3">
+          <div class="col-lg-3 col-md-6">
+            <label for="tutor_id" class="form-label fw-semibold">
+              <i class="fas fa-users me-1"></i>Select Tutors
+            </label>
+            <div class="dropdown" style="position: relative; z-index: 1050;">
+              <input type="text" name="tutor_id" id="tutor_id" class="form-control" placeholder="Search and select tutors..." autocomplete="off" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="dropdown-menu w-100" id="tutorDropdown" style="max-height: 200px; overflow-y: auto; z-index: 1051; position: absolute; left: 0; right: 0;">
+                <div class="px-2 py-1 text-muted small">Loading tutors...</div>
+              </div>
+            </div>
+            <div id="selectedTutors" class="mt-2"></div>
+          </div>
+          
+          <div class="col-lg-2 col-md-3 col-sm-6">
+            <label for="start_date" class="form-label fw-semibold">
+              <i class="fas fa-calendar-alt me-1"></i>Start Date
+            </label>
+            <input type="date" name="start_date" id="start_date" class="form-control">
+          </div>
+          
+          <div class="col-lg-2 col-md-3 col-sm-6">
+            <label for="end_date" class="form-label fw-semibold">
+              <i class="fas fa-calendar-alt me-1"></i>End Date
+            </label>
+            <input type="date" name="end_date" id="end_date" class="form-control">
+          </div>
+          
+          <div class="col-lg-2 col-md-3 col-sm-6">
+            <label for="duration" class="form-label fw-semibold">
+              <i class="fas fa-clock me-1"></i>Duration
+            </label>
+            <select name="duration" id="duration" class="form-select">
+              <option value="">All Durations</option>
+              <option value="<1">< 1 hour</option>
+              <option value="1-2">1ΓÇô2 hours</option>
+              <option value="2-4">2ΓÇô4 hours</option>
+              <option value="4+">4+ hours</option>
+            </select>
+          </div>
+          
+          <div class="col-lg-3 col-md-3 col-sm-6">
+            <label for="day_type" class="form-label fw-semibold">
+              <i class="fas fa-calendar-week me-1"></i>Day Type
+            </label>
+            <select name="day_type" id="day_type" class="form-select">
+              <option value="">All Days</option>
+              <option value="weekday">Weekdays</option>
+              <option value="weekend">Weekends</option>
+              <option value="monday">Monday</option>
+              <option value="tuesday">Tuesday</option>
+              <option value="wednesday">Wednesday</option>
+              <option value="thursday">Thursday</option>
+              <option value="friday">Friday</option>
+              <option value="saturday">Saturday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Chart Configuration Row -->
+        <div class="row g-3 mb-3">
+          <div class="col-lg-4 col-md-6">
+            <label for="dataset" class="form-label fw-semibold">
+              <i class="fas fa-chart-bar me-1"></i>Dataset
+            </label>
+            <select name="dataset" id="dataset" class="form-select">
+              <optgroup label="Tutor Performance">
+                <option value="checkins_per_tutor">Check-ins per Tutor</option>
+                <option value="hours_per_tutor">Hours per Tutor</option>
+                <option value="avg_session_duration_per_tutor">Avg Session Duration per Tutor</option>
+                <option value="tutor_consistency_score">Tutor Consistency Score</option>
+              </optgroup>
+              <optgroup label="Time Analysis">
+                <option value="daily_checkins">Daily Check-ins</option>
+                <option value="daily_hours">Daily Hours</option>
+                <option value="hourly_checkins_dist">Hourly Distribution</option>
+                <option value="monthly_hours">Monthly Hours</option>
+                <option value="avg_hours_per_day_of_week">Avg Hours by Day of Week</option>
+                <option value="checkins_per_day_of_week">Check-ins by Day of Week</option>
+              </optgroup>
+              <optgroup label="Patterns">
+                <option value="cumulative_checkins">Cumulative Check-ins</option>
+                <option value="cumulative_hours">Cumulative Hours</option>
+                <option value="hourly_activity_by_day">Hourly Activity Heatmap</option>
+                <!-- <option value="punctuality_analysis">Punctuality Analysis</option> -->
+                <option value="session_duration_distribution">Session Duration Distribution</option>
+              </optgroup>
+            </select>
+          </div>
+          
+          <div class="col-lg-2 col-md-3 col-sm-6">
+            <label for="chartTypeSelect" class="form-label fw-semibold">
+              <i class="fas fa-chart-pie me-1"></i>Chart Type
+            </label>
+            <select name="chartTypeSelect" id="chartTypeSelect" class="form-select"></select>
+          </div>
+          
+          <div class="col-lg-3 col-md-6">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-clock me-1"></i>Check-In Hour Range
+            </label>
+            <div class="range-slider-group">
+              <div class="d-flex align-items-center gap-2">
+                <input type="range" name="shift_start_hour" id="shift_start_hour" class="form-range" min="0" max="23" value="0">
+                <span class="badge bg-secondary" id="shiftStartTimeDisplay">00:00</span>
+                <span class="text-muted">to</span>
+                <input type="range" name="shift_end_hour" id="shift_end_hour" class="form-range" min="0" max="23" value="23">
+                <span class="badge bg-secondary" id="shiftEndTimeDisplay">23:00</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-lg-3 col-md-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-layer-group me-1"></i>Analysis Mode
+            </label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="analysisMode" id="singleMode" value="single" checked>
+              <label class="btn btn-outline-primary" for="singleMode">Single</label>
+              
+              <input type="radio" class="btn-check" name="analysisMode" id="comparisonMode" value="comparison">
+              <label class="btn btn-outline-primary" for="comparisonMode">Compare</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-chart-line me-1"></i>Generate Chart
+              </button>
+              <button type="button" id="resetBtn" class="btn btn-outline-secondary">
+                <i class="fas fa-undo me-1"></i>Reset
+              </button>
+              
+              <!-- Quick Date Ranges -->
+              <div class="btn-group" style="position: relative; z-index: 1050;">
+                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-calendar-alt me-1"></i>Quick Ranges
+                </button>
+                <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 180px;">
+                  <li><button type="button" id="todayBtn" class="dropdown-item">Today</button></li>
+                  <li><button type="button" id="thisWeekBtn" class="dropdown-item">This Week</button></li>
+                  <li><button type="button" id="thisMonthBtn" class="dropdown-item">This Month</button></li>
+                  <li><button type="button" id="last7DaysBtn" class="dropdown-item">Last 7 Days</button></li>
+                  <li><button type="button" id="last30DaysBtn" class="dropdown-item">Last 30 Days</button></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button type="button" id="lastQuarterBtn" class="dropdown-item">Last Quarter</button></li>
+                  <li><button type="button" id="thisYearBtn" class="dropdown-item">This Year</button></li>
+                </ul>
+              </div>
+              
+              <!-- Export Options -->
+              <div class="btn-group" style="position: relative; z-index: 1050;">
+                <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
+                  <li><button type="button" class="dropdown-item" onclick="downloadChartImage()">
+                    <i class="fas fa-image me-2"></i>Chart as PNG
+                  </button></li>
+                  <li><button type="button" id="exportChartCSVBtn" class="dropdown-item">
+                    <i class="fas fa-file-csv me-2"></i>Chart Data CSV
+                  </button></li>
+                  <li><button type="button" id="exportChartUnderlyingRawDataCsvBtn" class="dropdown-item">
+                    <i class="fas fa-table me-2"></i>Raw Data CSV
+                  </button></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button type="button" id="exportFiltersLinkBtn" class="dropdown-item">
+                    <i class="fas fa-link me-2"></i>Share Filters Link
+                  </button></li>
+                </ul>
+              </div>
+              
+              <button type="button" class="btn btn-dark ms-auto" id="themeToggleBtn" onclick="toggleTheme()">
+                <i class="fas fa-moon me-1"></i>Dark Mode
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Advanced Filters & Comparison Section -->
+  <div class="card mb-4 advanced-filters-section fade-in">
+    <div class="card-header bg-gradient">
+      <button class="btn btn-link text-decoration-none p-0 w-100 text-start advanced-filter-toggle text-white" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false">
+        <i class="fas fa-sliders-h me-2"></i>
+        <strong>Advanced Filters & Comparison Tools</strong>
+        <i class="fas fa-chevron-down float-end mt-1"></i>
+      </button>
+    </div>
+    <div class="collapse" id="advancedFilters">
+      <div class="card-body">
+        <!-- Comparison Mode Section -->
+        <div id="comparisonSection" class="mb-4" style="display: none;">
+          <div class="alert alert-info">
+            <h6 class="alert-heading"><i class="fas fa-layer-group me-2"></i>Comparison Mode</h6>
+            <p class="mb-2">Compare data across different time periods, tutors, or conditions.</p>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Comparison Type</label>
+                <select id="comparisonType" class="form-select" onchange="toggleComparisonInputs()">
+                  <option value="time_periods">Time Periods</option>
+                  <option value="tutors">Tutors</option>
+                  <option value="day_types">Day Types</option>
+                  <option value="duration_ranges">Duration Ranges</option>
+                </select>
+              </div>
+              
+              <!-- Time Periods Inputs -->
+              <div id="timePeriodInputs" class="col-md-8">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                <label class="form-label fw-semibold">Period 1 (Primary)</label>
+                <div class="input-group">
+                      <input type="date" id="period1Start" class="form-control" placeholder="Start date">
+                  <span class="input-group-text">to</span>
+                      <input type="date" id="period1End" class="form-control" placeholder="End date">
+                </div>
+              </div>
+                  <div class="col-md-6">
+                <label class="form-label fw-semibold">Period 2 (Compare)</label>
+                <div class="input-group">
+                      <input type="date" id="period2Start" class="form-control" placeholder="Start date">
+                  <span class="input-group-text">to</span>
+                      <input type="date" id="period2End" class="form-control" placeholder="End date">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Tutors Inputs -->
+              <div id="tutorsInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Select tutors from the main filter above. The system will automatically split them into two groups for comparison.</small>
+                </div>
+              </div>
+              
+              <!-- Day Types Inputs -->
+              <div id="dayTypesInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Automatically compares weekdays (Mon-Fri) vs weekends (Sat-Sun) using your current date range and filters.</small>
+                </div>
+              </div>
+              
+              <!-- Duration Ranges Inputs -->
+              <div id="durationRangesInputs" class="col-md-8" style="display: none;">
+                <div class="alert alert-info">
+                  <small><i class="fas fa-info-circle me-1"></i>Automatically compares short sessions (Γëñ2 hours) vs long sessions (>2 hours) using your current data.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- Performance Filters -->
+          <div class="col-lg-4">
+            <h6 class="filter-section-header">
+              <i class="fas fa-chart-line me-2"></i>Performance Filters
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <label for="minHours" class="form-label">Min Hours/Session</label>
+                <input type="number" id="minHours" class="form-control" placeholder="0.5" step="0.1" min="0">
+              </div>
+              <div class="col-sm-6">
+                <label for="maxHours" class="form-label">Max Hours/Session</label>
+                <input type="number" id="maxHours" class="form-control" placeholder="8.0" step="0.1" min="0">
+              </div>
+              <div class="col-sm-6">
+                <label for="minSessions" class="form-label">Min Sessions</label>
+                <input type="number" id="minSessions" class="form-control" placeholder="1" min="1">
+              </div>
+              <div class="col-sm-6">
+                <label for="maxSessions" class="form-label">Max Sessions</label>
+                <input type="number" id="maxSessions" class="form-control" placeholder="100" min="1">
+              </div>
+              <div class="col-12">
+                <label for="sessionPattern" class="form-label">Session Pattern</label>
+                <select id="sessionPattern" class="form-select">
+                  <option value="">All Patterns</option>
+                  <option value="consistent">Consistent (Regular)</option>
+                  <option value="irregular">Irregular</option>
+                  <option value="weekend_only">Weekend Only</option>
+                  <option value="weekday_only">Weekday Only</option>
+                  <option value="high_frequency">High Frequency (>3/week)</option>
+                  <option value="low_frequency">Low Frequency (<2/week)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Time-based Filters -->
+          <div class="col-lg-4">
+            <h6 class="filter-section-header">
+              <i class="fas fa-clock me-2"></i>Time-based Filters
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <label for="timeOfDay" class="form-label">Time of Day</label>
+                <select id="timeOfDay" class="form-select">
+                  <option value="">All Times</option>
+                  <option value="early_morning">Early Morning (6-9)</option>
+                  <option value="morning">Morning (9-12)</option>
+                  <option value="afternoon">Afternoon (12-17)</option>
+                  <option value="evening">Evening (17-21)</option>
+                  <option value="night">Night (21-6)</option>
+                </select>
+              </div>
+              <div class="col-sm-6">
+                <label for="punctualityFilter" class="form-label">Punctuality</label>
+                <select id="punctualityFilter" class="form-select">
+                  <option value="">All</option>
+                  <option value="early">Early (>15min)</option>
+                  <option value="ontime">On Time (┬▒15min)</option>
+                  <option value="late">Late (>15min)</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <div class="form-check">
+                  <input type="checkbox" id="excludeWeekends" class="form-check-input">
+                  <label for="excludeWeekends" class="form-check-label">
+                    Exclude Weekends from Analysis
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input type="checkbox" id="excludeHolidays" class="form-check-input">
+                  <label for="excludeHolidays" class="form-check-label">
+                    Exclude Holidays
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistical Filters -->
+          <div class="col-lg-4">
+            <h6 class="filter-section-header">
+              <i class="fas fa-calculator me-2"></i>Statistical Filters
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <label for="outlierHandling" class="form-label">Outlier Handling</label>
+                <select id="outlierHandling" class="form-select">
+                  <option value="include">Include All</option>
+                  <option value="exclude_extreme">Exclude Extreme</option>
+                  <option value="cap_outliers">Cap Outliers</option>
+                </select>
+              </div>
+              <div class="col-sm-6">
+                <label for="aggregationMethod" class="form-label">Aggregation</label>
+                <select id="aggregationMethod" class="form-select">
+                  <option value="sum">Sum</option>
+                  <option value="average">Average</option>
+                  <option value="median">Median</option>
+                  <option value="count">Count</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="confidenceLevel" class="form-label">
+                  Confidence Level: <span id="confidenceLevelValue">95%</span>
+                </label>
+                <input type="range" id="confidenceLevel" class="form-range" min="80" max="99" value="95" step="1">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-primary" onclick="applyAdvancedFilters()">
+                <i class="fas fa-filter me-1"></i>Apply Advanced Filters
+              </button>
+              <button type="button" class="btn btn-outline-secondary" onclick="clearAdvancedFilters()">
+                <i class="fas fa-times me-1"></i>Clear Advanced
+              </button>
+              <button type="button" class="btn btn-outline-info" onclick="saveFilterPreset()">
+                <i class="fas fa-save me-1"></i>Save Preset
+              </button>
+              <div class="btn-group" style="position: relative; z-index: 1050;">
+                <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-bookmark me-1"></i>Load Preset
+                </button>
+                <ul class="dropdown-menu" id="filterPresets" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
+                  <li><span class="dropdown-item-text text-muted">No saved presets</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-3" id="filterChips"></div>
+
+  <style>
+    .filter-chip {
+      display: inline-block;
+      background: var(--bs-primary);
+      color: white;
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+    
+    .filter-chip.advanced-chip {
+      background: var(--bs-warning);
+      color: var(--bs-dark);
+    }
+    
+    .filter-chip.advanced-chip::before {
+      content: "ΓÜÖ∩╕Å ";
+      margin-right: 4px;
+    }
+  </style>
+
+
+
+  <!-- Punctuality Analysis Section -->
+  <div class="card punctuality-section mb-4 fade-in" style="overflow: visible;">
+    <div class="chart-header">
+      <h6 class="chart-title"><i class="fas fa-clock me-2"></i>Punctuality Analysis</h6>
+    </div>
+    <div class="card-body" style="overflow: visible;">
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Punctuality calculated based on expected vs actual check-in times
+        </small>
+        <div class="dropdown" style="position: relative; z-index: 1050;">
+          <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="punctualityDetailsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-chart-pie me-1"></i>View Details
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="punctualityDetailsDropdown" style="z-index: 1051; position: absolute; right: 0; left: auto; min-width: 200px;">
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('breakdown')"><i class="fas fa-list me-1"></i>Breakdown</a></li>
+            
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('daytime')"><i class="fas fa-clock me-1"></i>By Day & Time</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('outliers')"><i class="fas fa-star me-1"></i>Top Performers</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showPunctualityDetails('deviation')"><i class="fas fa-sliders-h me-1"></i>Deviation Distribution</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Analytics Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 id="chartTitle" class="text-capitalize mb-0">
+          <i class="fas fa-chart-area me-2"></i>Analytics Visualization
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+          <span id="totalCount" class="badge bg-secondary"></span>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary active" onclick="toggleChartLayout('single')" id="singleLayoutBtn">
+              <i class="fas fa-square"></i> Single
+            </button>
+            <button class="btn btn-outline-primary" onclick="toggleChartLayout('split')" id="splitLayoutBtn">
+              <i class="fas fa-columns"></i> Split
+            </button>
+            <button class="btn btn-outline-primary" onclick="toggleChartLayout('grid')" id="gridLayoutBtn">
+              <i class="fas fa-th"></i> Grid
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Chart Container -->
+  <div class="card chart-container-enhanced mb-4 shadow-sm fade-in">
+    <div class="chart-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="mb-0" id="chartHeaderTitle">
+          <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+        </h6>
+        <div class="chart-controls-header d-flex gap-2">
+          <button class="btn btn-light btn-sm" onclick="refreshChart()" title="Refresh Chart">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <button class="btn btn-light btn-sm" onclick="downloadChartImage()" title="Download Chart">
+            <i class="fas fa-download"></i>
+          </button>
+          <button class="btn btn-light btn-sm" onclick="toggleChartFullscreen()" title="Fullscreen">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="chart-controls">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <small class="text-muted">
+            <i class="fas fa-chart-line me-1"></i>
+            Interactive chart with real-time filtering
+          </small>
+          <div id="chartLoadingIndicator" class="spinner-border spinner-border-sm text-primary" style="display: none;"></div>
+        </div>
+        
+        <div class="d-flex gap-2">
+          <!-- Chart Type Switcher -->
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="switchChartType('line')" title="Line Chart">
+              <i class="fas fa-chart-line"></i>
+            </button>
+            <button class="btn btn-outline-info" onclick="switchChartType('bar')" title="Bar Chart">
+              <i class="fas fa-chart-bar"></i>
+            </button>
+            <button class="btn btn-outline-info" onclick="switchChartType('pie')" title="Pie Chart">
+              <i class="fas fa-chart-pie"></i>
+            </button>
+            <button class="btn btn-outline-info" onclick="switchChartType('doughnut')" title="Doughnut Chart">
+              <i class="fas fa-circle-notch"></i>
+            </button>
+            <button class="btn btn-outline-info" onclick="switchChartType('scatter')" title="Scatter Plot">
+              <i class="fas fa-braille"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chart Content Area -->
+    <div class="p-3">
+      <!-- Single Chart Layout -->
+      <div id="singleChartLayout" class="chart-layout">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h5 class="chart-title" id="chartTitle">
+              <i class="fas fa-chart-bar me-2"></i>
+              Select a dataset to view chart
+            </h5>
+          </div>
+          <div class="chart-body">
+            <div id="tutorChartContainer" style="position: relative; height: 60vh; min-height: 500px;">
+              <canvas id="tutorChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Split Chart Layout (for comparison) -->
+      <div id="splitChartLayout" class="chart-layout" style="display: none;">
+        <div class="comparison-container">
+          <div class="comparison-chart">
+            <div class="comparison-header">
+              <i class="fas fa-chart-line me-2"></i>
+              Primary Dataset
+            </div>
+            <div class="comparison-body">
+              <div id="primaryChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                <canvas id="primaryChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="comparison-chart">
+            <div class="comparison-header">
+              <i class="fas fa-chart-bar me-2"></i>
+              Comparison Dataset
+            </div>
+            <div class="comparison-body">
+              <div id="comparisonChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                <canvas id="comparisonChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Grid Chart Layout (for multiple metrics) -->
+      <div id="gridChartLayout" class="chart-layout" style="display: none;">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-users me-2"></i>
+                  Check-ins Overview
+                </h6>
+              </div>
+              <div class="chart-body">
+                <div id="gridChart1Container" style="position: relative; height: 300px;">
+                  <canvas id="gridChart1"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-clock me-2"></i>
+                  Hours Analysis
+                </h6>
+              </div>
+              <div class="chart-body">
+                <div id="gridChart2Container" style="position: relative; height: 300px;">
+                  <canvas id="gridChart2"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-chart-pie me-2"></i>
+                  Time Distribution
+                </h6>
+              </div>
+              <div class="chart-body">
+                <div id="gridChart3Container" style="position: relative; height: 300px;">
+                  <canvas id="gridChart3"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h6 class="chart-title">
+                  <i class="fas fa-tachometer-alt me-2"></i>
+                  Performance Metrics
+                </h6>
+              </div>
+              <div class="chart-body">
+                <div id="gridChart4Container" style="position: relative; height: 300px;">
+                  <canvas id="gridChart4"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Chart Summary Table -->
+      <div id="chartSummaryTable" class="mt-4 table-responsive" style="max-height: 300px; overflow-y: auto;">
+        <!-- Table will be populated by JavaScript -->
+      </div>
+      
+      <!-- Chart Insights Panel -->
+      <div id="chartInsights" class="mt-3" style="display: none;">
+        <div class="alert alert-info">
+          <h6 class="alert-heading">
+            <i class="fas fa-lightbulb me-2"></i>Chart Insights
+          </h6>
+          <div id="insightsContent">
+            <!-- Insights will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<div class="modal fade" id="chartsSnapshotModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content bg-dark">
+      <div class="modal-header border-0"><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body text-center p-0"><img id="chartsModalImage" class="img-fluid rounded" src="" alt="Snapshot" style="max-height: 80vh;" /></div>
+  </div></div>
+</div>
+
+<!-- Punctuality Details Modal -->
+<div class="modal fade" id="punctualityModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-clock me-2"></i>Punctuality Analysis Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Tab navigation -->
+        <ul class="nav nav-tabs mb-3" id="punctualityTabNav" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-breakdown" data-bs-toggle="tab" data-bs-target="#pane-breakdown" type="button" role="tab" aria-controls="pane-breakdown" aria-selected="true"><i class="fas fa-list me-1"></i>Breakdown</button>
+          </li>
+
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-daytime" data-bs-toggle="tab" data-bs-target="#pane-daytime" type="button" role="tab" aria-controls="pane-daytime" aria-selected="false"><i class="fas fa-clock me-1"></i>By Day & Time</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-outliers" data-bs-toggle="tab" data-bs-target="#pane-outliers" type="button" role="tab" aria-controls="pane-outliers" aria-selected="false"><i class="fas fa-star me-1"></i>Top Performers</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-deviation" data-bs-toggle="tab" data-bs-target="#pane-deviation" type="button" role="tab" aria-controls="pane-deviation" aria-selected="false"><i class="fas fa-sliders-h me-1"></i>Deviation Distribution</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="punctualityTabContent">
+          <!-- Breakdown Tab -->
+          <div class="tab-pane fade show active" id="pane-breakdown" role="tabpanel" aria-labelledby="tab-breakdown">
+            <div class="row mb-3">
+              <div class="col-md-4 text-center">
+                <canvas id="punctualityChart" width="200" height="200"></canvas>
+              </div>
+              <div class="col-md-8">
+                <h6>Punctuality Breakdown</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                        <th>Avg Deviation</th>
+                      </tr>
+                    </thead>
+                    <tbody id="punctualityTableBody">
+                      <tr>
+                        <td><span class="badge bg-success">Early</span></td>
+                        <td id="earlyDetailCount">-</td>
+                        <td id="earlyDetailPercent">-</td>
+                        <td id="earlyDetailAvg">-</td>
+                      </tr>
+                      <tr>
+                        <td><span class="badge bg-info">On Time</span></td>
+                        <td id="ontimeDetailCount">-</td>
+                        <td id="ontimeDetailPercent">-</td>
+                        <td id="ontimeDetailAvg">-</td>
+                      </tr>
+                      <tr>
+                        <td><span class="badge bg-danger">Late</span></td>
+                        <td id="lateDetailCount">-</td>
+                        <td id="lateDetailPercent">-</td>
+                        <td id="lateDetailAvg">-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('breakdown')"><i class="fas fa-download me-1"></i>Export Breakdown</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- By Day & Time Tab -->
+          <div class="tab-pane fade" id="pane-daytime" role="tabpanel" aria-labelledby="tab-daytime">
+            <h6>Punctuality by Day & Time</h6>
+            <div id="punctualityDayTimeChartContainer" style="height: 240px;">
+              <canvas id="punctualityDayTimeChart"></canvas>
+            </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('daytime')"><i class="fas fa-download me-1"></i>Export By Day & Time</button>
+          </div>
+          <!-- Top Performers Tab -->
+          <div class="tab-pane fade" id="pane-outliers" role="tabpanel" aria-labelledby="tab-outliers">
+            <h6>Top Performers & Outliers</h6>
+            <div id="punctualityOutliers">
+              <div><strong>Most Punctual:</strong> <span id="mostPunctualList">-</span></div>
+              <div><strong>Least Punctual:</strong> <span id="leastPunctualList">-</span></div>
+            </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('outliers')"><i class="fas fa-download me-1"></i>Export Top Performers</button>
+          </div>
+          <!-- Deviation Distribution Tab -->
+          <div class="tab-pane fade" id="pane-deviation" role="tabpanel" aria-labelledby="tab-deviation">
+            <h6>Deviation Distribution</h6>
+            <div id="punctualityDeviationChartContainer" style="height: 200px;">
+              <canvas id="punctualityDeviationChart"></canvas>
+            </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="exportPunctualityData('deviation')"><i class="fas fa-download me-1"></i>Export Deviation</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <!-- Removed the old export button -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Move Bootstrap JS to the top of the script includes -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
+<script src="/static/js/chart.js"></script>
+<script>
+  // Register Chart.js Zoom plugin globally
+  if (window.Chart && window.Chart.register && window.ChartZoom) {
+    Chart.register(window.ChartZoom);
+  }
+
+  // Enhanced Charts Functionality
+  let currentChartLayout = 'single';
+  let currentChartInstances = {};
+  let comparisonMode = false;
+  let filterPresets = JSON.parse(localStorage.getItem('chartFilterPresets') || '[]');
+
+  // Analysis Mode Toggle
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded event fired: starting punctuality KPI fetch');
+    // Always update punctuality KPI cards with real data on page load
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: 'punctuality_analysis' })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Punctuality Analysis fetch result:', data);
+    })
+    .catch(error => {
+      console.error('Error fetching punctuality analysis:', error);
+    });
+
+    // Setup analysis mode toggle
+    document.querySelectorAll('input[name="analysisMode"]').forEach(radio => {
+      radio.addEventListener('change', function() {
+        comparisonMode = this.value === 'comparison';
+        toggleComparisonSection(comparisonMode);
+        updateChartLayout();
+      });
+    });
+
+    // Setup confidence level slider
+    const confidenceSlider = document.getElementById('confidenceLevel');
+    if (confidenceSlider) {
+      confidenceSlider.addEventListener('input', function() {
+        document.getElementById('confidenceLevelValue').textContent = this.value + '%';
+      });
+    }
+
+    // Initialize chart layout buttons
+    updateLayoutButtons();
+    loadFilterPresets();
+    
+    // Setup new date range buttons
+    setupNewDateRangeButtons();
+    
+    // Initialize comparison inputs
+    toggleComparisonInputs();
+  });
+
+  function toggleComparisonSection(show) {
+    const section = document.getElementById('comparisonSection');
+    if (section) {
+      section.style.display = show ? 'block' : 'none';
+    }
+    
+    // Also expand the advanced filters section when showing comparison
+    if (show) {
+      const advancedFilters = document.getElementById('advancedFilters');
+      if (advancedFilters && !advancedFilters.classList.contains('show')) {
+        const collapse = new bootstrap.Collapse(advancedFilters, { show: true });
+      }
+    }
+    
+    // Destroy existing charts when switching modes
+    destroyAllCharts();
+    
+    // Update chart layout based on comparison mode
+    if (show) {
+      toggleChartLayout('split');
+    } else {
+      toggleChartLayout('single');
+    }
+  }
+  
+  function destroyAllCharts() {
+    // Destroy main chart
+    if (window.chartInstance) {
+      window.chartInstance.destroy();
+      window.chartInstance = null;
+    }
+    
+    // Destroy comparison chart
+    if (window.comparisonChartInstance) {
+      window.comparisonChartInstance.destroy();
+      window.comparisonChartInstance = null;
+    }
+    
+    // Clear any canvas elements
+    const canvases = document.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  }
+  
+  // Expose functions to global scope
+  window.toggleComparisonSection = toggleComparisonSection;
+  window.updateComparisonChart = updateComparisonChart;
+  window.updateFilterChips = updateFilterChips;
+  window.toggleChartLayout = toggleChartLayout;
+  window.switchChartType = switchChartType;
+
+  // Chart Layout Management
+  function toggleChartLayout(layout) {
+    currentChartLayout = layout;
+    updateLayoutButtons();
+    updateChartLayout();
+  }
+
+  function updateLayoutButtons() {
+    ['single', 'split', 'grid'].forEach(layout => {
+      const btn = document.getElementById(layout + 'LayoutBtn');
+      if (btn) {
+        btn.classList.toggle('active', currentChartLayout === layout);
+        btn.classList.toggle('btn-primary', currentChartLayout === layout);
+        btn.classList.toggle('btn-outline-primary', currentChartLayout !== layout);
+      }
+    });
+  }
+
+  function updateChartLayout() {
+    // Hide all layouts
+    document.querySelectorAll('.chart-layout').forEach(layout => {
+      layout.style.display = 'none';
+    });
+
+    // Show selected layout
+    const selectedLayout = document.getElementById(currentChartLayout + 'ChartLayout');
+    if (selectedLayout) {
+      selectedLayout.style.display = 'block';
+    }
+
+    // Clear existing chart instances
+    Object.values(currentChartInstances).forEach(chart => {
+      if (chart && chart.destroy) {
+        chart.destroy();
+      }
+    });
+    currentChartInstances = {};
+
+    // Trigger chart refresh for the new layout
+    setTimeout(() => {
+      const form = document.getElementById('filterForm');
+      if (form) {
+        form.dispatchEvent(new Event('submit', { bubbles: true }));
+      }
+    }, 100);
+  }
+
+  // Chart Type Switching
+  function switchChartType(type) {
+    const chartTypeSelect = document.getElementById('chartTypeSelect');
+    if (chartTypeSelect) {
+      // Update the select value
+      for (let option of chartTypeSelect.options) {
+        if (option.value === type) {
+          chartTypeSelect.value = type;
+          break;
+        }
+      }
+      
+      // Trigger chart update
+      refreshChart();
+    }
+  }
+
+  // Chart Controls
+  function refreshChart() {
+    showLoadingIndicator(true);
+    
+    // Trigger form submission to reload chart
+    const form = document.getElementById('filterForm');
+    if (form) {
+      const event = new Event('submit');
+      form.dispatchEvent(event);
+    }
+    
+    setTimeout(() => showLoadingIndicator(false), 1000);
+  }
+
+
+  function zoomChart(direction) {
+    Object.values(currentChartInstances).forEach(chart => {
+      if (chart && chart.zoom) {
+        const zoomPlugin = chart.getPlugin('zoom');
+        if (zoomPlugin) {
+          if (direction === 'in') {
+            zoomPlugin.zoom(1.1);
+          } else if (direction === 'out') {
+            zoomPlugin.zoom(0.9);
+          }
+        }
+      }
+    });
+  }
+
+  function resetChartZoom() {
+    Object.values(currentChartInstances).forEach(chart => {
+      if (chart && chart.resetZoom) {
+        const zoomPlugin = chart.getPlugin('zoom');
+        if (zoomPlugin) {
+          zoomPlugin.resetZoom();
+        }
+      }
+    });
+  }
+
+  function toggleChartFullscreen() {
+    const chartContainer = document.querySelector('.chart-container-enhanced');
+    if (chartContainer) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        chartContainer.requestFullscreen();
+      }
+    }
+  }
+
+  // Centralized function to collect all advanced filters
+  function collectAdvancedFilters() {
+    return {
+      minHours: document.getElementById('minHours')?.value || '',
+      maxHours: document.getElementById('maxHours')?.value || '',
+      minSessions: document.getElementById('minSessions')?.value || '',
+      maxSessions: document.getElementById('maxSessions')?.value || '',
+      sessionPattern: document.getElementById('sessionPattern')?.value || '',
+      timeOfDay: document.getElementById('timeOfDay')?.value || '',
+      punctualityFilter: document.getElementById('punctualityFilter')?.value || '',
+      excludeWeekends: document.getElementById('excludeWeekends')?.checked || false,
+      excludeHolidays: document.getElementById('excludeHolidays')?.checked || false,
+      outlierHandling: document.getElementById('outlierHandling')?.value || 'include',
+      aggregationMethod: document.getElementById('aggregationMethod')?.value || 'sum',
+      confidenceLevel: document.getElementById('confidenceLevel')?.value || 95
+    };
+  }
+
+  // Advanced Filters
+  function applyAdvancedFilters() {
+    // Collect advanced filter values
+    const advancedFilters = collectAdvancedFilters();
+
+    console.log('Advanced filters being applied:', advancedFilters); // Debug log
+
+    // Store in session storage for use by chart generation
+    sessionStorage.setItem('advancedFilters', JSON.stringify(advancedFilters));
+    
+    // Update filter chips
+    updateFilterChips(); // This now includes both normal and advanced filters
+    
+    // Refresh chart by triggering form submission
+    const form = document.getElementById('filterForm');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { bubbles: true }));
+    }
+    
+    // Show success message
+    showToast('Advanced filters applied successfully', 'success');
+  }
+
+  function clearAdvancedFilters() {
+    // Reset all advanced filter inputs
+    document.getElementById('minHours').value = '';
+    document.getElementById('maxHours').value = '';
+    document.getElementById('minSessions').value = '';
+    document.getElementById('maxSessions').value = '';
+    document.getElementById('sessionPattern').value = '';
+    document.getElementById('timeOfDay').value = '';
+    document.getElementById('punctualityFilter').value = '';
+    document.getElementById('excludeWeekends').checked = false;
+    document.getElementById('excludeHolidays').checked = false;
+    document.getElementById('outlierHandling').value = 'include';
+    document.getElementById('aggregationMethod').value = 'sum';
+    document.getElementById('confidenceLevel').value = 95;
+    document.getElementById('confidenceLevelValue').textContent = '95%';
+
+    // Clear from session storage
+    sessionStorage.removeItem('advancedFilters');
+    
+    // Update filter chips (this now includes both normal and advanced filters)
+    updateFilterChips();
+    
+    // Refresh chart by triggering form submission
+    const form = document.getElementById('filterForm');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { bubbles: true }));
+    }
+    
+    showToast('Advanced filters cleared', 'info');
+  }
+
+  // Filter Presets
+  function saveFilterPreset() {
+    const presetName = prompt('Enter a name for this filter preset:');
+    if (!presetName) return;
+
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const preset = {
+      name: presetName,
+      timestamp: new Date().toISOString(),
+      filters: Object.fromEntries(formData),
+      advancedFilters: JSON.parse(sessionStorage.getItem('advancedFilters') || '{}')
+    };
+
+    filterPresets.push(preset);
+    localStorage.setItem('chartFilterPresets', JSON.stringify(filterPresets));
+    loadFilterPresets();
+    
+    showToast(`Filter preset "${presetName}" saved successfully`, 'success');
+  }
+
+  function loadFilterPresets() {
+    const presetsMenu = document.getElementById('filterPresets');
+    if (!presetsMenu) return;
+
+    if (filterPresets.length === 0) {
+      presetsMenu.innerHTML = '<li><span class="dropdown-item-text text-muted">No saved presets</span></li>';
+      return;
+    }
+
+    presetsMenu.innerHTML = filterPresets.map((preset, index) => `
+      <li>
+        <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" onclick="applyFilterPreset(${index})">
+          <span>
+            <strong>${preset.name}</strong>
+            <br><small class="text-muted">${new Date(preset.timestamp).toLocaleDateString()}</small>
+          </span>
+          <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteFilterPreset(${index})" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </a>
+      </li>
+    `).join('');
+  }
+
+  function applyFilterPreset(index) {
+    const preset = filterPresets[index];
+    if (!preset) return;
+
+    // Apply basic filters
+    const form = document.getElementById('filterForm');
+    Object.entries(preset.filters).forEach(([key, value]) => {
+      const element = form.elements[key];
+      if (element) {
+        element.value = value;
+      }
+    });
+
+    // Apply advanced filters
+    if (preset.advancedFilters) {
+      Object.entries(preset.advancedFilters).forEach(([key, value]) => {
+        const element = document.getElementById(key);
+        if (element) {
+          if (element.type === 'checkbox') {
+            element.checked = value;
+          } else {
+            element.value = value;
+          }
+        }
+      });
+      sessionStorage.setItem('advancedFilters', JSON.stringify(preset.advancedFilters));
+    }
+
+    // Update UI
+    updateFilterChips();
+    refreshChart();
+    
+    showToast(`Filter preset "${preset.name}" applied`, 'success');
+  }
+
+  function deleteFilterPreset(index) {
+    if (confirm('Are you sure you want to delete this preset?')) {
+      filterPresets.splice(index, 1);
+      localStorage.setItem('chartFilterPresets', JSON.stringify(filterPresets));
+      loadFilterPresets();
+      showToast('Filter preset deleted', 'info');
+    }
+  }
+
+  // Utility Functions
+  function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 3000);
+  }
+
+  // Quick Date Range Functions
+  function setDateRange(startDate, endDate) {
+    document.getElementById('start_date').value = startDate;
+    document.getElementById('end_date').value = endDate;
+    updateFilterChips();
+  }
+
+  function setupNewDateRangeButtons() {
+    document.getElementById('last30DaysBtn')?.addEventListener('click', () => {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      setDateRange(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
+    });
+
+    document.getElementById('lastQuarterBtn')?.addEventListener('click', () => {
+      const end = new Date();
+      const start = new Date();
+      start.setMonth(start.getMonth() - 3);
+      setDateRange(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
+    });
+
+    document.getElementById('thisYearBtn')?.addEventListener('click', () => {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 1);
+      setDateRange(start.toISOString().split('T')[0], now.toISOString().split('T')[0]);
+    });
+  }
+
+
+  function formatFilterLabel(key) {
+    const labels = {
+      minHours: 'Min Hours',
+      maxHours: 'Max Hours',
+      minSessions: 'Min Sessions',
+      maxSessions: 'Max Sessions',
+      sessionPattern: 'Pattern',
+      timeOfDay: 'Time of Day',
+      punctualityFilter: 'Punctuality',
+      excludeWeekends: 'Exclude Weekends',
+      excludeHolidays: 'Exclude Holidays',
+      outlierHandling: 'Outliers',
+      aggregationMethod: 'Aggregation',
+      confidenceLevel: 'Confidence'
+    };
+    return labels[key] || key;
+  }
+
+  function formatFilterValue(key, value) {
+    if (key === 'excludeWeekends' || key === 'excludeHolidays') {
+      return value ? 'Yes' : 'No';
+    }
+    if (key === 'confidenceLevel') {
+      return value + '%';
+    }
+    return value;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { 
+    updateFilterChips(); 
+    document.getElementById('filterForm').addEventListener('submit', handleFormSubmit); 
+    initializeTutorSelector(); 
+    
+    // Load initial chart data
+    console.log('Loading initial chart data...');
+    console.log('renderChart function available:', typeof window.renderChart);
+    loadChartData();
+  });
+
+  // Handle form submission with debouncing
+  const debouncedHandleFormSubmit = debounce(function(event) {
+    event.preventDefault();
+    updateFilterChips();
+    
+    // Check if comparison mode is enabled
+    const comparisonMode = document.querySelector('input[name="analysisMode"]:checked')?.value === 'comparison';
+    
+    if (comparisonMode) {
+      loadComparisonData();
+    } else {
+      loadChartData();
+    }
+  }, 300);
+
+  function handleFormSubmit(event) {
+    debouncedHandleFormSubmit(event);
+  }
+
+  // Loading state management
+  let isLoading = false;
+
+  // Chart titles mapping is defined in chart.js
+
+  // Load chart data with current form values
+  function loadChartData() {
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      console.log('Request already in progress, skipping...');
+      return;
+    }
+    
+    isLoading = true;
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to object
+    const payload = {};
+    for (let [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+    
+    // Debug: Log all form data
+    console.log('Form data entries:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
+    // Add dataset and chart_type from current controls
+    const datasetEl = document.getElementById('dataset');
+    const chartTypeEl = document.getElementById('chartTypeSelect');
+    if (datasetEl) payload.dataset = datasetEl.value;
+    if (chartTypeEl) payload.chart_type = chartTypeEl.value;
+    
+    // Add advanced filters to payload using centralized collection
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        payload[key] = value;
+      }
+    });
+    
+    console.log('Submitting form with payload:', payload);
+    console.log('Selected tutors:', selectedTutors);
+    console.log('Tutor IDs string:', document.getElementById('tutor_id')?.getAttribute('data-selected-ids'));
+    
+    // Show loading indicator
+    showLoadingIndicator(true);
+    
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Chart data received:', data);
+      updateChart(data);
+      showLoadingIndicator(false);
+      isLoading = false;
+    })
+    .catch(error => {
+      console.error('Error loading chart data:', error);
+      showError('Failed to load chart data: ' + error.message);
+      showLoadingIndicator(false);
+      isLoading = false;
+    });
+  }
+
+  // Toggle comparison input fields based on comparison type
+  function toggleComparisonInputs() {
+    const comparisonType = document.getElementById('comparisonType')?.value || 'time_periods';
+    
+    // Hide all input sections
+    document.getElementById('timePeriodInputs').style.display = 'none';
+    document.getElementById('tutorsInputs').style.display = 'none';
+    document.getElementById('dayTypesInputs').style.display = 'none';
+    document.getElementById('durationRangesInputs').style.display = 'none';
+    
+    // Show relevant input section
+    switch(comparisonType) {
+      case 'time_periods':
+        document.getElementById('timePeriodInputs').style.display = 'block';
+        break;
+      case 'tutors':
+        document.getElementById('tutorsInputs').style.display = 'block';
+        break;
+      case 'day_types':
+        document.getElementById('dayTypesInputs').style.display = 'block';
+        break;
+      case 'duration_ranges':
+        document.getElementById('durationRangesInputs').style.display = 'block';
+        break;
+    }
+  }
+
+  // Load comparison data
+  function loadComparisonData() {
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      console.log('Request already in progress, skipping...');
+      return;
+    }
+    
+    isLoading = true;
+    
+    // Ensure comparison section is visible
+    const comparisonSection = document.getElementById('comparisonSection');
+    if (comparisonSection) {
+      comparisonSection.style.display = 'block';
+    }
+    
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to object
+    const payload = {};
+    for (let [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+    
+    // Add dataset parameter
+    payload.dataset = 'checkins_per_tutor';
+    payload.mode = 'comparison';
+    
+    // Add comparison parameters - get values directly from elements
+    const comparisonType = document.getElementById('comparisonType')?.value || 'time_periods';
+    payload.comparisonType = comparisonType;
+    
+    // Handle different comparison types
+    if (comparisonType === 'time_periods') {
+      const period1Start = document.getElementById('period1Start')?.value;
+      const period1End = document.getElementById('period1End')?.value;
+      const period2Start = document.getElementById('period2Start')?.value;
+      const period2End = document.getElementById('period2End')?.value;
+      
+      // Check if required parameters are present
+      if (!period1Start || !period1End || !period2Start || !period2End) {
+        showError('Please fill in all comparison date fields (Period 1 and Period 2)');
+        return;
+      }
+      
+      payload.period1Start = period1Start;
+      payload.period1End = period1End;
+      payload.period2Start = period2Start;
+      payload.period2End = period2End;
+      
+    } else if (comparisonType === 'tutors') {
+      // Get selected tutors from the main filter
+      const tutorIds = document.getElementById('tutor_id')?.getAttribute('data-selected-ids') || '';
+      if (!tutorIds || tutorIds.split(',').length < 2) {
+        showError('Please select at least 2 tutors for comparison');
+        return;
+      }
+      payload.tutor_ids = tutorIds;
+      
+    } else if (comparisonType === 'day_types' || comparisonType === 'duration_ranges') {
+      // These comparison types use the current date range and filters
+      // No additional parameters needed
+    }
+    
+    // Add advanced filters to payload using centralized collection
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        payload[key] = value;
+      }
+    });
+    
+    console.log('Submitting comparison data with payload:', payload);
+    
+    // Show loading indicator
+    showLoadingIndicator(true);
+    
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Comparison data received:', data);
+      updateComparisonChart(data);
+      showLoadingIndicator(false);
+      isLoading = false;
+    })
+    .catch(error => {
+      console.error('Error loading comparison data:', error);
+      showError('Failed to load comparison data: ' + error.message);
+      showLoadingIndicator(false);
+      isLoading = false;
+    });
+  }
+
+  // Update comparison chart with new data (throttled)
+  const throttledUpdateComparisonChart = throttle(function(data) {
+    console.log('Updating comparison chart with data:', data);
+    
+    // Update metrics if available
+    if (data.raw_records_for_chart_context) {
+      updateChartMetrics(data);
+    }
+    
+    // Update punctuality analysis if available
+    if (data.punctuality_analysis) {
+      updatePunctualityAnalysis(data.punctuality_analysis);
+    }
+    
+    // Check for errors
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+    
+    // Render comparison charts
+    if (data.primary_data && data.comparison_data) {
+      // Switch to split layout for comparison
+      if (typeof window.toggleComparisonSection === 'function') {
+        window.toggleComparisonSection(true);
+      }
+      
+      // Render primary chart
+      if (data.primary_data.chart_data && data.primary_data.chart_type) {
+        if (typeof window.renderChart === 'function') {
+          window.renderChart(data.primary_data.chart_type, data.primary_data.chart_data, data.primary_data.title || 'Primary Dataset', true);
+        } else {
+          console.error('renderChart function not found in global scope');
+          showError('Chart rendering function not available');
+        }
+      }
+      
+      // Render comparison chart in the second container
+      if (data.comparison_data.chart_data && data.comparison_data.chart_type) {
+        // Find the comparison chart container
+        const comparisonCtx = document.getElementById('comparisonChart')?.getContext('2d');
+        if (comparisonCtx && typeof window.createChartInstance === 'function') {
+          // Destroy existing comparison chart
+          if (window.comparisonChartInstance) {
+            window.comparisonChartInstance.destroy();
+          }
+          
+          // Create new comparison chart
+          window.comparisonChartInstance = window.createChartInstance(
+            comparisonCtx,
+            data.comparison_data.chart_type,
+            data.comparison_data.chart_data,
+            data.comparison_data.title || 'Comparison Dataset',
+            true
+          );
+        } else {
+          console.log('Comparison chart container not found or createChartInstance not available');
+        }
+      }
+    } else {
+      console.error('Invalid comparison data structure:', data);
+      showError('Invalid comparison data received from server');
+    }
+  }, 500);
+
+  function updateComparisonChart(data) {
+    throttledUpdateComparisonChart(data);
+  }
+
+  // Update chart with new data (throttled to prevent rapid updates)
+  const throttledUpdateChart = throttle(function(data) {
+    console.log('Updating chart with data:', data);
+    console.log('Data structure check:', {
+      hasChartData: !!data.chart_data,
+      hasChartType: !!data.chart_type,
+      hasTitle: !!data.title,
+      hasDataset: !!data.dataset,
+      renderChartAvailable: typeof window.renderChart
+    });
+    
+    // Destroy existing main chart before creating new one
+    if (window.chartInstance) {
+      window.chartInstance.destroy();
+      window.chartInstance = null;
+    }
+    
+    // Update metrics if available
+    if (data.raw_records_for_chart_context) {
+      updateChartMetrics(data);
+    }
+    
+    // Update punctuality analysis if available
+    if (data.punctuality_analysis) {
+      updatePunctualityAnalysis(data.punctuality_analysis);
+    }
+    
+    // Ensure chart container exists
+    const chartContainer = document.getElementById('tutorChartContainer');
+    if (!chartContainer) {
+      console.error('Chart container not found');
+      showError('Chart container not found');
+      return;
+    }
+    
+    // Ensure canvas exists
+    let canvas = document.getElementById('tutorChart');
+    if (!canvas) {
+      console.log('Creating new canvas element');
+      canvas = document.createElement('canvas');
+      canvas.id = 'tutorChart';
+      chartContainer.innerHTML = '';
+      chartContainer.appendChild(canvas);
+    }
+    
+    // Render the chart based on the data
+    if (data.chart_data && data.chart_type && data.title) {
+      // Call renderChart from the global scope (defined in chart.js)
+      if (typeof window.renderChart === 'function') {
+        console.log('Rendering chart with data:', data.chart_type, data.title);
+        window.renderChart(data.chart_type, data.chart_data, data.title, false, data.forecast_data);
+      } else {
+        console.error('renderChart function not found in global scope');
+        showError('Chart rendering function not available');
+      }
+    } else if (data.dataset && data.chart_data) {
+      // Fallback for different data structure
+      const chartType = data.chart_type || 'bar';
+      const title = data.title || window.chartTitles?.[data.dataset] || 'Chart';
+      if (typeof window.renderChart === 'function') {
+        console.log('Rendering chart with fallback data:', chartType, title);
+        window.renderChart(chartType, data.chart_data, title, false, data.forecast_data);
+      } else {
+        console.error('renderChart function not found in global scope');
+        showError('Chart rendering function not available');
+      }
+    } else {
+      console.error('Invalid chart data structure:', data);
+      showError('Invalid chart data received from server');
+    }
+  }, 500);
+
+  function updateChart(data) {
+    throttledUpdateChart(data);
+  }
+
+  // Show/hide loading indicator
+  function showLoadingIndicator(show) {
+    const loadingDiv = document.getElementById('loadingIndicator');
+    const chartIndicator = document.getElementById('chartLoadingIndicator');
+    
+    if (loadingDiv) {
+      loadingDiv.style.display = show ? 'block' : 'none';
+    }
+    
+    if (chartIndicator) {
+      chartIndicator.style.display = show ? 'inline-block' : 'none';
+    }
+  }
+
+  // Show error message
+  function showError(message) {
+    console.error(message);
+    // You can implement a proper error display here
+    alert(message);
+  }
+
+  // Multi-select tutor functionality
+  let selectedTutors = [];
+  let allTutors = [];
+
+  async function initializeTutorSelector() {
+    try {
+      const response = await fetch('/get-tutors');
+      allTutors = await response.json();
+      populateTutorDropdown(allTutors);
+      setupTutorSearch();
+    } catch (error) {
+      console.error('Error loading tutors:', error);
+      document.getElementById('tutorDropdown').innerHTML = '<div class="px-2 py-1 text-danger small">Error loading tutors</div>';
+    }
+  }
+
+  function populateTutorDropdown(tutors) {
+    const dropdown = document.getElementById('tutorDropdown');
+    if (tutors.length === 0) {
+      dropdown.innerHTML = '<div class="px-2 py-1 text-muted small">No tutors found</div>';
+      return;
+    }
+
+    // Add control buttons
+    const controlButtons = `
+      <div class="dropdown-item-text border-bottom mb-1 pb-1">
+        <small class="text-muted d-flex justify-content-between">
+          <span class="btn btn-link btn-sm p-0" onclick="selectAllTutors()">Select All</span>
+          <span class="btn btn-link btn-sm p-0" onclick="clearAllTutors()">Clear All</span>
+        </small>
+      </div>
+    `;
+
+    const tutorItems = tutors.map(tutor => 
+      `<div class="dropdown-item tutor-option" data-tutor-id="${tutor.tutor_id}" data-tutor-name="${tutor.tutor_name}">
+        <strong>${tutor.tutor_name}</strong> <small class="text-muted">(ID: ${tutor.tutor_id})</small>
+      </div>`
+    ).join('');
+
+    dropdown.innerHTML = controlButtons + tutorItems;
+
+    // Add click event listeners to dropdown items
+    dropdown.querySelectorAll('.tutor-option').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tutorId = item.getAttribute('data-tutor-id');
+        const tutorName = item.getAttribute('data-tutor-name');
+        addTutor(tutorId, tutorName);
+        document.getElementById('tutor_id').value = '';
+      });
+    });
+  }
+
+  function selectAllTutors() {
+    allTutors.forEach(tutor => {
+      addTutor(tutor.tutor_id, tutor.tutor_name);
+    });
+    document.getElementById('tutor_id').blur();
+  }
+
+  function clearAllTutors() {
+    selectedTutors = [];
+    updateSelectedTutorsDisplay();
+    updateTutorIdInput();
+    document.getElementById('tutor_id').blur();
+  }
+
+  function setupTutorSearch() {
+    const searchInput = document.getElementById('tutor_id');
+    
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      const filteredTutors = allTutors.filter(tutor => 
+        tutor.tutor_name.toLowerCase().includes(searchTerm) || 
+        tutor.tutor_id.toString().includes(searchTerm)
+      );
+      populateTutorDropdown(filteredTutors);
+    });
+
+    // Show dropdown when input is focused
+    searchInput.addEventListener('focus', () => {
+      populateTutorDropdown(allTutors);
+    });
+  }
+
+  function addTutor(tutorId, tutorName) {
+    // Check if tutor is already selected
+    if (selectedTutors.find(t => t.id === tutorId)) {
+      return;
+    }
+
+    selectedTutors.push({ id: tutorId, name: tutorName });
+    updateSelectedTutorsDisplay();
+    updateTutorIdInput();
+  }
+
+  function removeTutor(tutorId) {
+    selectedTutors = selectedTutors.filter(t => t.id !== tutorId);
+    updateSelectedTutorsDisplay();
+    updateTutorIdInput();
+  }
+
+  function updateSelectedTutorsDisplay() {
+    const container = document.getElementById('selectedTutors');
+    container.innerHTML = selectedTutors.map(tutor => 
+      `<span class="tutor-chip">
+        ${tutor.name} (${tutor.id})
+        <span class="remove-btn" onclick="removeTutor('${tutor.id}')">&times;</span>
+      </span>`
+    ).join('');
+  }
+
+  function updateTutorIdInput() {
+    const tutorIds = selectedTutors.map(t => t.id).join(',');
+    document.getElementById('tutor_id').setAttribute('data-selected-ids', tutorIds);
+    
+    // Update the form data for submission
+    const form = document.getElementById('filterForm');
+    let hiddenInput = form.querySelector('input[name="tutor_ids"]');
+    if (!hiddenInput) {
+      hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'tutor_ids';
+      form.appendChild(hiddenInput);
+    }
+    hiddenInput.value = tutorIds;
+  }
+
+  // Update the filter chips function to show selected tutors
+  function updateFilterChips() {
+    const form = document.getElementById('filterForm'); 
+    const chipsDiv = document.getElementById('filterChips');
+    chipsDiv.innerHTML = ''; 
+    
+    const createChip = (label, value, displayValue = null, isAdvanced = false) => {
+      if (value && String(value).trim() !== '') { 
+        const chip = document.createElement('span'); 
+        chip.className = `filter-chip ${isAdvanced ? 'advanced-chip' : ''}`;
+        chip.textContent = `${label}: ${displayValue || value}`; 
+        chipsDiv.appendChild(chip);
+      }
+    };
+    
+    // Show selected tutors
+    if (selectedTutors.length > 0) {
+      const tutorNames = selectedTutors.map(t => t.name).join(', ');
+      createChip("Tutors", tutorNames);
+    }
+    
+    // Normal filters
+    createChip("From", form.start_date.value); 
+    createChip("To", form.end_date.value);
+    const durationSelect = form.duration; 
+    if (durationSelect.value) createChip("Duration", durationSelect.options[durationSelect.selectedIndex].text);
+    const dayTypeSelect = form.day_type; 
+    if (dayTypeSelect.value) createChip("Day Type", dayTypeSelect.options[dayTypeSelect.selectedIndex].text);
+    const shiftStartHour = document.getElementById('shift_start_hour').value; 
+    const shiftEndHour = document.getElementById('shift_end_hour').value;
+    if (shiftStartHour !== "0" || shiftEndHour !== "23") createChip("Check-In Time", `${String(shiftStartHour).padStart(2,'0')}:00 - ${String(shiftEndHour).padStart(2,'0')}:00`);
+    
+    // Advanced filters
+    const advancedFilters = collectAdvancedFilters();
+    Object.entries(advancedFilters).forEach(([key, value]) => {
+      if (value && value !== '' && value !== false) {
+        createChip(formatFilterLabel(key), formatFilterValue(key, value), null, true);
+      }
+    });
+  }
+
+  // Enhanced Analytics Functions
+  let currentMetrics = {};
+  let punctualityChart = null;
+  let punctualityTrendChart = null;
+
+  // Advanced Filters Functions (duplicate removed - using the one above)
+
+  function addFilterChip(label, value) {
+    const chipsDiv = document.getElementById('filterChips');
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip';
+    chip.textContent = `${label}: ${value}`;
+    chipsDiv.appendChild(chip);
+  }
+
+  // Metrics Update Functions (for charts context)
+  function updateChartMetrics(data) {
+    if (!data || !data.raw_records_for_chart_context) return;
+    const records = data.raw_records_for_chart_context;
+    const totalCheckins = records.length;
+    const totalHours = records.reduce((sum, record) => sum + (parseFloat(record.shift_hours) || 0), 0);
+    const avgSession = totalCheckins > 0 ? (totalHours / totalCheckins) : 0;
+    const activeTutors = new Set(records.map(r => r.tutor_id)).size;
+    // Do NOT update punctuality KPI cards here; they are updated only on page load
+    currentMetrics = { totalCheckins, totalHours, avgSession, activeTutors, records };
+  }
+
+  function updatePunctualityAnalysis(punctualityAnalysis) {
+    // Use the new backend structure: {breakdown: {Early: {...}, 'On Time': {...}, Late: {...}}}
+    if (!punctualityAnalysis || !punctualityAnalysis.breakdown) {
+      ['earlyPercentage', 'ontimePercentage', 'latePercentage'].forEach(id => {
+        document.getElementById(id).textContent = '-';
+      });
+      ['earlyCount', 'ontimeCount', 'lateCount'].forEach(id => {
+        document.getElementById(id).textContent = '- sessions';
+      });
+      return;
+    }
+    const breakdown = punctualityAnalysis.breakdown;
+    // Early
+    const early = breakdown['Early'] || {};
+    document.getElementById('earlyCount').textContent = (early.count !== undefined ? early.count : '-') + ' sessions';
+    document.getElementById('earlyPercentage').textContent = (early.percent !== undefined ? early.percent + '%' : '-');
+    // On Time
+    const ontime = breakdown['On Time'] || {};
+    document.getElementById('ontimeCount').textContent = (ontime.count !== undefined ? ontime.count : '-') + ' sessions';
+    document.getElementById('ontimePercentage').textContent = (ontime.percent !== undefined ? ontime.percent + '%' : '-');
+    // Late
+    const late = breakdown['Late'] || {};
+    document.getElementById('lateCount').textContent = (late.count !== undefined ? late.count : '-') + ' sessions';
+    document.getElementById('latePercentage').textContent = (late.percent !== undefined ? late.percent + '%' : '-');
+  }
+
+  // Chart Enhancement Functions
+  function refreshChart() {
+    const form = document.getElementById('filterForm');
+    form.dispatchEvent(new Event('submit', { bubbles: true }));
+  }
+
+  function toggleChartFullscreen() {
+    const chartContainer = document.querySelector('.chart-container-enhanced');
+    if (chartContainer) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        chartContainer.requestFullscreen();
+      }
+    }
+  }
+
+  function zoomChart(direction) {
+    // Apply zoom to all active chart instances
+    const allCharts = [tutorChart, ...Object.values(currentChartInstances)];
+    
+    allCharts.forEach(chart => {
+      if (chart && chart.zoom) {
+        if (direction === 'in') {
+          chart.zoom(1.2);
+        } else if (direction === 'out') {
+          chart.zoom(0.8);
+        }
+      }
+    });
+  }
+
+  function resetChartZoom() {
+    // Reset zoom for all active chart instances
+    const allCharts = [tutorChart, ...Object.values(currentChartInstances)];
+    
+    allCharts.forEach(chart => {
+      if (chart && chart.resetZoom) {
+        chart.resetZoom();
+      }
+    });
+  }
+
+  // Punctuality Details Modal Functions
+  function showPunctualityDetails() {
+    // Fetch detailed punctuality data
+    fetch('/chart-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: 'punctuality_analysis' })
+    })
+    .then(response => response.json())
+    .then(data => {
+      const punctualityData = data.punctuality_analysis || {};
+      const breakdown = punctualityData.breakdown || {};
+      // Update modal content with real data
+      const cats = ['Early', 'On Time', 'Late'];
+      cats.forEach(cat => {
+        const idPrefix = cat.toLowerCase().replace(' ', '');
+        document.getElementById(idPrefix + 'DetailCount').textContent = (breakdown[cat]?.count ?? '-');
+        document.getElementById(idPrefix + 'DetailPercent').textContent = (breakdown[cat]?.percent ?? '-') + '%';
+        document.getElementById(idPrefix + 'DetailAvg').textContent = (breakdown[cat]?.avg_deviation ?? '-');
+      });
+      // Donut chart
+      const ctx = document.getElementById('punctualityChart');
+      if (ctx) {
+        if (window.punctualityChartInstance) window.punctualityChartInstance.destroy();
+        window.punctualityChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: cats,
+            datasets: [{
+              data: cats.map(cat => breakdown[cat]?.count ?? 0),
+              backgroundColor: ['#28a745', '#17a2b8', '#dc3545'],
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+
+      // Day/Time grouped bar chart
+      const dayTimeCtx = document.getElementById('punctualityDayTimeChart');
+      if (dayTimeCtx) {
+        if (window.punctualityDayTimeChartInstance) window.punctualityDayTimeChartInstance.destroy();
+        const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const slots = ['Morning','Afternoon','Evening'];
+        window.punctualityDayTimeChartInstance = new Chart(dayTimeCtx, {
+          type: 'bar',
+          data: {
+            labels: dayLabels,
+            datasets: slots.map((slot, idx) => ({
+              label: slot,
+              data: (punctualityData.day_time && punctualityData.day_time[slot]) ? punctualityData.day_time[slot] : Array(7).fill(0),
+              backgroundColor: ['rgba(40,167,69,0.7)','rgba(23,162,184,0.7)','rgba(220,53,69,0.7)'][idx],
+              borderRadius: 4,
+              barPercentage: 0.7,
+              categoryPercentage: 0.5
+            }))
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+          }
+        });
+      }
+      // Outliers/top performers
+      const mostPunctual = (punctualityData.outliers && punctualityData.outliers.most_punctual) || [];
+      const leastPunctual = (punctualityData.outliers && punctualityData.outliers.least_punctual) || [];
+      document.getElementById('mostPunctualList').textContent = mostPunctual.length ? mostPunctual.join(', ') : '-';
+      document.getElementById('leastPunctualList').textContent = leastPunctual.length ? leastPunctual.join(', ') : '-';
+      // Deviation distribution bar chart
+      const devDistCtx = document.getElementById('punctualityDeviationChart');
+      if (devDistCtx) {
+        if (window.punctualityDeviationChartInstance) window.punctualityDeviationChartInstance.destroy();
+        const devLabels = ['Early >15min', 'Early 5-15min', 'On Time ┬▒5min', 'Late 5-15min', 'Late >15min'];
+        const devData = devLabels.map(l => (punctualityData.deviation_distribution && punctualityData.deviation_distribution[l]) || 0);
+        window.punctualityDeviationChartInstance = new Chart(devDistCtx, {
+          type: 'bar',
+          data: {
+            labels: devLabels,
+            datasets: [{
+              label: 'Sessions',
+              data: devData,
+              backgroundColor: [
+                'rgba(40,167,69,0.7)', 'rgba(40,167,69,0.4)',
+                'rgba(23,162,184,0.7)',
+                'rgba(220,53,69,0.4)', 'rgba(220,53,69,0.7)'
+              ],
+              borderRadius: 4
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+      }
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('punctualityModal'));
+      modal.show();
+    });
+  }
+  
+  function calculatePercentage(value, data) {
+    const total = Object.values(data).reduce((sum, val) => sum + (val || 0), 0);
+    return total > 0 ? Math.round((value || 0) / total * 100) : 0;
+  }
+  
+  function calculateOverallPunctuality(data) {
+    const early = data.Early || 0;
+    const onTime = data['On Time'] || 0;
+    const total = Object.values(data).reduce((sum, val) => sum + (val || 0), 0);
+    return total > 0 ? Math.round((early + onTime) / total * 100) : 0;
+  }
+  
+  function exportPunctualityReport() {
+    // Implementation for exporting punctuality report
+    alert('Punctuality report export functionality will be implemented here.');
+  }
+
+  function exportPunctualityData() {
+    // Implementation for exporting punctuality data
+    alert('Punctuality data export functionality will be implemented here.');
+  }
+
+  // Debounce function to prevent rapid calls
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Throttle function to limit calls
+  function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+      const args = arguments;
+      const context = this;
+      if (!inThrottle) {
+        func.apply(context, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }
+
+
+</script>
+</body>
+</html>
