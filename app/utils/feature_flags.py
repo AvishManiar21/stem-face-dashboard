@@ -16,7 +16,7 @@ def ensure_config_file():
              'description': 'Enable face recognition module', 'last_updated': datetime.now().isoformat()},
             {'setting_key': 'legacy_analytics_enabled', 'setting_value': 'false', 
              'description': 'Enable legacy analytics charts', 'last_updated': datetime.now().isoformat()},
-            {'setting_key': 'maintenance_mode', 'setting_value': 'false', 
+            {'setting_key': 'maintenance_mode_enabled', 'setting_value': 'false', 
              'description': 'Enable maintenance mode access', 'last_updated': datetime.now().isoformat()},
         ]
         df = pd.DataFrame(defaults)
@@ -35,7 +35,8 @@ def is_feature_enabled(feature_name):
     ensure_config_file()
     
     try:
-        df = pd.read_csv(CONFIG_FILE)
+        # Read CSV with setting_value as string to avoid boolean conversion
+        df = pd.read_csv(CONFIG_FILE, dtype={'setting_value': str})
         
         # Check if required columns exist
         if 'setting_key' not in df.columns or 'setting_value' not in df.columns:
@@ -70,21 +71,27 @@ def toggle_feature(feature_name, enabled):
     ensure_config_file()
     
     try:
-        df = pd.read_csv(CONFIG_FILE)
+        # Read CSV with setting_value as string to avoid boolean conversion
+        df = pd.read_csv(CONFIG_FILE, dtype={'setting_value': str})
         key = f'{feature_name}_enabled'
         
+        # Convert enabled to string 'true' or 'false'
+        value_str = 'true' if enabled else 'false'
+        
         if key in df['setting_key'].values:
-            df.loc[df['setting_key'] == key, 'setting_value'] = str(enabled).lower()
+            df.loc[df['setting_key'] == key, 'setting_value'] = value_str
             df.loc[df['setting_key'] == key, 'last_updated'] = datetime.now().isoformat()
         else:
             new_row = {
                 'setting_key': key,
-                'setting_value': str(enabled).lower(),
+                'setting_value': value_str,
                 'description': f'Enable {feature_name} feature',
                 'last_updated': datetime.now().isoformat()
             }
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         
+        # Ensure setting_value column is string type before saving
+        df['setting_value'] = df['setting_value'].astype(str)
         df.to_csv(CONFIG_FILE, index=False)
         return True
     except Exception as e:
@@ -96,15 +103,18 @@ def get_all_features():
     ensure_config_file()
     
     try:
-        df = pd.read_csv(CONFIG_FILE)
+        # Read CSV with setting_value as string to avoid boolean conversion
+        df = pd.read_csv(CONFIG_FILE, dtype={'setting_value': str})
         features = {}
         for _, row in df.iterrows():
             if row['setting_key'].endswith('_enabled'):
                 feature_name = row['setting_key'].replace('_enabled', '')
+                # Convert setting_value to string and check if it's 'true'
+                value_str = str(row['setting_value']).strip().lower()
                 features[feature_name] = {
-                    'enabled': row['setting_value'].lower() == 'true',
-                    'description': row['description'],
-                    'last_updated': row['last_updated']
+                    'enabled': value_str == 'true',
+                    'description': str(row['description']) if pd.notna(row['description']) else '',
+                    'last_updated': str(row['last_updated']) if pd.notna(row['last_updated']) else ''
                 }
         return features
     except Exception as e:

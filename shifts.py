@@ -4,6 +4,20 @@ Handles shift creation, assignment, and monitoring
 """
 
 import os
+import pandas as pd
+from datetime import datetime, timedelta
+from auth import get_current_user
+from app.legacy.analytics import TutorAnalytics
+
+# File paths
+SHIFTS_FILE = 'data/core/shifts.csv'
+SHIFT_ASSIGNMENTS_FILE = 'data/core/shift_assignments.csv'
+
+def ensure_shift_files():
+    """Ensure shift files exist with proper structure"""
+    os.makedirs(os.path.dirname(SHIFTS_FILE), exist_ok=True)
+    os.makedirs(os.path.dirname(SHIFT_ASSIGNMENTS_FILE), exist_ok=True)
+    
     # Create shifts file if it doesn't exist
     if not os.path.exists(SHIFTS_FILE):
         shifts_df = pd.DataFrame(columns=[

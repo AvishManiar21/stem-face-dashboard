@@ -27,16 +27,56 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABAS
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
-# Register forecasting blueprint
-app.register_blueprint(legacy_bp)
-
 # Initialize permission middleware
 from permission_middleware import init_permission_middleware
 init_permission_middleware(app)
 
+# Add feature flags to template context (for both apps)
+@app.context_processor
+def inject_feature_flags():
+    """Make feature flags available in templates"""
+    try:
+        from app.utils.feature_flags import is_feature_enabled, get_all_features
+        return dict(
+            is_feature_enabled=is_feature_enabled,
+            get_all_features=get_all_features
+        )
+    except ImportError:
+        # Fallback if feature flags not available
+        return dict(
+            is_feature_enabled=lambda x: False,
+            get_all_features=lambda: {}
+        )
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Register blueprints conditionally based on feature flags
+from app.utils.feature_flags import is_feature_enabled
+
+# Register scheduling blueprint (always available - WCOnline style)
+try:
+    from app.scheduling.routes import scheduling_bp
+    app.register_blueprint(scheduling_bp, url_prefix='/scheduling')
+    logger.info("Scheduling system enabled")
+except ImportError as e:
+    logger.warning(f"Scheduling blueprint not available: {e}")
+
+# Only register legacy (face recognition) blueprint if feature is enabled
+if is_feature_enabled('face_recognition') or os.getenv('ENABLE_FACE_RECOGNITION', 'false').lower() == 'true':
+    app.register_blueprint(legacy_bp)
+    logger.info("Face Recognition (Legacy) module enabled")
+else:
+    logger.info("Face Recognition (Legacy) module disabled - using scheduling system")
+
+# Register admin blueprint for feature toggles
+try:
+    from app.admin.routes import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    logger.info("Admin blueprint registered")
+except ImportError as e:
+    logger.warning(f"Admin blueprint not available: {e}")
 
 # Global flag to track if app has been initialized (no demo seeding)
 _app_initialized = False
@@ -179,10 +219,17 @@ Tutor Dashboard System
 
 @app.route('/')
 def index():
-    """Serve the main dashboard page"""
+    """Serve the main dashboard page - routing based on feature flags"""
     # Initialize app on first request
     initialize_app_once()
-    return send_from_directory('templates', 'dashboard.html')
+    
+    # Check if face recognition is enabled
+    if is_feature_enabled('face_recognition') or os.getenv('ENABLE_FACE_RECOGNITION', 'false').lower() == 'true':
+        # Show legacy face recognition dashboard
+        return send_from_directory('templates', 'dashboard.html')
+    else:
+        # Show WCOnline-style scheduling system
+        return redirect(url_for('scheduling.index'))
 
 
 
@@ -209,6 +256,22 @@ def admin_shifts():
 @app.route('/login')
 def login_page():
     """Serve the login page"""
+    # If already logged in and authorized, redirect to admin dashboard
+    user = get_current_user()
+    if user:
+        user_role = user.get('role', '')
+        # Check if user has admin access
+        if user_role in ['admin', 'system_admin', 'manager']:
+            return redirect(url_for('admin.dashboard'))
+        # Check if user is in allowed list
+        import os
+        allowed_users_env = os.getenv('FEATURE_TOGGLE_ALLOWED_USERS', '')
+        allowed_users = [u.strip().lower() for u in allowed_users_env.split(',') if u.strip()]
+        user_email = user.get('email', '').lower()
+        user_id = str(user.get('user_id') or user.get('id', '')).lower()
+        if allowed_users and (user_email in allowed_users or user_id in allowed_users):
+            return redirect(url_for('admin.dashboard'))
+    
     # Render login.html with default email value
     return render_template('login.html', default_email=request.args.get('email', ''))
 
@@ -766,6 +829,22 @@ def login():
     success, message = authenticate_user(email, password)
     if success:
         # Store user in session (already handled by authenticate_user)
+        # Check if user should be redirected to admin dashboard
+        user = get_current_user()
+        if user:
+            user_role = user.get('role', '')
+            # Check if user has admin access
+            if user_role in ['admin', 'system_admin', 'manager']:
+                return redirect(url_for('admin.dashboard'))
+            # Check if user is in allowed list
+            import os
+            allowed_users_env = os.getenv('FEATURE_TOGGLE_ALLOWED_USERS', '')
+            allowed_users = [u.strip().lower() for u in allowed_users_env.split(',') if u.strip()]
+            user_email = user.get('email', '').lower()
+            user_id = str(user.get('user_id') or user.get('id', '')).lower()
+            if allowed_users and (user_email in allowed_users or user_id in allowed_users):
+                return redirect(url_for('admin.dashboard'))
+        # Default redirect
         return redirect('/')
     # On failure, re-render login page with inline error and preserved email
     flash(message or 'Invalid credentials', 'error')
@@ -1072,7 +1151,16 @@ def api_update_notification_settings():
 
 
 if __name__ == '__main__':
-    if not os.path.exists(os.path.dirname(CSV_FILE)): os.makedirs(os.path.dirname(CSV_FILE))
-    if not os.path.exists(SNAPSHOTS_DIR): os.makedirs(SNAPSHOTS_DIR)
+    # Ensure data directories exist
+    data_dirs = [
+        'data/legacy',
+        'data/core',
+        'logs',
+        'static/snapshots'
+    ]
+    for dir_path in data_dirs:
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path, exist_ok=True)
+    
     app.run(debug=True, host='0.0.0.0', port=5000)
 

@@ -1,4 +1,4 @@
 setting_key,setting_value,description,last_updated
-face_recognition_enabled,false,Enable face recognition module,2025-11-26T12:27:07.566109
-legacy_analytics_enabled,false,Enable legacy analytics charts,2025-11-26T12:27:07.566125
-maintenance_mode,false,Enable maintenance mode access,2025-11-26T12:27:07.566128
+face_recognition_enabled,false,Enable face recognition module,2025-11-26T15:17:58.662192
+legacy_analytics_enabled,False,Enable legacy analytics charts,2025-11-26T15:17:25.922463
+maintenance_mode_enabled,False,Enable maintenance_mode feature,2025-11-26T15:17:25.951836
