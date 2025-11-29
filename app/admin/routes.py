@@ -175,3 +175,81 @@ def save_settings():
             'success': False,
             'error': f'Error saving settings: {str(e)}'
         }), 500
+
+@admin_bp.route('/api/current-user')
+def api_current_user():
+    """Get current user info for navbar display"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    user_email = user.get('email', 'Unknown')
+    user_name = user.get('full_name') or user.get('user_metadata', {}).get('full_name', user_email.split('@')[0])
+    user_role = get_user_role(user) or 'user'
+    
+    return jsonify({
+        'email': user_email,
+        'name': user_name,
+        'role': user_role
+    })
+
+@admin_bp.route('/api/dashboard-stats')
+def api_dashboard_stats():
+    """Get dashboard statistics"""
+    user, redirect_response = require_admin_access()
+    if redirect_response or not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        import pandas as pd
+        import os
+        from datetime import datetime
+        
+        stats = {
+            'total_tutors': 0,
+            'active_courses': 0,
+            'appointments_today': 0,
+            'total_users': 0
+        }
+        
+        # Count tutors
+        tutors_file = 'data/core/tutors.csv'
+        if os.path.exists(tutors_file):
+            try:
+                df = pd.read_csv(tutors_file)
+                stats['total_tutors'] = len(df)
+            except:
+                pass
+        
+        # Count courses
+        courses_file = 'data/core/courses.csv'
+        if os.path.exists(courses_file):
+            try:
+                df = pd.read_csv(courses_file)
+                stats['active_courses'] = len(df)
+            except:
+                pass
+        
+        # Count today's appointments
+        appointments_file = 'data/core/appointments.csv'
+        if os.path.exists(appointments_file):
+            try:
+                df = pd.read_csv(appointments_file)
+                if not df.empty and 'appointment_date' in df.columns:
+                    today = datetime.now().strftime('%Y-%m-%d')
+                    stats['appointments_today'] = len(df[df['appointment_date'] == today])
+            except:
+                pass
+        
+        # Count users
+        users_file = 'data/core/users.csv'
+        if os.path.exists(users_file):
+            try:
+                df = pd.read_csv(users_file)
+                stats['total_users'] = len(df)
+            except:
+                pass
+        
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

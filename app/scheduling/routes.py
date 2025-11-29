@@ -49,31 +49,43 @@ def ensure_data_files():
 
 @scheduling_bp.route('/')
 def index():
-    """Main scheduling dashboard"""
-    ensure_data_files()
-    return render_template('scheduling/dashboard.html')
+    """Redirect to admin dashboard - unified experience"""
+    # Check if user is authenticated
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
+    
+    # Everyone uses the same admin dashboard
+    return redirect('/admin/dashboard')
 
 @scheduling_bp.route('/appointments')
 def appointments():
-    """View and manage appointments"""
+    """View and manage appointments - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
     ensure_data_files()
     return render_template('scheduling/appointments.html')
 
 @scheduling_bp.route('/tutors')
 def tutors():
-    """View and manage tutors"""
+    """View and manage tutors - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
     ensure_data_files()
     return render_template('scheduling/tutors.html')
 
 @scheduling_bp.route('/courses')
 def courses():
-    """View and manage courses"""
+    """View and manage courses - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
     ensure_data_files()
     return render_template('scheduling/courses.html')
 
 @scheduling_bp.route('/availability')
 def availability():
-    """View and manage tutor availability"""
+    """View and manage tutor availability - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
     ensure_data_files()
     return render_template('scheduling/availability.html')
 

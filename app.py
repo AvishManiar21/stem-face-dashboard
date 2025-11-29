@@ -219,17 +219,18 @@ Tutor Dashboard System
 
 @app.route('/')
 def index():
-    """Serve the main dashboard page - routing based on feature flags"""
+    """Serve landing page or dashboard based on authentication"""
     # Initialize app on first request
     initialize_app_once()
     
-    # Check if face recognition is enabled
-    if is_feature_enabled('face_recognition') or os.getenv('ENABLE_FACE_RECOGNITION', 'false').lower() == 'true':
-        # Show legacy face recognition dashboard
-        return send_from_directory('templates', 'dashboard.html')
-    else:
-        # Show WCOnline-style scheduling system
-        return redirect(url_for('scheduling.index'))
+    # Check authentication
+    user = get_current_user()
+    if not user:
+        # Show beautiful landing page for unauthenticated users
+        return send_from_directory('templates', 'landing.html')
+    
+    # Authenticated users go to admin dashboard
+    return redirect(url_for('admin.dashboard'))
 
 
 
