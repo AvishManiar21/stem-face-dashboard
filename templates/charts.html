@@ -7,10 +7,10 @@
   <link rel="icon" href="/static/snapshots/2192067.jpg">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="/static/css/global.css">
-  <script src="/static/js/theme-switcher.js"></script>
   <script src="/static/js/error_handler.js"></script>
   <script>
     // Prevent admin_navbar.js from injecting - set flag before body loads
@@ -30,155 +30,256 @@
       }
     })();
 
-    // Force theme persistence - run immediately before any other scripts
-    (function () {
-      const savedTheme = localStorage.getItem('theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-
-      // Watch for any attempts to remove the theme
-      const observer = new MutationObserver(() => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        if (!currentTheme || currentTheme !== savedTheme) {
-          document.documentElement.setAttribute('data-theme', savedTheme);
-        }
-      });
-
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme']
-      });
-
-      // Also check periodically
-      setInterval(() => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const saved = localStorage.getItem('theme') || 'light';
-        if (currentTheme !== saved) {
-          document.documentElement.setAttribute('data-theme', saved);
-        }
-      }, 500);
-    })();
+    // Charts page uses fixed light purple theme - no theme switching needed
   </script>
   <style>
-    /* ===== CHARTS PAGE THEME STYLING ===== */
-
-    /* Page Background */
+    /* Charts Page - Simple Dashboard Theme */
     body.charts-page {
-      background-color: var(--bg-primary) !important;
-      color: var(--text-primary) !important;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1e293b;
     }
 
-    [data-theme="dark"] body.charts-page {
-      background-color: var(--bg-primary) !important;
-      color: var(--text-primary) !important;
+    /* Apply Inter font but exclude icons */
+    body.charts-page *:not(i):not([class*="fa-"]):not([class*="icon"]) {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
-    /* Dashboard Header Styling (exact match from dashboard.html) */
-    .dashboard-header {
-      background: linear-gradient(135deg, #6a77e8 0%, #7a68b6 60%, #e08cf6 100%) !important;
-      color: white !important;
-      padding: 1.5rem 0 !important;
-      margin-bottom: 1rem !important;
-      border-radius: 0 0 1.25rem 1.25rem !important;
-      position: relative !important;
-      overflow: hidden !important;
-      box-shadow: 0 6px 24px rgba(102, 126, 234, 0.25) !important;
+    /* Ensure Font Awesome icons use correct font */
+    body.charts-page i,
+    body.charts-page [class*="fa-"],
+    body.charts-page .fa,
+    body.charts-page .fas,
+    body.charts-page .far,
+    body.charts-page .fab {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+      font-style: normal !important;
     }
 
-    /* Dark theme override for header to match navbar */
-    [data-theme="dark"] .dashboard-header {
-      background: linear-gradient(135deg, #3730a3 0%, #5b21b6 60%, #7c3aed 100%) !important;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45) !important;
-    }
-
-    /* Ensure header stays visible */
-    .dashboard-header,
-    [data-theme="dark"] .dashboard-header,
-    [data-theme="light"] .dashboard-header {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    /* Constrain header inner content */
-    .dashboard-header .text-center {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .dashboard-header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background:
-        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-      animation: pulse 4s ease-in-out infinite;
-      z-index: 0;
-      pointer-events: none;
-      /* prevent overlay from blocking clicks */
-    }
-
-    [data-theme="dark"] .dashboard-header::before {
-      background:
-        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
-    }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        opacity: 0.5;
-      }
-
-      50% {
-        opacity: 1;
-      }
-    }
-
-    .dashboard-header h2 {
-      color: var(--text-light);
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
-      position: relative;
-      z-index: 1;
-      font-size: 2rem;
-      line-height: 1.2;
-      margin-bottom: 0.25rem;
-    }
-
-    .dashboard-header p {
-      color: rgba(255, 255, 255, 0.9);
-      position: relative;
-      z-index: 1;
-      font-size: 0.95rem;
-      margin: 0;
-    }
-
-    /* Charts Navbar - Uses app-navbar styling from global.css, just custom buttons */
+    /* Charts Navbar with Title - Purple Gradient */
     .charts-navbar {
-      margin-bottom: 0 !important;
-      background: linear-gradient(135deg, #6a77e8 0%, #7a68b6 55%, #e08cf6 100%) !important;
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
+      margin-bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      backdrop-filter: none;
+      border-bottom: none;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem 0;
     }
 
-    [data-theme="dark"] .charts-navbar {
-      background: linear-gradient(135deg, #3730a3 0%, #5b21b6 60%, #7c3aed 100%) !important;
+    .charts-navbar .navbar-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
+
+    .charts-navbar .navbar-title {
+      color: white;
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .charts-navbar .navbar-title i {
+      color: white;
+    }
+
+    .charts-navbar .navbar-subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.95rem;
+      margin: 0.25rem 0 0 0;
+    }
+
+    .charts-navbar .navbar-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Buttons - Dashboard Theme */
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      border: none !important;
+      color: white !important;
+      font-weight: 600 !important;
+      font-size: 0.875rem !important;
+      padding: 0.625rem 1.25rem !important;
+      border-radius: 8px !important;
+      transition: all 0.3s ease !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+      color: white !important;
+      background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+    }
+
+    .btn-outline-secondary,
+    .btn-outline-info,
+    .btn-outline-success {
+      background: white !important;
+      border: 1px solid #e2e8f0 !important;
+      color: #1e293b !important;
+      font-weight: 600 !important;
+      font-size: 0.875rem !important;
+      padding: 0.625rem 1.25rem !important;
+      border-radius: 8px !important;
+      transition: all 0.3s ease !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+
+    .btn-outline-secondary:hover {
+      background: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #1e293b !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .btn-outline-info:hover {
+      background: #f0f9ff !important;
+      border-color: #667eea !important;
+      color: #667eea !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2) !important;
+    }
+
+    .btn-outline-success:hover {
+      background: #f0fdf4 !important;
+      border-color: #10b981 !important;
+      color: #10b981 !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    .btn-outline-primary {
+      background: white;
+      border: 1px solid #667eea;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus {
+      background: #667eea;
+      border-color: #667eea;
+      color: white;
+    }
+
+    .btn-check:checked + .btn-outline-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      color: white;
+    }
+
+    /* Card Header - Dashboard Theme */
+    .card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border-bottom: none !important;
+      border-radius: 16px 16px 0 0 !important;
+      padding: 1.25rem 1.5rem !important;
+      font-weight: 600 !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+
+    .card-header h5 {
+      color: white !important;
+      font-weight: 600 !important;
+      font-size: 1rem !important;
+      margin: 0 !important;
+    }
+
+    .card-header i {
+      color: white !important;
+    }
+
+    .card-header.bg-gradient-primary,
+    .card-header.bg-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+    }
+
+    /* Badge - Dashboard Theme */
+    .badge {
+      background: #f8fafc;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.75rem;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .badge.bg-secondary {
+      background: #f8fafc !important;
+      color: #64748b !important;
+    }
+
+    /* Text Colors - Dashboard Theme */
+    .text-muted {
+      color: #64748b !important;
+    }
+
+    .fw-semibold {
+      font-weight: 600;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* Dropdown Menu - Dashboard Theme */
+    .dropdown-menu {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      padding: 0.5rem;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dropdown-item {
+      color: #1e293b;
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+      background: #f8fafc;
+      color: #667eea;
+    }
+
+    .dropdown-divider {
+      border-color: #e2e8f0;
+      margin: 0.5rem 0;
+    }
+
 
     .charts-navbar .btn-back,
     .charts-navbar .btn-logout {
       background: rgba(255, 255, 255, 0.2);
-      color: white !important;
+      color: white;
       border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 8px;
       padding: 0.5rem 1rem;
       font-weight: 600;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
@@ -188,28 +289,35 @@
 
     .charts-navbar .btn-back:hover,
     .charts-navbar .btn-logout:hover {
-      background: rgba(255, 255, 255, 0.3) !important;
-      border-color: rgba(255, 255, 255, 0.5) !important;
-      color: white !important;
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+      color: white;
       text-decoration: none;
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
-    [data-theme="dark"] .charts-navbar .btn-back,
-    [data-theme="dark"] .charts-navbar .btn-logout {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.25);
-      color: white !important;
-    }
-
-    [data-theme="dark"] .charts-navbar .btn-back:hover,
-    [data-theme="dark"] .charts-navbar .btn-logout:hover {
-      background: rgba(255, 255, 255, 0.18) !important;
-      border-color: rgba(255, 255, 255, 0.35) !important;
-      color: white !important;
-    }
 
     /* Responsive navbar */
     @media (max-width: 768px) {
+      .charts-navbar {
+        padding: 1rem 0;
+      }
+
+      .charts-navbar .navbar-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .charts-navbar .navbar-title {
+        font-size: 1.5rem;
+      }
+
+      .charts-navbar .navbar-subtitle {
+        font-size: 0.85rem;
+      }
+
       .charts-navbar .d-flex {
         flex-direction: column;
         gap: 0.5rem !important;
@@ -223,62 +331,72 @@
       }
     }
 
-    /* Form Controls - Enhanced Theme Support */
+    /* Form Labels - Dashboard Theme */
+    .form-label {
+      color: #1e293b !important;
+      font-weight: 600 !important;
+      font-size: 0.875rem !important;
+      margin-bottom: 0.5rem !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+
+    .form-label i {
+      color: #667eea !important;
+      margin-right: 0.25rem;
+    }
+
+    /* Form Controls - White background like admin dashboard */
     .form-control,
     .form-select {
-      background-color: var(--bg-card) !important;
-      color: var(--text-primary) !important;
-      border: 1px solid var(--border-color) !important;
-      transition: all var(--transition-normal) !important;
+      background-color: white !important;
+      color: #1e293b !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.875rem;
+      padding: 0.625rem 0.875rem;
     }
 
     .form-control::placeholder,
     .form-select::placeholder {
-      color: var(--text-muted) !important;
+      color: #94a3b8 !important;
     }
 
     .form-control:focus,
     .form-select:focus {
-      background-color: var(--bg-card) !important;
-      color: var(--text-primary) !important;
-      border-color: var(--border-focus) !important;
-      box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25) !important;
+      background-color: white !important;
+      color: #1e293b !important;
+      border-color: #667eea !important;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+      outline: none;
     }
 
-    /* Filter Chips - Enhanced Styling */
+
+    /* Filter Chips - Fixed light purple theme */
     .filter-chip {
       display: inline-block;
       padding: 0.4em 0.8em;
       font-size: 0.85em;
       margin-right: 8px;
       margin-bottom: 8px;
-      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      color: var(--text-secondary);
-      font-weight: var(--font-medium);
-      transition: all var(--transition-normal);
-      box-shadow: var(--shadow-xs);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      color: #64748b;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .filter-chip:hover {
       transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-      color: var(--text-light);
-      border-color: var(--primary-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
     }
 
-    .dark-mode .filter-chip {
-      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-      border-color: #555;
-      color: #ccc;
-    }
-
-    .dark-mode .filter-chip:hover {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-      color: var(--text-light);
-    }
 
     /* Range Slider Group */
     .range-slider-group {
@@ -291,10 +409,10 @@
       flex-grow: 1;
       -webkit-appearance: none;
       height: 6px;
-      border-radius: var(--radius-full);
-      background: var(--border-light);
+      border-radius: 9999px;
+      background: #e2e8f0;
       outline: none;
-      transition: all var(--transition-normal);
+      transition: all 0.3s ease;
     }
 
     .range-slider-group input[type="range"]::-webkit-slider-thumb {
@@ -302,44 +420,44 @@
       appearance: none;
       width: 20px;
       height: 20px;
-      border-radius: var(--radius-full);
-      background: var(--primary-color);
+      border-radius: 9999px;
+      background: #667eea;
       cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-normal);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
 
     .range-slider-group input[type="range"]::-webkit-slider-thumb:hover {
       transform: scale(1.1);
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .range-value-display {
       font-variant-numeric: tabular-nums;
-      font-weight: var(--font-semibold);
-      color: var(--text-primary);
+      font-weight: 600;
+      color: #1e293b;
       min-width: 3rem;
       text-align: center;
     }
 
-    /* Tutor Chips - Enhanced Styling */
+    /* Tutor Chips - Fixed light purple theme */
     .tutor-chip {
       display: inline-flex;
       align-items: center;
       padding: 0.4rem 0.8rem;
       margin: 0.2rem;
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-      color: var(--text-light);
-      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 20px;
       font-size: 0.85rem;
-      font-weight: var(--font-medium);
-      box-shadow: var(--shadow-xs);
-      transition: all var(--transition-normal);
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
 
     .tutor-chip:hover {
       transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .tutor-chip .remove-btn {
@@ -347,7 +465,7 @@
       cursor: pointer;
       font-weight: bold;
       opacity: 0.8;
-      transition: all var(--transition-fast);
+      transition: all 0.2s ease;
     }
 
     .tutor-chip .remove-btn:hover {
@@ -359,126 +477,111 @@
     /* Dropdown Styling */
     .dropdown-item.tutor-option {
       cursor: pointer;
-      transition: all var(--transition-fast);
-      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+      border-radius: 8px;
       margin: 0.1rem;
     }
 
     .dropdown-item.tutor-option:hover {
-      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      background: #f8fafc;
       transform: translateX(4px);
     }
 
-    .dark-mode .dropdown-item.tutor-option:hover {
-      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-    }
 
-    /* Advanced Filters Section - Enhanced */
+    /* Advanced Filters Section - White card like admin dashboard */
     .advanced-filters-section {
-      border-left: 4px solid var(--primary-color);
-      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-      border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-normal);
+      border-left: 4px solid #667eea;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .dark-mode .advanced-filters-section {
-      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-      border-left-color: var(--primary-light);
+    .advanced-filters-section:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
     }
+
 
     .filter-section-header {
-      font-weight: var(--font-semibold);
-      color: var(--text-primary);
-      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
       padding-bottom: 0.75rem;
       margin-bottom: 1.5rem;
-      font-size: var(--font-size-lg);
+      font-size: 1.125rem;
     }
 
-    .dark-mode .filter-section-header {
-      color: var(--text-primary);
-      border-bottom-color: #444;
-    }
 
     .advanced-filter-toggle {
-      transition: all var(--transition-normal);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-xs);
+      transition: all 0.3s ease;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .advanced-filter-toggle:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
-    /* Metrics Summary - Enhanced */
+    /* Metrics Summary - Fixed light purple theme */
     .metrics-summary {
-      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-normal);
-    }
-
-    .dark-mode .metrics-summary {
-      background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-      border-color: #444;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
 
     .metric-card {
-      transition: all var(--transition-normal);
-      border-radius: var(--radius-md);
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
-      box-shadow: var(--shadow-xs);
+      transition: all 0.3s ease;
+      border-radius: 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .metric-card:hover {
       transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
-      border-color: var(--primary-color);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      border-color: #667eea;
     }
 
     .metric-value {
       font-size: 1.75rem;
-      font-weight: var(--font-bold);
-      color: var(--text-primary);
-      line-height: var(--leading-tight);
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1.2;
     }
 
     .metric-label {
-      font-size: var(--font-size-sm);
-      color: var(--text-muted);
+      font-size: 0.875rem;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      font-weight: var(--font-medium);
-    }
-
-    .dark-mode .metric-label {
-      color: var(--text-muted);
+      font-weight: 500;
     }
 
     .metric-trend {
-      font-size: var(--font-size-xs);
-      font-weight: var(--font-semibold);
+      font-size: 0.75rem;
+      font-weight: 600;
     }
 
     .trend-up {
-      color: var(--success-color);
+      color: #10b981;
     }
 
     .trend-down {
-      color: var(--danger-color);
+      color: #ef4444;
     }
 
-    /* Chart Container Styling */
+    /* Chart Container Styling - White cards like admin dashboard */
     .chart-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-normal);
+      background: white;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       overflow: hidden;
       padding: 1rem;
     }
@@ -518,48 +621,34 @@
     }
 
     .chart-container:hover {
-      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }
 
     .chart-container canvas {
       background: transparent !important;
     }
 
-    [data-theme="dark"] .chart-container {
-      background: var(--bg-card);
-      border-color: var(--border-color);
-    }
-
-    [data-theme="dark"] .chart-container canvas {
-      background: transparent !important;
-    }
 
     .chart-header {
-      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-      border-bottom: 1px solid var(--border-color);
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
       padding: 1rem 1.5rem;
-    }
-
-    .dark-mode .chart-header {
-      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-      border-bottom-color: #444;
+      border-radius: 16px 16px 0 0;
     }
 
     .chart-title {
-      color: var(--text-primary);
-      font-weight: var(--font-semibold);
-      font-size: var(--font-size-lg);
+      color: #1e293b;
+      font-weight: 600;
+      font-size: 1rem;
       margin: 0;
     }
 
     .chart-body {
       padding: 1.5rem;
-      background: var(--bg-card);
+      background: white;
     }
 
-    .dark-mode .chart-body {
-      background: #2a2a2a;
-    }
 
     /* Comparison Mode Styling */
     .comparison-container {
@@ -570,23 +659,25 @@
     }
 
     .comparison-chart {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      background: white;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .dark-mode .comparison-chart {
-      background: #2a2a2a;
-      border-color: #444;
+    .comparison-chart:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }
+
 
     .comparison-header {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-      color: var(--text-light);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       padding: 0.75rem 1rem;
-      font-weight: var(--font-semibold);
+      font-weight: 600;
       text-align: center;
     }
 
@@ -600,22 +691,17 @@
       align-items: center;
       justify-content: center;
       min-height: 300px;
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-    }
-
-    .dark-mode .chart-loading {
-      background: #2a2a2a;
-      border-color: #444;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
     }
 
     .loading-spinner {
       width: 2rem;
       height: 2rem;
-      border: 3px solid var(--border-light);
-      border-top: 3px solid var(--primary-color);
-      border-radius: var(--radius-full);
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #667eea;
+      border-radius: 9999px;
       animation: spin 1s linear infinite;
     }
 
@@ -656,36 +742,51 @@
     /* Chart Enhancement */
     .chart-container-enhanced {
       position: relative;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      transition: all var(--transition-normal);
+      background: white;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    [data-theme="dark"] .chart-container-enhanced {
-      background: var(--bg-card);
-      border-color: var(--border-color);
+    .chart-container-enhanced:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
     }
 
-    .chart-header {
-      background: var(--bg-gradient-primary);
-      color: var(--text-light);
-      padding: 1rem;
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      border-bottom: 1px solid var(--border-color);
+    
+    /* Cards - White cards with rounded corners like admin dashboard */
+    .card {
+      background: white !important;
+      border: none !important;
+      border-radius: 16px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+      color: #1e293b !important;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     }
+
+    .card:hover {
+      transform: translateY(-5px) !important;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .card-body {
+      padding: 1.5rem !important;
+      background: white !important;
+      color: #1e293b !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+
+
+
 
     .chart-controls {
-      background: var(--bg-secondary);
-      padding: 0.75rem;
-      border-bottom: 1px solid var(--border-color);
+      background: #f8fafc;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
     }
 
-    [data-theme="dark"] .chart-controls {
-      background: var(--bg-secondary);
-      border-bottom-color: var(--border-color);
-    }
 
     /* Animation Classes */
     .fade-in {
@@ -740,11 +841,742 @@
       margin-bottom: 1.25rem !important;
     }
 
-    /* Custom Scrollbar */
-    <h5 id="chartTitle" class="text-capitalize mb-0"><i class="fas fa-chart-area me-2"></i>Analytics Visualization </h5><div class="d-flex align-items-center gap-2"><span id="totalCount" class="badge bg-secondary"></span><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary active" onclick="toggleChartLayout('single')" id="singleLayoutBtn"><i class="fas fa-square"></i>Single </button><button class="btn btn-outline-primary" onclick="toggleChartLayout('split')" id="splitLayoutBtn"><i class="fas fa-columns"></i>Split </button><button class="btn btn-outline-primary" onclick="toggleChartLayout('grid')" id="gridLayoutBtn"><i class="fas fa-th"></i>Grid </button></div></div></div></div></div>< !-- Main Chart Container --><div class="card chart-container-enhanced mb-4 shadow-sm fade-in"><div class="chart-header"><div class="d-flex justify-content-between align-items-center"><h6 class="mb-0" id="chartHeaderTitle"><i class="fas fa-chart-line me-2"></i>Analytics Dashboard </h6><div class="chart-controls-header d-flex gap-2"><button class="btn btn-light btn-sm" onclick="refreshChart()" title="Refresh Chart"><i class="fas fa-sync-alt"></i></button><button class="btn btn-light btn-sm" onclick="downloadChartImage()" title="Download Chart"><i class="fas fa-download"></i></button><button class="btn btn-light btn-sm" onclick="toggleChartFullscreen()" title="Fullscreen"><i class="fas fa-expand"></i></button></div></div></div><div class="chart-controls"><div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><div class="d-flex align-items-center gap-2"><small class="text-muted"><i class="fas fa-chart-line me-1"></i>Interactive chart with real-time filtering </small><div id="chartLoadingIndicator" class="spinner-border spinner-border-sm text-primary" style="display: none;"></div></div><div class="d-flex gap-2">< !-- Chart Type Switcher --><div class="btn-group btn-group-sm"><button class="btn btn-outline-info" onclick="switchChartType('line')" title="Line Chart"><i class="fas fa-chart-line"></i></button><button class="btn btn-outline-info" onclick="switchChartType('bar')" title="Bar Chart"><i class="fas fa-chart-bar"></i></button><button class="btn btn-outline-info" onclick="switchChartType('pie')" title="Pie Chart"><i class="fas fa-chart-pie"></i></button><button class="btn btn-outline-info" onclick="switchChartType('doughnut')" title="Doughnut Chart"><i class="fas fa-circle-notch"></i></button><button class="btn btn-outline-info" onclick="switchChartType('scatter')" title="Scatter Plot"><i class="fas fa-braille"></i></button></div></div></div></div>< !-- Chart Content Area --><div class="p-3">< !-- Single Chart Layout --><div id="singleChartLayout" class="chart-layout"><div class="chart-container"><div class="chart-header"><h5 class="chart-title" id="chartTitle"><i class="fas fa-chart-bar me-2"></i>Select a dataset to view chart </h5></div><div class="chart-body"><div id="tutorChartContainer" style="position: relative; height: 60vh; min-height: 500px;"><canvas id="tutorChart"></canvas></div></div></div></div>< !-- Split Chart Layout (for comparison) --><div id="splitChartLayout" class="chart-layout" style="display: none;"><div class="comparison-container"><div class="comparison-chart"><div class="comparison-header"><i class="fas fa-chart-line me-2"></i>Primary Dataset </div><div class="comparison-body"><div id="primaryChartContainer" style="position: relative; height: 50vh; min-height: 400px;"><canvas id="primaryChart"></canvas></div></div></div><div class="comparison-chart"><div class="comparison-header"><i class="fas fa-chart-bar me-2"></i>Comparison Dataset </div><div class="comparison-body"><div id="comparisonChartContainer" style="position: relative; height: 50vh; min-height: 400px;"><canvas id="comparisonChart"></canvas></div></div></div></div></div>< !-- Grid Chart Layout (for multiple metrics) --><div id="gridChartLayout" class="chart-layout" style="display: none;">< !-- Grid Controls --><div class="card mb-3 shadow-sm"><div class="card-body py-2"><div class="d-flex justify-content-between align-items-center"><small class="text-muted"><i class="fas fa-th me-1"></i>Showing 6 key metrics simultaneously </small><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary btn-sm" onclick="refreshAllGridCharts()"
-    title="Refresh All Charts"><i class="fas fa-sync-alt"></i>Refresh All </button><button class="btn btn-outline-success btn-sm" onclick="exportGridChartsAsPDF()" title="Export as PDF"><i class="fas fa-file-pdf"></i>Export PDF </button></div></div></div></div>< !-- Grid of 6 Charts (2 rows x 3 columns) --><div class="row g-3 mb-4">< !-- Chart 1: Appointments per Tutor --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-calendar-check me-2"></i>Appointments per Tutor </h6></div><div class="chart-body"><div id="gridChart1Container" style="position: relative; height: 280px;"><canvas id="gridChart1"></canvas></div></div></div></div>< !-- Chart 2: Hours per Tutor --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-clock me-2"></i>Scheduled Hours per Tutor </h6></div><div class="chart-body"><div id="gridChart2Container" style="position: relative; height: 280px;"><canvas id="gridChart2"></canvas></div></div></div></div>< !-- Chart 3: Daily Appointments --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-chart-line me-2"></i>Daily Appointments </h6></div><div class="chart-body"><div id="gridChart3Container" style="position: relative; height: 280px;"><canvas id="gridChart3"></canvas></div></div></div></div></div>< !-- Second Row of Charts --><div class="row g-3">< !-- Chart 4: Appointments by Status --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-tasks me-2"></i>Appointments by Status </h6></div><div class="chart-body"><div id="gridChart4Container" style="position: relative; height: 280px;"><canvas id="gridChart4"></canvas></div></div></div></div>< !-- Chart 5: Course Popularity --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-book me-2"></i>Course Popularity </h6></div><div class="chart-body"><div id="gridChart5Container" style="position: relative; height: 280px;"><canvas id="gridChart5"></canvas></div></div></div></div>< !-- Chart 6: Hourly Distribution --><div class="col-lg-4 col-md-6"><div class="chart-container"><div class="chart-header"><h6 class="chart-title"><i class="fas fa-business-time me-2"></i>Hourly Distribution </h6></div><div class="chart-body"><div id="gridChart6Container" style="position: relative; height: 280px;"><canvas id="gridChart6"></canvas></div></div></div></div></div></div>< !-- Chart Summary Table --><div id="chartSummaryTable" class="mt-4 table-responsive" style="max-height: 300px; overflow-y: auto;">< !-- Table will be populated by JavaScript --></div>< !-- Chart Insights Panel --><div id="chartInsights" class="mt-3" style="display: none;"><div class="alert alert-info"><h6 class="alert-heading"><i class="fas fa-lightbulb me-2"></i>Chart Insights </h6><div id="insightsContent">< !-- Insights will be populated by JavaScript --></div></div></div></div></div></div><div class="modal fade" id="chartsSnapshotModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content bg-dark"><div class="modal-header border-0"><button type="button" class="btn-close btn-close-white"
-    data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-0"><img id="chartsModalImage" class="img-fluid rounded" src=""
-    alt="Snapshot" style="max-height: 80vh;" /></div></div></div></div>< !-- Move Bootstrap JS to the top of the script includes --><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script><script src="/static/js/chart.js"></script><script> // Register Chart.js Zoom plugin globally
+    /* Custom Scrollbar - Fixed light purple theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Text Visibility - Simple Fix */
+    .card-body { color: #1e293b; }
+    .text-muted { color: #64748b; }
+    .text-white { color: white; }
+    .alert { background: white; color: #1e293b; border: 1px solid #e2e8f0; }
+    .alert-info { background: #f0f9ff; border-color: #667eea; }
+    ::placeholder { color: #94a3b8; opacity: 1; }
+  </style>
+</head>
+
+<body class="charts-page" data-no-admin-navbar="true">
+  <!-- Navbar with Title - Purple Gradient (prevents admin_navbar.js injection) -->
+  <nav class="navbar navbar-expand-lg navbar-dark app-navbar charts-navbar" id="charts-navbar">
+    <div class="container">
+      <div class="navbar-content w-100">
+        <div class="navbar-left">
+          <h2 class="navbar-title">
+            <i class="fas fa-chart-bar"></i>Analytics Dashboard
+          </h2>
+          <p class="navbar-subtitle">Comprehensive scheduling and appointment analytics</p>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
+          <a href="/" class="btn-back">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+          </a>
+          <a href="/logout" class="btn-logout">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4" style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
+    <!-- Filter Form Section -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-gradient-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+      </div>
+      <div class="card-body">
+        <form id="filterForm">
+          <!-- Primary Filters Row -->
+          <div class="row g-3 mb-3">
+            <div class="col-lg-3 col-md-6">
+              <label for="tutor_id" class="form-label fw-semibold">
+                <i class="fas fa-users me-1"></i>Select Tutors
+              </label>
+              <div class="dropdown" style="position: relative; z-index: 1050;">
+                <input type="text" name="tutor_id" id="tutor_id" class="form-control" placeholder="Search and select tutors..." autocomplete="off" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="dropdown-menu w-100" id="tutorDropdown" style="max-height: 200px; overflow-y: auto; z-index: 1051; position: absolute; left: 0; right: 0;">
+                  <div class="px-2 py-1 text-muted small">Loading tutors...</div>
+                </div>
+              </div>
+              <div id="selectedTutors" class="mt-2"></div>
+            </div>
+            
+            <div class="col-lg-2 col-md-3 col-sm-6">
+              <label for="start_date" class="form-label fw-semibold">
+                <i class="fas fa-calendar-alt me-1"></i>Start Date
+              </label>
+              <input type="date" name="start_date" id="start_date" class="form-control">
+            </div>
+            
+            <div class="col-lg-2 col-md-3 col-sm-6">
+              <label for="end_date" class="form-label fw-semibold">
+                <i class="fas fa-calendar-alt me-1"></i>End Date
+              </label>
+              <input type="date" name="end_date" id="end_date" class="form-control">
+            </div>
+            
+            <div class="col-lg-2 col-md-3 col-sm-6">
+              <label for="duration" class="form-label fw-semibold">
+                <i class="fas fa-clock me-1"></i>Duration
+              </label>
+              <select name="duration" id="duration" class="form-select">
+                <option value="">All Durations</option>
+                <option value="<1">< 1 hour</option>
+                <option value="1-2">1-2 hours</option>
+                <option value="2-4">2-4 hours</option>
+                <option value="4+">4+ hours</option>
+              </select>
+            </div>
+            
+            <div class="col-lg-3 col-md-3 col-sm-6">
+              <label for="day_type" class="form-label fw-semibold">
+                <i class="fas fa-calendar-week me-1"></i>Day Type
+              </label>
+              <select name="day_type" id="day_type" class="form-select">
+                <option value="">All Days</option>
+                <option value="weekday">Weekdays</option>
+                <option value="weekend">Weekends</option>
+                <option value="monday">Monday</option>
+                <option value="tuesday">Tuesday</option>
+                <option value="wednesday">Wednesday</option>
+                <option value="thursday">Thursday</option>
+                <option value="friday">Friday</option>
+                <option value="saturday">Saturday</option>
+                <option value="sunday">Sunday</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Chart Configuration Row -->
+          <div class="row g-3 mb-3">
+            <div class="col-lg-4 col-md-6">
+              <label for="dataset" class="form-label fw-semibold">
+                <i class="fas fa-chart-bar me-1"></i>Dataset
+              </label>
+              <select name="dataset" id="dataset" class="form-select">
+                <optgroup label="Tutor Performance">
+                  <option value="appointments_per_tutor">Appointments per Tutor</option>
+                  <option value="hours_per_tutor">Scheduled Hours per Tutor</option>
+                  <option value="avg_session_duration_per_tutor">Avg Session Duration per Tutor</option>
+                  <option value="tutor_consistency_score">Tutor Consistency Score</option>
+                </optgroup>
+                <optgroup label="Time Analysis">
+                  <option value="daily_appointments">Daily Appointments</option>
+                  <option value="daily_hours">Daily Hours</option>
+                  <option value="hourly_appointments_dist">Hourly Distribution</option>
+                  <option value="monthly_hours">Monthly Hours</option>
+                  <option value="avg_hours_per_day_of_week">Avg Hours by Day of Week</option>
+                  <option value="appointments_per_day_of_week">Appointments by Day of Week</option>
+                </optgroup>
+                <optgroup label="Status & Courses">
+                  <option value="appointments_by_status">Appointments by Status</option>
+                  <option value="course_popularity">Course Popularity</option>
+                </optgroup>
+                <optgroup label="Patterns">
+                  <option value="cumulative_appointments">Cumulative Appointments</option>
+                  <option value="cumulative_hours">Cumulative Hours</option>
+                  <option value="hourly_activity_by_day">Hourly Activity Heatmap</option>
+                  <option value="session_duration_distribution">Session Duration Distribution</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <div class="col-lg-2 col-md-3 col-sm-6">
+              <label for="chartTypeSelect" class="form-label fw-semibold">
+                <i class="fas fa-chart-pie me-1"></i>Chart Type
+              </label>
+              <select name="chartTypeSelect" id="chartTypeSelect" class="form-select"></select>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+              <label class="form-label fw-semibold">
+                <i class="fas fa-clock me-1"></i>Hour Range
+              </label>
+              <div class="range-slider-group">
+                <div class="d-flex align-items-center gap-2">
+                  <input type="range" name="shift_start_hour" id="shift_start_hour" class="form-range" min="0" max="23" value="0">
+                  <span class="badge bg-secondary" id="shiftStartTimeDisplay">00:00</span>
+                  <span class="text-muted">to</span>
+                  <input type="range" name="shift_end_hour" id="shift_end_hour" class="form-range" min="0" max="23" value="23">
+                  <span class="badge bg-secondary" id="shiftEndTimeDisplay">23:00</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-3">
+              <label class="form-label fw-semibold">
+                <i class="fas fa-layer-group me-1"></i>Analysis Mode
+              </label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="analysisMode" id="singleMode" value="single" checked>
+                <label class="btn btn-outline-primary" for="singleMode">Single</label>
+                
+                <input type="radio" class="btn-check" name="analysisMode" id="comparisonMode" value="comparison">
+                <label class="btn btn-outline-primary" for="comparisonMode">Compare</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-chart-line me-1"></i>Generate Chart
+                </button>
+                <button type="button" id="resetBtn" class="btn btn-outline-secondary">
+                  <i class="fas fa-undo me-1"></i>Reset
+                </button>
+                
+                <!-- Quick Date Ranges -->
+                <div class="btn-group" style="position: relative; z-index: 1050;">
+                  <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-calendar-alt me-1"></i>Quick Ranges
+                  </button>
+                  <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 180px;">
+                    <li><button type="button" id="todayBtn" class="dropdown-item">Today</button></li>
+                    <li><button type="button" id="thisWeekBtn" class="dropdown-item">This Week</button></li>
+                    <li><button type="button" id="thisMonthBtn" class="dropdown-item">This Month</button></li>
+                    <li><button type="button" id="last7DaysBtn" class="dropdown-item">Last 7 Days</button></li>
+                    <li><button type="button" id="last30DaysBtn" class="dropdown-item">Last 30 Days</button></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button type="button" id="lastQuarterBtn" class="dropdown-item">Last Quarter</button></li>
+                    <li><button type="button" id="thisYearBtn" class="dropdown-item">This Year</button></li>
+                  </ul>
+                </div>
+                
+                <!-- Export Options -->
+                <div class="btn-group" style="position: relative; z-index: 1050;">
+                  <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-download me-1"></i>Export
+                  </button>
+                  <ul class="dropdown-menu" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
+                    <li><button type="button" class="dropdown-item" onclick="downloadChartImage()">
+                      <i class="fas fa-image me-2"></i>Chart as PNG
+                    </button></li>
+                    <li><button type="button" id="exportChartCSVBtn" class="dropdown-item">
+                      <i class="fas fa-file-csv me-2"></i>Chart Data CSV
+                    </button></li>
+                    <li><button type="button" id="exportChartUnderlyingRawDataCsvBtn" class="dropdown-item">
+                      <i class="fas fa-table me-2"></i>Raw Data CSV
+                    </button></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button type="button" id="exportFiltersLinkBtn" class="dropdown-item">
+                      <i class="fas fa-link me-2"></i>Share Filters Link
+                    </button></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Advanced Filters & Comparison Section -->
+    <div class="card mb-4 advanced-filters-section fade-in">
+      <div class="card-header bg-gradient">
+        <button class="btn btn-link text-decoration-none p-0 w-100 text-start advanced-filter-toggle text-white" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false">
+          <i class="fas fa-sliders-h me-2"></i>
+          <strong>Advanced Filters & Comparison Tools</strong>
+          <i class="fas fa-chevron-down float-end mt-1"></i>
+        </button>
+      </div>
+      <div class="collapse" id="advancedFilters">
+        <div class="card-body">
+          <!-- Comparison Mode Section -->
+          <div id="comparisonSection" class="mb-4" style="display: none;">
+            <div class="alert alert-info">
+              <h6 class="alert-heading"><i class="fas fa-layer-group me-2"></i>Comparison Mode</h6>
+              <p class="mb-2">Compare data across different time periods, tutors, or conditions.</p>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">Comparison Type</label>
+                  <select id="comparisonType" class="form-select" onchange="toggleComparisonInputs()">
+                    <option value="time_periods">Time Periods</option>
+                    <option value="tutors">Tutors</option>
+                    <option value="day_types">Day Types</option>
+                    <option value="duration_ranges">Duration Ranges</option>
+                  </select>
+                </div>
+                
+                <!-- Time Periods Inputs -->
+                <div id="timePeriodInputs" class="col-md-8">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Period 1 (Primary)</label>
+                      <div class="input-group">
+                        <input type="date" id="period1Start" class="form-control" placeholder="Start date">
+                        <span class="input-group-text">to</span>
+                        <input type="date" id="period1End" class="form-control" placeholder="End date">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Period 2 (Compare)</label>
+                      <div class="input-group">
+                        <input type="date" id="period2Start" class="form-control" placeholder="Start date">
+                        <span class="input-group-text">to</span>
+                        <input type="date" id="period2End" class="form-control" placeholder="End date">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Tutors Inputs -->
+                <div id="tutorsInputs" class="col-md-8" style="display: none;">
+                  <div class="alert alert-info">
+                    <small><i class="fas fa-info-circle me-1"></i>Select tutors from the main filter above. The system will automatically split them into two groups for comparison.</small>
+                  </div>
+                </div>
+                
+                <!-- Day Types Inputs -->
+                <div id="dayTypesInputs" class="col-md-8" style="display: none;">
+                  <div class="alert alert-info">
+                    <small><i class="fas fa-info-circle me-1"></i>Automatically compares weekdays (Mon-Fri) vs weekends (Sat-Sun) using your current date range and filters.</small>
+                  </div>
+                </div>
+                
+                <!-- Duration Ranges Inputs -->
+                <div id="durationRangesInputs" class="col-md-8" style="display: none;">
+                  <div class="alert alert-info">
+                    <small><i class="fas fa-info-circle me-1"></i>Automatically compares short sessions (≤2 hours) vs long sessions (>2 hours) using your current data.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4">
+            <!-- Performance Filters -->
+            <div class="col-lg-4">
+              <h6 class="filter-section-header">
+                <i class="fas fa-chart-line me-2"></i>Performance Filters
+              </h6>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label for="minHours" class="form-label">Min Hours/Session</label>
+                  <input type="number" id="minHours" class="form-control" placeholder="0.5" step="0.1" min="0">
+                </div>
+                <div class="col-sm-6">
+                  <label for="maxHours" class="form-label">Max Hours/Session</label>
+                  <input type="number" id="maxHours" class="form-control" placeholder="8.0" step="0.1" min="0">
+                </div>
+                <div class="col-sm-6">
+                  <label for="minSessions" class="form-label">Min Sessions</label>
+                  <input type="number" id="minSessions" class="form-control" placeholder="1" min="1">
+                </div>
+                <div class="col-sm-6">
+                  <label for="maxSessions" class="form-label">Max Sessions</label>
+                  <input type="number" id="maxSessions" class="form-control" placeholder="100" min="1">
+                </div>
+                <div class="col-12">
+                  <label for="sessionPattern" class="form-label">Session Pattern</label>
+                  <select id="sessionPattern" class="form-select">
+                    <option value="">All Patterns</option>
+                    <option value="consistent">Consistent (Regular)</option>
+                    <option value="irregular">Irregular</option>
+                    <option value="weekend_only">Weekend Only</option>
+                    <option value="weekday_only">Weekday Only</option>
+                    <option value="high_frequency">High Frequency (>3/week)</option>
+                    <option value="low_frequency">Low Frequency (<2/week)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Time-based Filters -->
+            <div class="col-lg-4">
+              <h6 class="filter-section-header">
+                <i class="fas fa-clock me-2"></i>Time-based Filters
+              </h6>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label for="timeOfDay" class="form-label">Time of Day</label>
+                  <select id="timeOfDay" class="form-select">
+                    <option value="">All Times</option>
+                    <option value="early_morning">Early Morning (6-9)</option>
+                    <option value="morning">Morning (9-12)</option>
+                    <option value="afternoon">Afternoon (12-17)</option>
+                    <option value="evening">Evening (17-21)</option>
+                    <option value="night">Night (21-6)</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input type="checkbox" id="excludeWeekends" class="form-check-input">
+                    <label for="excludeWeekends" class="form-check-label">
+                      Exclude Weekends from Analysis
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input type="checkbox" id="excludeHolidays" class="form-check-input">
+                    <label for="excludeHolidays" class="form-check-label">
+                      Exclude Holidays
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Statistical Filters -->
+            <div class="col-lg-4">
+              <h6 class="filter-section-header">
+                <i class="fas fa-calculator me-2"></i>Statistical Filters
+              </h6>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label for="outlierHandling" class="form-label">Outlier Handling</label>
+                  <select id="outlierHandling" class="form-select">
+                    <option value="include">Include All</option>
+                    <option value="exclude_extreme">Exclude Extreme</option>
+                    <option value="cap_outliers">Cap Outliers</option>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label for="aggregationMethod" class="form-label">Aggregation</label>
+                  <select id="aggregationMethod" class="form-select">
+                    <option value="sum">Sum</option>
+                    <option value="average">Average</option>
+                    <option value="median">Median</option>
+                    <option value="count">Count</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label for="confidenceLevel" class="form-label">
+                    Confidence Level: <span id="confidenceLevelValue">95%</span>
+                  </label>
+                  <input type="range" id="confidenceLevel" class="form-range" min="80" max="99" value="95" step="1">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" onclick="applyAdvancedFilters()">
+                  <i class="fas fa-filter me-1"></i>Apply Advanced Filters
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearAdvancedFilters()">
+                  <i class="fas fa-times me-1"></i>Clear Advanced
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="saveFilterPreset()">
+                  <i class="fas fa-save me-1"></i>Save Preset
+                </button>
+                <div class="btn-group" style="position: relative; z-index: 1050;">
+                  <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-bookmark me-1"></i>Load Preset
+                  </button>
+                  <ul class="dropdown-menu" id="filterPresets" style="z-index: 1051; position: absolute; left: 0; right: auto; min-width: 160px;">
+                    <li><span class="dropdown-item-text text-muted">No saved presets</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Chips Display -->
+    <div class="mb-3" id="filterChips"></div>
+
+    <!-- Chart Layout Controls -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 id="chartTitle" class="text-capitalize mb-0">
+            <i class="fas fa-chart-area me-2"></i>Analytics Visualization
+          </h5>
+          <div class="d-flex align-items-center gap-2">
+            <span id="totalCount" class="badge bg-secondary"></span>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary active" onclick="toggleChartLayout('single')" id="singleLayoutBtn">
+                <i class="fas fa-square"></i> Single
+              </button>
+              <button class="btn btn-outline-primary" onclick="toggleChartLayout('split')" id="splitLayoutBtn">
+                <i class="fas fa-columns"></i> Split
+              </button>
+              <button class="btn btn-outline-primary" onclick="toggleChartLayout('grid')" id="gridLayoutBtn">
+                <i class="fas fa-th"></i> Grid
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Chart Container -->
+    <div class="card chart-container-enhanced mb-4 shadow-sm fade-in">
+      <div class="chart-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0" id="chartHeaderTitle">
+            <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+          </h6>
+          <div class="chart-controls-header d-flex gap-2">
+            <button class="btn btn-light btn-sm" onclick="refreshChart()" title="Refresh Chart">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="btn btn-light btn-sm" onclick="downloadChartImage()" title="Download Chart">
+              <i class="fas fa-download"></i>
+            </button>
+            <button class="btn btn-light btn-sm" onclick="toggleChartFullscreen()" title="Fullscreen">
+              <i class="fas fa-expand"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-controls">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <small class="text-muted">
+              <i class="fas fa-chart-line me-1"></i>Interactive chart with real-time filtering
+            </small>
+            <div id="chartLoadingIndicator" class="spinner-border spinner-border-sm text-primary" style="display: none;"></div>
+          </div>
+          <div class="d-flex gap-2">
+            <!-- Chart Type Switcher -->
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-info" onclick="switchChartType('line')" title="Line Chart">
+                <i class="fas fa-chart-line"></i>
+              </button>
+              <button class="btn btn-outline-info" onclick="switchChartType('bar')" title="Bar Chart">
+                <i class="fas fa-chart-bar"></i>
+              </button>
+              <button class="btn btn-outline-info" onclick="switchChartType('pie')" title="Pie Chart">
+                <i class="fas fa-chart-pie"></i>
+              </button>
+              <button class="btn btn-outline-info" onclick="switchChartType('doughnut')" title="Doughnut Chart">
+                <i class="fas fa-circle-notch"></i>
+              </button>
+              <button class="btn btn-outline-info" onclick="switchChartType('scatter')" title="Scatter Plot">
+                <i class="fas fa-braille"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Chart Content Area -->
+      <div class="p-3">
+        <!-- Single Chart Layout -->
+        <div id="singleChartLayout" class="chart-layout">
+          <div class="chart-container">
+            <div class="chart-header">
+              <h5 class="chart-title" id="chartTitle">
+                <i class="fas fa-chart-bar me-2"></i>Select a dataset to view chart
+              </h5>
+            </div>
+            <div class="chart-body">
+              <div id="tutorChartContainer" style="position: relative; height: 60vh; min-height: 500px;">
+                <canvas id="tutorChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split Chart Layout (for comparison) -->
+        <div id="splitChartLayout" class="chart-layout" style="display: none;">
+          <div class="comparison-container">
+            <div class="comparison-chart">
+              <div class="comparison-header">
+                <i class="fas fa-chart-line me-2"></i>Primary Dataset
+              </div>
+              <div class="comparison-body">
+                <div id="primaryChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                  <canvas id="primaryChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="comparison-chart">
+              <div class="comparison-header">
+                <i class="fas fa-chart-bar me-2"></i>Comparison Dataset
+              </div>
+              <div class="comparison-body">
+                <div id="comparisonChartContainer" style="position: relative; height: 50vh; min-height: 400px;">
+                  <canvas id="comparisonChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid Chart Layout (for multiple metrics) -->
+        <div id="gridChartLayout" class="chart-layout" style="display: none;">
+          <!-- Grid Controls -->
+          <div class="card mb-3 shadow-sm">
+            <div class="card-body py-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  <i class="fas fa-th me-1"></i>Showing 6 key metrics simultaneously
+                </small>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-primary btn-sm" onclick="refreshAllGridCharts()" title="Refresh All Charts">
+                    <i class="fas fa-sync-alt"></i> Refresh All
+                  </button>
+                  <button class="btn btn-outline-success btn-sm" onclick="exportGridChartsAsPDF()" title="Export as PDF">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid of 6 Charts (2 rows x 3 columns) -->
+          <div class="row g-3 mb-4">
+            <!-- Chart 1: Appointments per Tutor -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-calendar-check me-2"></i>Appointments per Tutor
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart1Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart1"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 2: Hours per Tutor -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-clock me-2"></i>Scheduled Hours per Tutor
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart2Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart2"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 3: Daily Appointments -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-chart-line me-2"></i>Daily Appointments
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart3Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart3"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Second Row of Charts -->
+          <div class="row g-3">
+            <!-- Chart 4: Appointments by Status -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-tasks me-2"></i>Appointments by Status
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart4Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart4"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 5: Course Popularity -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-book me-2"></i>Course Popularity
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart5Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart5"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 6: Hourly Distribution -->
+            <div class="col-lg-4 col-md-6">
+              <div class="chart-container">
+                <div class="chart-header">
+                  <h6 class="chart-title">
+                    <i class="fas fa-business-time me-2"></i>Hourly Distribution
+                  </h6>
+                </div>
+                <div class="chart-body">
+                  <div id="gridChart6Container" style="position: relative; height: 280px;">
+                    <canvas id="gridChart6"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Summary Table -->
+        <div id="chartSummaryTable" class="mt-4 table-responsive" style="max-height: 300px; overflow-y: auto;">
+          <!-- Table will be populated by JavaScript -->
+        </div>
+
+        <!-- Chart Insights Panel -->
+        <div id="chartInsights" class="mt-3" style="display: none;">
+          <div class="alert alert-info">
+            <h6 class="alert-heading">
+              <i class="fas fa-lightbulb me-2"></i>Chart Insights
+            </h6>
+            <div id="insightsContent">
+              <!-- Insights will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Chart Snapshots -->
+  <div class="modal fade" id="chartsSnapshotModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-dark">
+        <div class="modal-header border-0">
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center p-0">
+          <img id="chartsModalImage" class="img-fluid rounded" src="" alt="Snapshot" style="max-height: 80vh;" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
+  <script src="/static/js/chart.js"></script>
+  <script>
+    // Register Chart.js Zoom plugin globally
 
     if (window.Chart && window.Chart.register && window.ChartZoom) {
       Chart.register(window.ChartZoom);
@@ -762,34 +1594,34 @@
     // Analysis Mode Toggle
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Setup analysis mode toggle
-        document.querySelectorAll('input[name="analysisMode"]').forEach(radio=> {
-            radio.addEventListener('change', function () {
-                comparisonMode=this.value==='comparison';
-                toggleComparisonSection(comparisonMode);
-                updateChartLayout();
-              });
-          });
-
-        // Setup confidence level slider
-        const confidenceSlider=document.getElementById('confidenceLevel');
-
-        if (confidenceSlider) {
-          confidenceSlider.addEventListener('input', function () {
-              document.getElementById('confidenceLevelValue').textContent=this.value + '%';
+      // Setup analysis mode toggle
+      document.querySelectorAll('input[name="analysisMode"]').forEach(radio=> {
+          radio.addEventListener('change', function () {
+              comparisonMode=this.value==='comparison';
+              toggleComparisonSection(comparisonMode);
+              updateChartLayout();
             });
-        }
+        });
 
-        // Initialize chart layout buttons
-        updateLayoutButtons();
-        loadFilterPresets();
+      // Setup confidence level slider
+      const confidenceSlider=document.getElementById('confidenceLevel');
 
-        // Setup new date range buttons
-        setupNewDateRangeButtons();
+      if (confidenceSlider) {
+        confidenceSlider.addEventListener('input', function () {
+            document.getElementById('confidenceLevelValue').textContent=this.value + '%';
+          });
+      }
 
-        // Initialize comparison inputs
-        toggleComparisonInputs();
-      });
+      // Initialize chart layout buttons
+      updateLayoutButtons();
+      loadFilterPresets();
+
+      // Setup new date range buttons
+      setupNewDateRangeButtons();
+
+      // Initialize comparison inputs
+      toggleComparisonInputs();
+    });
 
     function toggleComparisonSection(show) {
       const section=document.getElementById('comparisonSection');
@@ -1201,23 +2033,55 @@
     }
 
     function setupNewDateRangeButtons() {
-      document.getElementById('last30DaysBtn')?.addEventListener('click', ()=> {
-          const end=new Date();
-          const start=new Date();
+      // Today
+      document.getElementById('todayBtn')?.addEventListener('click', () => {
+        const today = new Date();
+        setDateRange(today.toISOString().split('T')[0], today.toISOString().split('T')[0]);
+      });
+
+      // This Week
+      document.getElementById('thisWeekBtn')?.addEventListener('click', () => {
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - today.getDay());
+        setDateRange(start.toISOString().split('T')[0], today.toISOString().split('T')[0]);
+      });
+
+      // This Month
+      document.getElementById('thisMonthBtn')?.addEventListener('click', () => {
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        setDateRange(start.toISOString().split('T')[0], today.toISOString().split('T')[0]);
+      });
+
+      // Last 7 Days
+      document.getElementById('last7DaysBtn')?.addEventListener('click', () => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        setDateRange(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
+      });
+
+      // Last 30 Days
+      document.getElementById('last30DaysBtn')?.addEventListener('click', () => {
+        const end = new Date();
+        const start = new Date();
           start.setDate(start.getDate() - 30);
           setDateRange(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
         });
 
-      document.getElementById('lastQuarterBtn')?.addEventListener('click', ()=> {
-          const end=new Date();
-          const start=new Date();
+      // Last Quarter
+      document.getElementById('lastQuarterBtn')?.addEventListener('click', () => {
+        const end = new Date();
+        const start = new Date();
           start.setMonth(start.getMonth() - 3);
           setDateRange(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
         });
 
-      document.getElementById('thisYearBtn')?.addEventListener('click', ()=> {
-          const now=new Date();
-          const start=new Date(now.getFullYear(), 0, 1);
+      // This Year
+      document.getElementById('thisYearBtn')?.addEventListener('click', () => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 1);
           setDateRange(start.toISOString().split('T')[0], now.toISOString().split('T')[0]);
         });
     }
@@ -1254,152 +2118,40 @@
       return value;
     }
 
-    // Ensure theme persists and dashboard header styles are maintained
-    function ensureThemePersistence() {
-      const html=document.documentElement;
-      const savedTheme=localStorage.getItem('theme') || 'light';
-
-      // Ensure data-theme attribute is set and matches saved theme
-      const currentTheme=html.getAttribute('data-theme');
-
-      if ( !currentTheme || currentTheme !==savedTheme) {
-        html.setAttribute('data-theme', savedTheme);
-      }
-    }
-
-    // Watch for theme attribute changes and restore if removed
-    const themeObserver=new MutationObserver((mutations)=> {
-        mutations.forEach((mutation)=> {
-            if (mutation.type==='attributes' && mutation.attributeName==='data-theme') {
-              const html=document.documentElement;
-              const savedTheme=localStorage.getItem('theme') || 'light';
-              const currentTheme=html.getAttribute('data-theme');
-
-              // If theme was removed or changed unexpectedly, restore it
-              if ( !currentTheme || (currentTheme !==savedTheme && !document.querySelector('#theme-toggle:active'))) {
-                setTimeout(()=> {
-                    html.setAttribute('data-theme', savedTheme);
-                    forceApplyDashboardStyles();
-                  }
-
-                  , 100);
-              }
-
-              else {
-                // Theme changed legitimately, update styles
-                forceApplyDashboardStyles();
-              }
-            }
-          });
-      });
-
-    // Also watch for style changes on dashboard header and navbar
-    const styleObserver=new MutationObserver(()=> {
-        forceApplyDashboardStyles();
-      });
-
-    // Start observing theme changes
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme']
-    });
-
-    // Observe dashboard header and navbar for style changes
-    document.addEventListener('DOMContentLoaded', ()=> {
-        const dashboardHeader=document.querySelector('.dashboard-header');
-        const navbar=document.querySelector('.charts-navbar');
-
-        if (dashboardHeader) {
-          styleObserver.observe(dashboardHeader, {
-            attributes: true,
-            attributeFilter: ['style', 'class']
-          });
-      }
-
-      if (navbar) {
-        styleObserver.observe(navbar, {
-          attributes: true,
-          attributeFilter: ['style', 'class']
-        });
-    }
-    });
-
-    // Continuous style enforcement
-    setInterval(()=> {
-        forceApplyDashboardStyles();
-      }
-
-      , 2000);
-
-    // Function to force apply dashboard styles
-    function forceApplyDashboardStyles() {
-      const dashboardHeader=document.querySelector('.dashboard-header');
-      const navbar=document.querySelector('.charts-navbar');
-
-      if (dashboardHeader) {
-        const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-        dashboardHeader.style.setProperty('background',
-          isDark ? 'linear-gradient(135deg, #3730a3 0%, #5b21b6 60%, #7c3aed 100%)'
-          : 'linear-gradient(135deg, #6a77e8 0%, #7a68b6 60%, #e08cf6 100%)',
-          'important'
-        );
-        dashboardHeader.style.setProperty('display', 'block', 'important');
-        dashboardHeader.style.setProperty('visibility', 'visible', 'important');
-        dashboardHeader.style.setProperty('opacity', '1', 'important');
-      }
-
-      if (navbar) {
-        const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-        navbar.style.setProperty('background',
-          isDark ? 'linear-gradient(135deg, #3730a3 0%, #5b21b6 60%, #7c3aed 100%)'
-          : 'linear-gradient(135deg, #6a77e8 0%, #7a68b6 55%, #e08cf6 100%)',
-          'important'
-        );
-        navbar.style.setProperty('display', 'block', 'important');
-        navbar.style.setProperty('visibility', 'visible', 'important');
-        navbar.style.setProperty('opacity', '1', 'important');
-      }
-    }
-
-    // Run immediately and on DOMContentLoaded
-    ensureThemePersistence();
-    forceApplyDashboardStyles();
-
-    document.addEventListener('DOMContentLoaded', ()=> {
-        ensureThemePersistence();
-        forceApplyDashboardStyles();
-
-        // Re-check theme and styles after delays to catch any late changes
-        setTimeout(()=> {
-            ensureThemePersistence();
-            forceApplyDashboardStyles();
-          }
-
-          , 100);
-
-        setTimeout(()=> {
-            ensureThemePersistence();
-            forceApplyDashboardStyles();
-          }
-
-          , 500);
-
-        setTimeout(()=> {
-            ensureThemePersistence();
-            forceApplyDashboardStyles();
-          }
-
-          , 1000);
-
-        setTimeout(()=> {
-            ensureThemePersistence();
-            forceApplyDashboardStyles();
-          }
-
-          , 2000);
+    // Charts page initialization - fixed light purple theme
+    document.addEventListener('DOMContentLoaded', () => {
         updateFilterChips();
         document.getElementById('filterForm').addEventListener('submit', handleFormSubmit);
         initializeTutorSelector();
+
+        // Setup hour range slider displays
+        const shiftStartHour = document.getElementById('shift_start_hour');
+        const shiftEndHour = document.getElementById('shift_end_hour');
+        const shiftStartDisplay = document.getElementById('shiftStartTimeDisplay');
+        const shiftEndDisplay = document.getElementById('shiftEndTimeDisplay');
+
+        function updateHourDisplay(slider, display) {
+          const value = parseInt(slider.value);
+          display.textContent = `${String(value).padStart(2, '0')}:00`;
+        }
+
+        if (shiftStartHour && shiftStartDisplay) {
+          shiftStartHour.addEventListener('input', () => updateHourDisplay(shiftStartHour, shiftStartDisplay));
+          updateHourDisplay(shiftStartHour, shiftStartDisplay);
+        }
+
+        if (shiftEndHour && shiftEndDisplay) {
+          shiftEndHour.addEventListener('input', () => updateHourDisplay(shiftEndHour, shiftEndDisplay));
+          updateHourDisplay(shiftEndHour, shiftEndDisplay);
+        }
+
+        // Setup reset button
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+          document.getElementById('filterForm').reset();
+          selectedTutors = [];
+          document.getElementById('selectedTutors').innerHTML = '';
+          updateFilterChips();
+        });
 
         // Load initial chart data
         console.log('Loading initial chart data...');
@@ -1632,36 +2384,36 @@
       // Add advanced filters to payload using centralized collection
       const advancedFilters=collectAdvancedFilters();
 
-      Object.entries(advancedFilters).forEach(([key, value])=> {
-          if (value && value !=='' && value !==false) {
-            payload[key]=value;
-          }
-        });
+        Object.entries(advancedFilters).forEach(([key, value])=> {
+            if (value && value !=='' && value !==false) {
+              payload[key]=value;
+            }
+          });
 
-      console.log('Submitting comparison data with payload:', payload);
+        console.log('Submitting comparison data with payload:', payload);
 
-      // Show loading indicator
-      showLoadingIndicator(true);
+        // Show loading indicator
+        showLoadingIndicator(true);
 
-      fetch('/chart-data', {
+        fetch('/chart-data', {
 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-
-        ,
-        body: JSON.stringify(payload)
-
-      }) .then(response=> {
-        if ( !response.ok) throw new Error(`HTTP error ! status: $ {
-            response.status
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
           }
 
-          `);
-        return response.json();
+          ,
+          body: JSON.stringify(payload)
 
-      }) .then(data=> {
+        }) .then(response=> {
+          if ( !response.ok) throw new Error(`HTTP error ! status: $ {
+              response.status
+            }
+
+            `);
+          return response.json();
+
+        }) .then(data=> {
         console.log('Comparison data received:', data);
         updateComparisonChart(data);
         showLoadingIndicator(false);
@@ -1682,26 +2434,122 @@
         // Update metrics if available
         if (data.raw_records_for_chart_context) {
           updateChartMetrics(data);
-        }
-
-        // Check for errors
-        if (data.error) {
-          showError(data.error);
-          return;
-        }
-
-        // Render comparison charts
-        if (data.primary_data && data.comparison_data) {
-
-          // Switch to split layout for comparison
-          if (typeof window.toggleComparisonSection==='function') {
-            window.toggleComparisonSection(true);
           }
 
-          // Render primary chart
-          if (data.primary_data.chart_data && data.primary_data.chart_type) {
-            if (typeof window.renderChart==='function') {
+          // Check for errors
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
+
+          // Render comparison charts
+          if (data.primary_data && data.comparison_data) {
+
+            // Switch to split layout for comparison
+            if (typeof window.toggleComparisonSection==='function') {
+              window.toggleComparisonSection(true);
+            }
+
+            // Render primary chart
+            if (data.primary_data.chart_data && data.primary_data.chart_type) {
+              if (typeof window.renderChart==='function') {
               window.renderChart(data.primary_data.chart_type, data.primary_data.chart_data, data.primary_data.title || 'Primary Dataset', true);
+                }
+
+                else {
+                  console.error('renderChart function not found in global scope');
+                  showError('Chart rendering function not available');
+                }
+              }
+
+              // Render comparison chart in the second container
+              if (data.comparison_data.chart_data && data.comparison_data.chart_type) {
+                // Find the comparison chart container
+                const comparisonCtx=document.getElementById('comparisonChart')?.getContext('2d');
+
+                if (comparisonCtx && typeof window.createChartInstance==='function') {
+
+                  // Destroy existing comparison chart
+                  if (window.comparisonChartInstance) {
+                    window.comparisonChartInstance.destroy();
+                  }
+
+                  // Create new comparison chart
+                  window.comparisonChartInstance=window.createChartInstance(comparisonCtx,
+                    data.comparison_data.chart_type,
+                    data.comparison_data.chart_data,
+                    data.comparison_data.title || 'Comparison Dataset',
+                    true);
+                }
+
+                else {
+                  console.log('Comparison chart container not found or createChartInstance not available');
+                }
+              }
+            }
+
+            else {
+              console.error('Invalid comparison data structure:', data);
+              showError('Invalid comparison data received from server');
+            }
+          }
+
+          , 500);
+
+        function updateComparisonChart(data) {
+          throttledUpdateComparisonChart(data);
+        }
+
+        // Update chart with new data (throttled to prevent rapid updates)
+        const throttledUpdateChart=throttle(function (data) {
+            console.log('Updating chart with data:', data);
+
+            console.log('Data structure check:', {
+              hasChartData: ! !data.chart_data,
+              hasChartType: ! !data.chart_type,
+              hasTitle: ! !data.title,
+              hasDataset: ! !data.dataset,
+              renderChartAvailable: typeof window.renderChart
+            });
+
+          // Destroy existing main chart before creating new one
+          if (window.chartInstance) {
+            window.chartInstance.destroy();
+            window.chartInstance=null;
+          }
+
+          // Update metrics if available
+          if (data.raw_records_for_chart_context) {
+            updateChartMetrics(data);
+          }
+
+          // Ensure chart container exists
+          const chartContainer=document.getElementById('tutorChartContainer');
+
+          if ( !chartContainer) {
+            console.error('Chart container not found');
+            showError('Chart container not found');
+            return;
+          }
+
+          // Ensure canvas exists
+          let canvas=document.getElementById('tutorChart');
+
+          if ( !canvas) {
+            console.log('Creating new canvas element');
+            canvas=document.createElement('canvas');
+            canvas.id='tutorChart';
+            chartContainer.innerHTML='';
+            chartContainer.appendChild(canvas);
+          }
+
+          // Render the chart based on the data
+          if (data.chart_data && data.chart_type && data.title) {
+
+            // Call renderChart from the global scope (defined in chart.js)
+            if (typeof window.renderChart==='function') {
+              console.log('Rendering chart with data:', data.chart_type, data.title);
+              window.renderChart(data.chart_type, data.chart_data, data.title, false, data.forecast_data);
             }
 
             else {
@@ -1710,243 +2558,147 @@
             }
           }
 
-          // Render comparison chart in the second container
-          if (data.comparison_data.chart_data && data.comparison_data.chart_type) {
-            // Find the comparison chart container
-            const comparisonCtx=document.getElementById('comparisonChart')?.getContext('2d');
+          else if (data.dataset && data.chart_data) {
+            // Fallback for different data structure
+            const chartType=data.chart_type || 'bar';
+            const title=data.title || window.chartTitles?.[data.dataset] || 'Chart';
 
-            if (comparisonCtx && typeof window.createChartInstance==='function') {
-
-              // Destroy existing comparison chart
-              if (window.comparisonChartInstance) {
-                window.comparisonChartInstance.destroy();
-              }
-
-              // Create new comparison chart
-              window.comparisonChartInstance=window.createChartInstance(comparisonCtx,
-                data.comparison_data.chart_type,
-                data.comparison_data.chart_data,
-                data.comparison_data.title || 'Comparison Dataset',
-                true);
+            if (typeof window.renderChart==='function') {
+              console.log('Rendering chart with fallback data:', chartType, title);
+              window.renderChart(chartType, data.chart_data, title, false, data.forecast_data);
             }
 
             else {
-              console.log('Comparison chart container not found or createChartInstance not available');
+              console.error('renderChart function not found in global scope');
+              showError('Chart rendering function not available');
             }
+          }
+
+          else {
+            console.error('Invalid chart data structure:', data);
+            showError('Invalid chart data received from server');
           }
         }
 
-        else {
-          console.error('Invalid comparison data structure:', data);
-          showError('Invalid comparison data received from server');
-        }
+        , 500);
+
+      function updateChart(data) {
+        throttledUpdateChart(data);
       }
 
-      , 500);
+      // Show/hide loading indicator
+      function showLoadingIndicator(show) {
+        const loadingDiv=document.getElementById('loadingIndicator');
+        const chartIndicator=document.getElementById('chartLoadingIndicator');
 
-    function updateComparisonChart(data) {
-      throttledUpdateComparisonChart(data);
-    }
-
-    // Update chart with new data (throttled to prevent rapid updates)
-    const throttledUpdateChart=throttle(function (data) {
-        console.log('Updating chart with data:', data);
-
-        console.log('Data structure check:', {
-          hasChartData: ! !data.chart_data,
-          hasChartType: ! !data.chart_type,
-          hasTitle: ! !data.title,
-          hasDataset: ! !data.dataset,
-          renderChartAvailable: typeof window.renderChart
-        });
-
-      // Destroy existing main chart before creating new one
-      if (window.chartInstance) {
-        window.chartInstance.destroy();
-        window.chartInstance=null;
-      }
-
-      // Update metrics if available
-      if (data.raw_records_for_chart_context) {
-        updateChartMetrics(data);
-      }
-
-      // Ensure chart container exists
-      const chartContainer=document.getElementById('tutorChartContainer');
-
-      if ( !chartContainer) {
-        console.error('Chart container not found');
-        showError('Chart container not found');
-        return;
-      }
-
-      // Ensure canvas exists
-      let canvas=document.getElementById('tutorChart');
-
-      if ( !canvas) {
-        console.log('Creating new canvas element');
-        canvas=document.createElement('canvas');
-        canvas.id='tutorChart';
-        chartContainer.innerHTML='';
-        chartContainer.appendChild(canvas);
-      }
-
-      // Render the chart based on the data
-      if (data.chart_data && data.chart_type && data.title) {
-
-        // Call renderChart from the global scope (defined in chart.js)
-        if (typeof window.renderChart==='function') {
-          console.log('Rendering chart with data:', data.chart_type, data.title);
-          window.renderChart(data.chart_type, data.chart_data, data.title, false, data.forecast_data);
-        }
-
-        else {
-          console.error('renderChart function not found in global scope');
-          showError('Chart rendering function not available');
-        }
-      }
-
-      else if (data.dataset && data.chart_data) {
-        // Fallback for different data structure
-        const chartType=data.chart_type || 'bar';
-        const title=data.title || window.chartTitles?.[data.dataset] || 'Chart';
-
-        if (typeof window.renderChart==='function') {
-          console.log('Rendering chart with fallback data:', chartType, title);
-          window.renderChart(chartType, data.chart_data, title, false, data.forecast_data);
-        }
-
-        else {
-          console.error('renderChart function not found in global scope');
-          showError('Chart rendering function not available');
-        }
-      }
-
-      else {
-        console.error('Invalid chart data structure:', data);
-        showError('Invalid chart data received from server');
-      }
-    }
-
-    , 500);
-
-    function updateChart(data) {
-      throttledUpdateChart(data);
-    }
-
-    // Show/hide loading indicator
-    function showLoadingIndicator(show) {
-      const loadingDiv=document.getElementById('loadingIndicator');
-      const chartIndicator=document.getElementById('chartLoadingIndicator');
-
-      if (loadingDiv) {
+        if (loadingDiv) {
         loadingDiv.style.display=show ? 'block': 'none';
-      }
+        }
 
-      if (chartIndicator) {
+        if (chartIndicator) {
         chartIndicator.style.display=show ? 'inline-block': 'none';
+        }
       }
-    }
 
-    // Show error message
-    function showError(message) {
-      console.error(message);
-      // You can implement a proper error display here
-      alert(message);
-    }
+      // Show error message
+      function showError(message) {
+        console.error(message);
+        // You can implement a proper error display here
+        alert(message);
+      }
 
-    // Multi-select tutor functionality
-    let selectedTutors=[];
-    let allTutors=[];
+      // Multi-select tutor functionality
+      let selectedTutors=[];
+      let allTutors=[];
 
-    async function initializeTutorSelector() {
-      try {
+      async function initializeTutorSelector() {
+        try {
         const response=await fetch('{{ url_for("analytics.get_tutors") }}');
-        allTutors=await response.json();
-        populateTutorDropdown(allTutors);
-        setupTutorSearch();
-      }
+          allTutors=await response.json();
+          populateTutorDropdown(allTutors);
+          setupTutorSearch();
+        }
 
-      catch (error) {
-        console.error('Error loading tutors:', error);
+        catch (error) {
+          console.error('Error loading tutors:', error);
         document.getElementById('tutorDropdown').innerHTML='<div class="px-2 py-1 text-danger small">Error loading tutors</div>';
-      }
-    }
-
-    function populateTutorDropdown(tutors) {
-      const dropdown=document.getElementById('tutorDropdown');
-
-      if (tutors.length===0) {
-        dropdown.innerHTML='<div class="px-2 py-1 text-muted small">No tutors found</div>';
-        return;
+        }
       }
 
-      // Add control buttons
+      function populateTutorDropdown(tutors) {
+        const dropdown=document.getElementById('tutorDropdown');
+
+        if (tutors.length===0) {
+          dropdown.innerHTML='<div class="px-2 py-1 text-muted small">No tutors found</div>';
+          return;
+        }
+
+        // Add control buttons
       const controlButtons=` <div class="dropdown-item-text border-bottom mb-1 pb-1"><small class="text-muted d-flex justify-content-between"><span class="btn btn-link btn-sm p-0" onclick="selectAllTutors()">Select All</span><span class="btn btn-link btn-sm p-0" onclick="clearAllTutors()">Clear All</span></small></div>`;
 
-      const tutorItems=tutors.map(tutor=> `<div class="dropdown-item tutor-option" data-tutor-id="${tutor.tutor_id}" data-tutor-name="${tutor.tutor_name}" > <strong>$ {
-          tutor.tutor_name
-        }
+        const tutorItems=tutors.map(tutor=> `<div class="dropdown-item tutor-option" data-tutor-id="${tutor.tutor_id}" data-tutor-name="${tutor.tutor_name}" > <strong>$ {
+            tutor.tutor_name
+          }
 
-        </strong> <small class="text-muted" >(ID: $ {
-            tutor.tutor_id
-          })</small> </div>`).join('');
+          </strong> <small class="text-muted" >(ID: $ {
+              tutor.tutor_id
+            })</small> </div>`).join('');
 
       dropdown.innerHTML=controlButtons+tutorItems;
 
-      // Add click event listeners to dropdown items
-      dropdown.querySelectorAll('.tutor-option').forEach(item=> {
-          item.addEventListener('click', (e)=> {
-              e.preventDefault();
-              const tutorId=item.getAttribute('data-tutor-id');
-              const tutorName=item.getAttribute('data-tutor-name');
-              addTutor(tutorId, tutorName);
-              document.getElementById('tutor_id').value='';
-            });
-        });
-    }
-
-    function selectAllTutors() {
-      allTutors.forEach(tutor=> {
-          addTutor(tutor.tutor_id, tutor.tutor_name);
-        });
-      document.getElementById('tutor_id').blur();
-    }
-
-    function clearAllTutors() {
-      selectedTutors=[];
-      updateSelectedTutorsDisplay();
-      updateTutorIdInput();
-      document.getElementById('tutor_id').blur();
-    }
-
-    function setupTutorSearch() {
-      const searchInput=document.getElementById('tutor_id');
-
-      searchInput.addEventListener('input', (e)=> {
-          const searchTerm=e.target.value.toLowerCase();
-          const filteredTutors=allTutors.filter(tutor=> tutor.tutor_name.toLowerCase().includes(searchTerm) || tutor.tutor_id.toString().includes(searchTerm));
-          populateTutorDropdown(filteredTutors);
-        });
-
-      // Show dropdown when input is focused
-      searchInput.addEventListener('focus', ()=> {
-          populateTutorDropdown(allTutors);
-        });
-    }
-
-    function addTutor(tutorId, tutorName) {
-
-      // Check if tutor is already selected
-      if (selectedTutors.find(t=> t.id===tutorId)) {
-        return;
+        // Add click event listeners to dropdown items
+        dropdown.querySelectorAll('.tutor-option').forEach(item=> {
+            item.addEventListener('click', (e)=> {
+                e.preventDefault();
+                const tutorId=item.getAttribute('data-tutor-id');
+                const tutorName=item.getAttribute('data-tutor-name');
+                addTutor(tutorId, tutorName);
+                document.getElementById('tutor_id').value='';
+              });
+          });
       }
 
-      selectedTutors.push({
-        id: tutorId, name: tutorName
-      });
-    updateSelectedTutorsDisplay();
-    updateTutorIdInput();
+      function selectAllTutors() {
+        allTutors.forEach(tutor=> {
+            addTutor(tutor.tutor_id, tutor.tutor_name);
+          });
+        document.getElementById('tutor_id').blur();
+      }
+
+      function clearAllTutors() {
+        selectedTutors=[];
+        updateSelectedTutorsDisplay();
+        updateTutorIdInput();
+        document.getElementById('tutor_id').blur();
+      }
+
+      function setupTutorSearch() {
+        const searchInput=document.getElementById('tutor_id');
+
+        searchInput.addEventListener('input', (e)=> {
+            const searchTerm=e.target.value.toLowerCase();
+            const filteredTutors=allTutors.filter(tutor=> tutor.tutor_name.toLowerCase().includes(searchTerm) || tutor.tutor_id.toString().includes(searchTerm));
+            populateTutorDropdown(filteredTutors);
+          });
+
+        // Show dropdown when input is focused
+        searchInput.addEventListener('focus', ()=> {
+            populateTutorDropdown(allTutors);
+          });
+      }
+
+      function addTutor(tutorId, tutorName) {
+
+        // Check if tutor is already selected
+        if (selectedTutors.find(t=> t.id===tutorId)) {
+          return;
+        }
+
+        selectedTutors.push({
+          id: tutorId, name: tutorName
+        });
+      updateSelectedTutorsDisplay();
+      updateTutorIdInput();
     }
 
     function removeTutor(tutorId) {
@@ -1995,21 +2747,8 @@
         if (value && String(value).trim() !=='') {
           const chip=document.createElement('span');
 
-          chip.className=`filter-chip $ {
-            isAdvanced ? 'advanced-chip': ''
-          }
-
-          `;
-
-          chip.textContent=`$ {
-            label
-          }
-
-          : $ {
-            displayValue || value
-          }
-
-          `;
+          chip.className = `filter-chip ${isAdvanced ? 'advanced-chip' : ''}`;
+          chip.textContent = `${label}: ${displayValue || value}`;
           chipsDiv.appendChild(chip);
         }
       }
@@ -2032,24 +2771,18 @@
       const shiftStartHour=document.getElementById('shift_start_hour').value;
       const shiftEndHour=document.getElementById('shift_end_hour').value;
 
-      if (shiftStartHour !=="0" || shiftEndHour !=="23") createChip("Check-In Time", `$ {
-          String(shiftStartHour).padStart(2, '0')
-        }
-
-        :00 - $ {
-          String(shiftEndHour).padStart(2, '0')
-        }
-
-        :00`);
+      if (shiftStartHour !== "0" || shiftEndHour !== "23") {
+        createChip("Check-In Time", `${String(shiftStartHour).padStart(2, '0')}:00 - ${String(shiftEndHour).padStart(2, '0')}:00`);
+      }
 
       // Advanced filters
-      const advancedFilters=collectAdvancedFilters();
+        const advancedFilters=collectAdvancedFilters();
 
-      Object.entries(advancedFilters).forEach(([key, value])=> {
-          if (value && value !=='' && value !==false) {
-            createChip(formatFilterLabel(key), formatFilterValue(key, value), null, true);
-          }
-        });
+        Object.entries(advancedFilters).forEach(([key, value])=> {
+            if (value && value !=='' && value !==false) {
+              createChip(formatFilterLabel(key), formatFilterValue(key, value), null, true);
+            }
+          });
     }
 
     // Enhanced Analytics Functions
@@ -2159,12 +2892,12 @@
       showLoadingIndicator(true);
 
       // Trigger form submission to reload all grid charts
-      const form=document.getElementById('filterForm');
+          const form=document.getElementById('filterForm');
 
-      if (form) {
-        form.dispatchEvent(new Event('submit', {
-            bubbles: true
-          }));
+          if (form) {
+            form.dispatchEvent(new Event('submit', {
+                bubbles: true
+              }));
     }
 
     setTimeout(()=> showLoadingIndicator(false), 1500);
@@ -2291,4 +3024,7 @@
           subtree: true
         });
     })();
-    </script></body></html>
+  </script>
+</body>
+
+</html>

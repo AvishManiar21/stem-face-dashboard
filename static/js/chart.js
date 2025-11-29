@@ -6,7 +6,8 @@ if (window.Chart && window.Chart.register && window.ChartZoom) {
 let tutorChart;
 
 function isDarkMode() {
-  return document.documentElement.getAttribute('data-theme') === 'dark';
+  // Charts page uses fixed light purple theme - always return false
+  return false;
 }
 
 const chartOptions = {
@@ -68,13 +69,13 @@ const darkModeColors = {
 
 const lightModeColors = {
   background: '#ffffff',
-  surface: '#f8fafc',
-  primary: '#2563eb',
+  surface: '#ffffff',
+  primary: '#667eea', // Purple to match dashboard theme
   secondary: '#64748b',
   success: '#10b981',
   warning: '#f59e0b',
   danger: '#ef4444',
-  info: '#06b6d4',
+  info: '#667eea', // Purple to match dashboard theme
   text: '#1e293b',
   textSecondary: '#475569',
   textMuted: '#64748b',
@@ -83,27 +84,29 @@ const lightModeColors = {
 };
 
 function getChartColors() {
-  return isDarkMode() ? darkModeColors : lightModeColors;
+  // Always use light mode colors for dashboard theme
+  return lightModeColors;
 }
 
 function getChartColorPalette() {
-  const colors = getChartColors();
+  // Dashboard theme color palette - purple gradient colors
   return [
-    colors.primary,
-    colors.success,
-    colors.warning,
-    colors.danger,
-    colors.info,
-    '#8b5cf6', // purple
-    '#f97316', // orange
-    '#06b6d4', // cyan
-    '#84cc16', // lime
-    '#ec4899', // pink
-    '#6366f1', // indigo
-    '#14b8a6', // teal
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#22c55e'  // green
+    '#667eea', // Primary purple
+    '#764ba2', // Secondary purple
+    '#10b981', // Success green
+    '#f59e0b', // Warning amber
+    '#ef4444', // Danger red
+    '#8b5cf6', // Purple
+    '#a78bfa', // Light purple
+    '#c084fc', // Lighter purple
+    '#06b6d4', // Cyan
+    '#84cc16', // Lime
+    '#ec4899', // Pink
+    '#6366f1', // Indigo
+    '#14b8a6', // Teal
+    '#f59e0b', // Amber
+    '#ef4444', // Red
+    '#22c55e'  // Green
   ];
 }
 
@@ -177,7 +180,7 @@ function getDefaultChartConfig() {
         labels: {
           color: colors.text,
           font: {
-            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             size: 12
           }
         }
@@ -209,7 +212,7 @@ function getDefaultChartConfig() {
         ticks: {
           color: colors.textSecondary,
           font: {
-            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             size: 11
           }
         },
@@ -225,7 +228,7 @@ function getDefaultChartConfig() {
         ticks: {
           color: colors.textSecondary,
           font: {
-            family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             size: 11
           }
         },
@@ -318,7 +321,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
         return {
             label: tutorName, data: dataPoints, fill: chartType === 'area',
             backgroundColor: color, borderColor: borderColor, borderWidth: 1.5, tension: 0.3,
-            pointBackgroundColor: borderColor, pointBorderColor: isDarkMode() ? '#fff' : '#333'
+            pointBackgroundColor: borderColor, pointBorderColor: '#1e293b'
         };
     });
     chartTitleEl.innerText = `${title} (Comparison)`;
@@ -371,15 +374,16 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     }
     chartTitleEl.innerText = title;
 
-    const singleBackgroundColor = isDarkMode() ? 'rgba(255, 159, 64, 0.7)' : 'rgba(0, 188, 212, 0.7)';
-    const singleBorderColor = isDarkMode() ? 'rgba(255, 159, 64, 1)' : 'rgba(0, 188, 212, 1)';
+    // Dashboard theme colors - purple gradient
+    const singleBackgroundColor = 'rgba(102, 126, 234, 0.7)'; // Purple with transparency
+    const singleBorderColor = 'rgba(102, 126, 234, 1)'; // Solid purple
 
     datasetsArray = [{
         label: title, data: data, fill: chartType === 'area',
         backgroundColor: chartType === 'pie' ? generateColors(data.length) : singleBackgroundColor,
         borderColor: chartType === 'pie' ? generateColors(data.length, true) : singleBorderColor,
         borderWidth: 1, tension: 0.4,
-        pointBackgroundColor: singleBorderColor, pointBorderColor: isDarkMode() ? '#fff' : '#333'
+        pointBackgroundColor: singleBorderColor, pointBorderColor: '#1e293b'
     }];
 
     if (forecastData && Object.keys(forecastData).length > 0 && chartType === 'line') {
@@ -401,7 +405,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     if (Object.keys(displayData).length > 0 && (typeof displayData[Object.keys(displayData)[0]] === 'number' || typeof displayData[Object.keys(displayData)[0]] === 'string')) {
         summaryTableDiv.innerHTML = `
             <h6 class="mt-3">Chart Data Summary:</h6>
-            <table class="table table-sm table-bordered table-striped ${isDarkMode() ? 'table-dark' : ''}">
+            <table class="table table-sm table-bordered table-striped">
             <thead><tr><th>Label</th><th>Value</th></tr></thead>
             <tbody>
                 ${Object.keys(displayData).map((l) => `<tr><td>${l}</td><td>${parseFloat(displayData[l]).toFixed(2)}</td></tr>`).join('')}
@@ -433,7 +437,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     ctx.scale(dpr, dpr);
     const W = cssW, H = cssH;
     ctx.clearRect(0, 0, W, H);
-    const isDark = isDarkMode && isDarkMode();
+    const isDark = false; // Fixed light purple theme
     const margin = { top: 16, right: 24, bottom: 36, left: 80 };
     const width = W - margin.left - margin.right;
     const height = H - margin.top - margin.bottom;
@@ -460,8 +464,8 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
       ctx.fillRect(px, py, cellW - 1, cellH - 1);
     });
     // Axes labels
-    ctx.fillStyle = isDark ? '#e6e6e6' : '#333';
-    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '12px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     daysOrder.forEach((day, i) => {
       const ty = y0 + i * cellH + cellH * 0.65;
       ctx.fillText(day.substring(0, 3), 10, ty);
@@ -487,8 +491,8 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     }
     ctx.fillStyle = grad;
     ctx.fillRect(lgX, lgY, lgW, lgH);
-    ctx.fillStyle = isDark ? '#e6e6e6' : '#333';
-    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '11px Inter, sans-serif';
     ctx.fillText(String(Math.round(minV)), lgX - 4 - ctx.measureText(String(Math.round(minV))).width, lgY + lgH);
     ctx.fillText(String(Math.round(maxV)), lgX + lgW + 4, lgY + lgH);
     chartTitleEl.innerText = title + ' (Heatmap)';
@@ -510,8 +514,8 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     const datasetsArray = [{
       label: title,
       data: points,
-      backgroundColor: isDarkMode() ? 'rgba(255, 159, 64, 0.7)' : 'rgba(0, 188, 212, 0.7)',
-      borderColor: isDarkMode() ? 'rgba(255, 159, 64, 1)' : 'rgba(0, 188, 212, 1)',
+      backgroundColor: 'rgba(102, 126, 234, 0.7)', // Purple theme
+      borderColor: 'rgba(102, 126, 234, 1)', // Purple theme
       pointRadius: 4
     }];
     const defaultConfig = getDefaultChartConfig();
@@ -566,12 +570,12 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
       scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
         y: {
           beginAtZero: true,
-          grid: { color: isDarkMode() ? '#444' : '#ddd' },
-          ticks: { color: isDarkMode() ? '#e0e0e0' : '#333' }
+          grid: { color: '#f1f5f9' },
+          ticks: { color: '#475569' }
         },
         x: {
-          grid: { color: isDarkMode() ? '#444' : '#ddd' },
-          ticks: { color: isDarkMode() ? '#e0e0e0' : '#333' }
+          grid: { color: '#f1f5f9' },
+          ticks: { color: '#475569' }
         }
       }
     }
@@ -804,20 +808,23 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
     scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
       x: { 
         ticks: { 
-          color: isDarkMode() ? '#f2f2f2' : '#111', 
-          font: { size: isGridChart ? 9 : 11 },
+          color: '#1e293b', 
+          font: { 
+            family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            size: isGridChart ? 9 : 11 
+          },
           maxRotation: isGridChart ? 45 : 0,
           autoSkip: isGridChart
         },
-        grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+        grid: { color: 'rgba(0,0,0,0.1)' }
       },
       y: { 
         beginAtZero: true,
         ticks: { 
-          color: isDarkMode() ? '#f2f2f2' : '#111', 
+          color: '#1e293b', 
           font: { size: isGridChart ? 9 : 11 }
         },
-        grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+        grid: { color: 'rgba(0,0,0,0.1)' }
       }
     },
     plugins: {
@@ -825,10 +832,13 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
       legend: { 
         position: chartType === 'pie' || chartType === 'doughnut' ? 'bottom' : 'top',
         labels: { 
-          color: isDarkMode() ? '#f2f2f2' : '#111', 
+          color: '#1e293b', 
           boxWidth: isGridChart ? 10 : 12, 
           padding: isGridChart ? 8 : 10, 
-          font: { size: isGridChart ? 9 : 11 },
+          font: { 
+            family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            size: isGridChart ? 9 : 11 
+          },
           usePointStyle: isGridChart
         },
         display: !isGridChart || chartType === 'pie' || chartType === 'doughnut'

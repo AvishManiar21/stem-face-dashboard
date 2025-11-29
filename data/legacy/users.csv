@@ -1,2 +1,0 @@
-user_id,email,full_name,role,created_at,last_login,active,password_hash
-ADMIN001,admin@example.com,System Administrator,admin,2025-11-29T14:57:46.199568,2025-11-29T14:57:46.199581,True,240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
