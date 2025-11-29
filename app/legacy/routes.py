@@ -474,7 +474,7 @@ def export_punctuality_csv():
         dataset = 'punctuality_analysis'
         max_date = req.get('max_date')
         # Build analytics with filters
-        analytics = TutorAnalytics(face_log_file='data/legacy/face_log_with_expected.csv', max_date=pd.to_datetime(max_date) if max_date else None)
+        analytics = SchedulingAnalytics()
         pa = analytics.get_chart_data(dataset)
         import io
         output = io.StringIO()
@@ -526,8 +526,8 @@ def export_punctuality_csv():
 def get_tutors():
     """Get all tutors for frontend"""
     try:
-        # Get unique tutors from face_log data
-        analytics = TutorAnalytics(face_log_file='data/legacy/face_log_with_expected.csv')
+        # Get unique tutors from scheduling data
+        analytics = SchedulingAnalytics()
         df = analytics.data
         if df.empty:
             return jsonify([])

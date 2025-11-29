@@ -15,14 +15,44 @@ class SchedulingAnalytics:
 
     def load_data(self):
         try:
-            # Load Appointments
-            if not os.path.exists(self.appointments_file):
-                return pd.DataFrame()
-            df_appt = pd.read_csv(self.appointments_file)
+            # Try loading from Core Appointments first
+            df_appt = pd.DataFrame()
+            if os.path.exists(self.appointments_file):
+                df_appt = pd.read_csv(self.appointments_file)
+            
+            # If Core is empty, try Legacy Face Log
+            if df_appt.empty:
+                legacy_file = 'data/legacy/face_log.csv'
+                if os.path.exists(legacy_file):
+                    # print(f"Loading data from {legacy_file}")
+                    df_legacy = pd.read_csv(legacy_file)
+                    if not df_legacy.empty:
+                        # Map Legacy columns to expected schema
+                        df_legacy['start_time_dt'] = pd.to_datetime(df_legacy['check_in'], errors='coerce')
+                        df_legacy['end_time_dt'] = pd.to_datetime(df_legacy['check_out'], errors='coerce')
+                        
+                        # Ensure duration_hours exists
+                        if 'shift_hours' in df_legacy.columns:
+                            df_legacy['duration_hours'] = pd.to_numeric(df_legacy['shift_hours'], errors='coerce').fillna(0)
+                        else:
+                            df_legacy['duration_hours'] = (df_legacy['end_time_dt'] - df_legacy['start_time_dt']).dt.total_seconds() / 3600
+                        
+                        # Basic fields
+                        df_legacy['date'] = df_legacy['start_time_dt'].dt.date
+                        df_legacy['hour'] = df_legacy['start_time_dt'].dt.hour
+                        df_legacy['day_of_week'] = df_legacy['start_time_dt'].dt.day_name()
+                        df_legacy['month'] = df_legacy['start_time_dt'].dt.month
+                        df_legacy['status'] = 'completed' # Assume log entries are completed sessions
+                        
+                        # Ensure tutor_id is string
+                        df_legacy['tutor_id'] = df_legacy['tutor_id'].astype(str)
+                        
+                        return df_legacy
+
             if df_appt.empty:
                 return pd.DataFrame()
             
-            # Load Tutors and Users to get Tutor Names
+            # Load Tutors and Users to get Tutor Names (Only for Core data)
             if os.path.exists(self.tutors_file) and os.path.exists(self.users_file):
                 df_tutors = pd.read_csv(self.tutors_file)
                 df_users = pd.read_csv(self.users_file)
