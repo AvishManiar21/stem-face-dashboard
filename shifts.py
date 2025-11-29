@@ -7,7 +7,7 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 from app.auth.service import get_current_user
-from app.legacy.analytics import TutorAnalytics
+from app.core.legacy_compat import TutorAnalytics
 
 # File paths
 SHIFTS_FILE = 'data/core/shifts.csv'

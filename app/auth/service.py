@@ -33,7 +33,7 @@ def error_response(message, status_code=400, code=None, details=None):
 
 # Bridge to analytics audit logger
 try:
-    from app.legacy.analytics import TutorAnalytics
+    from app.core.legacy_compat import TutorAnalytics
     _analytics = TutorAnalytics()
 except Exception:
     _analytics = None

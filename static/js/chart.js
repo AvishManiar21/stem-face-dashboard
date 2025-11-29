@@ -10,44 +10,43 @@ function isDarkMode() {
 }
 
 const chartOptions = {
-  checkins_per_tutor: ['bar', 'pie', 'doughnut'],
+  appointments_per_tutor: ['bar', 'pie', 'doughnut'],
   hours_per_tutor: ['bar', 'pie', 'doughnut'],
-  daily_checkins: ['bar', 'line', 'scatter'],
+  daily_appointments: ['bar', 'line', 'scatter'],
   daily_hours: ['bar', 'line', 'area', 'scatter'],
-  cumulative_checkins: ['line', 'area'],
+  cumulative_appointments: ['line', 'area'],
   cumulative_hours: ['line', 'area'],
-  hourly_checkins_dist: ['bar', 'line', 'scatter'],
+  hourly_distribution: ['bar', 'line', 'scatter'],
+  monthly_appointments: ['bar', 'line', 'scatter'],
   monthly_hours: ['bar', 'line', 'scatter'],
   avg_hours_per_day_of_week: ['bar', 'pie', 'doughnut'],
-  checkins_per_day_of_week: ['bar', 'pie', 'doughnut'],
-  // hourly_activity_by_day returns nested data {Day -> {Hour -> Count}}; support bar, line, and heatmap
-  hourly_activity_by_day: ['bar', 'line', 'heatmap'],
-  forecast_daily_checkins: ['line'],
-  session_duration_distribution: ['bar', 'pie', 'doughnut'],
-  punctuality_analysis: ['bar', 'pie', 'doughnut'],
-  avg_session_duration_per_tutor: ['bar', 'pie', 'doughnut'],
-  tutor_consistency_score: ['bar', 'pie', 'doughnut'],
-  session_duration_vs_checkin_hour: ['scatter']
+  appointments_per_day_of_week: ['bar', 'pie', 'doughnut'],
+  appointments_by_status: ['bar', 'pie', 'doughnut'],
+  appointments_by_course: ['bar', 'pie', 'doughnut'],
+  appointment_duration_distribution: ['bar', 'pie', 'doughnut'],
+  tutor_course_distribution: ['bar', 'pie', 'doughnut'],
+  shifts_overview: ['bar', 'pie', 'doughnut'],
+  tutor_availability: ['bar', 'pie', 'doughnut']
 };
 
 const chartTitles = {
-  checkins_per_tutor: "Check-ins per Tutor",
-  hours_per_tutor: "Hours per Tutor",
-  daily_checkins: "Daily Check-ins",
-  daily_hours: "Daily Hours",
-  cumulative_checkins: "Cumulative Check-ins",
+  appointments_per_tutor: "Appointments per Tutor",
+  hours_per_tutor: "Scheduled Hours per Tutor",
+  daily_appointments: "Daily Appointments",
+  daily_hours: "Daily Scheduled Hours",
+  cumulative_appointments: "Cumulative Appointments",
   cumulative_hours: "Cumulative Hours",
-  hourly_checkins_dist: "Hourly Check-Ins Distribution (Overall)",
+  hourly_distribution: "Hourly Appointment Distribution",
+  monthly_appointments: "Monthly Appointments",
   monthly_hours: "Monthly Hours",
-  avg_hours_per_day_of_week: "Average Session Hours per Day of Week",
-  checkins_per_day_of_week: "Check-ins per Day of Week",
-  hourly_activity_by_day: "Hourly Activity by Day of Week",
-  forecast_daily_checkins: "Daily Check-ins Forecast (Experimental)",
-  session_duration_distribution: "Session Duration Distribution",
-  punctuality_analysis: "Punctuality Analysis",
-  avg_session_duration_per_tutor: "Average Session Duration per Tutor",
-  tutor_consistency_score: "Tutor Consistency Score",
-  session_duration_vs_checkin_hour: "Session Duration vs. Check-in Hour"
+  avg_hours_per_day_of_week: "Average Hours per Day of Week",
+  appointments_per_day_of_week: "Appointments per Day of Week",
+  appointments_by_status: "Appointments by Status",
+  appointments_by_course: "Appointments by Course",
+  appointment_duration_distribution: "Appointment Duration Distribution",
+  tutor_course_distribution: "Courses Assigned per Tutor",
+  shifts_overview: "Shift Assignments per Tutor",
+  tutor_availability: "Availability Windows per Tutor"
 };
 
 // Dark mode color schemes
@@ -307,15 +306,15 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
   
   const chartKey = document.getElementById('dataset').value; // Get current chart key
 
-  if (isComparisonMode && (chartKey === 'daily_checkins' || chartKey === 'daily_hours') && typeof rawData === 'object' && Object.keys(rawData).length > 0) {
+  if (isComparisonMode && (chartKey === 'daily_appointments' || chartKey === 'daily_hours') && typeof rawData === 'object' && Object.keys(rawData).length > 0) {
     const allLabelsSet = new Set();
     Object.values(rawData).forEach(tutorData => Object.keys(tutorData).forEach(label => allLabelsSet.add(label)));
     labels = Array.from(allLabelsSet).sort();
 
     datasetsArray = Object.entries(rawData).map(([tutorName, tutorData], index) => {
         const dataPoints = labels.map(label => tutorData[label] || 0);
-        const color = متنوعColors(Object.keys(rawData).length, false, index);
-        const borderColor = متنوعColors(Object.keys(rawData).length, true, index);
+        const color = generateColors(Object.keys(rawData).length, false, index);
+        const borderColor = generateColors(Object.keys(rawData).length, true, index);
         return {
             label: tutorName, data: dataPoints, fill: chartType === 'area',
             backgroundColor: color, borderColor: borderColor, borderWidth: 1.5, tension: 0.3,
@@ -331,8 +330,8 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
     datasetsArray = daysOrder.map((day, index) => {
         const dayData = rawData[day] || {};
         const dataPoints = labels.map(hourLabel => dayData[hourLabel] || 0);
-        const color = متنوعColors(daysOrder.length, false, index);
-        const borderColor = متنوعColors(daysOrder.length, true, index);
+        const color = generateColors(daysOrder.length, false, index);
+        const borderColor = generateColors(daysOrder.length, true, index);
         return { label: day, data: dataPoints, backgroundColor: color, borderColor: borderColor, borderWidth: 1, tension: 0.3, fill: false };
     });
     chartTitleEl.innerText = title;
@@ -350,7 +349,7 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
         return;
     }
     let displayData = rawData;
-    // For comparison mode on charts like 'checkins_per_tutor', rawData itself is the {TutorA: count, TutorB: count}
+    // For comparison mode on charts like 'appointments_per_tutor', rawData itself is the {TutorA: count, TutorB: count}
     // So labels are tutor names and data is their counts.
     labels = Object.keys(displayData);
     const data = Object.values(displayData);
@@ -377,8 +376,8 @@ function renderSingleChart(chartType, rawData, title, isComparisonMode = false, 
 
     datasetsArray = [{
         label: title, data: data, fill: chartType === 'area',
-        backgroundColor: chartType === 'pie' ? متنوعColors(data.length) : singleBackgroundColor,
-        borderColor: chartType === 'pie' ? متنوعColors(data.length, true) : singleBorderColor,
+        backgroundColor: chartType === 'pie' ? generateColors(data.length) : singleBackgroundColor,
+        borderColor: chartType === 'pie' ? generateColors(data.length, true) : singleBorderColor,
         borderWidth: 1, tension: 0.4,
         pointBackgroundColor: singleBorderColor, pointBorderColor: isDarkMode() ? '#fff' : '#333'
     }];
@@ -637,48 +636,139 @@ function renderSplitChart(chartType, rawData, title, isComparisonMode = false, f
 }
 
 function renderGridChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
-  // For grid layout, render 4 different charts showing different metrics
-  const gridCtx1 = document.getElementById('gridChart1')?.getContext('2d');
-  const gridCtx2 = document.getElementById('gridChart2')?.getContext('2d');
-  const gridCtx3 = document.getElementById('gridChart3')?.getContext('2d');
-  const gridCtx4 = document.getElementById('gridChart4')?.getContext('2d');
-    
-  if (!gridCtx1 || !gridCtx2 || !gridCtx3 || !gridCtx4) return;
+  // For grid layout, render 6 different charts showing different metrics
+  console.log('Rendering grid charts...');
+  
+  // Verify containers exist
+  const containers = ['gridChart1Container', 'gridChart2Container', 'gridChart3Container', 
+                     'gridChart4Container', 'gridChart5Container', 'gridChart6Container'];
+  const missingContainers = containers.filter(id => !document.getElementById(id));
+  if (missingContainers.length > 0) {
+    console.error('Missing grid chart containers:', missingContainers);
+    return;
+  }
   
   // Clear existing charts
-  ['gridChart1', 'gridChart2', 'gridChart3', 'gridChart4'].forEach(chartId => {
-    if (currentChartInstances[chartId]) currentChartInstances[chartId].destroy();
+  ['gridChart1', 'gridChart2', 'gridChart3', 'gridChart4', 'gridChart5', 'gridChart6'].forEach(chartId => {
+    if (currentChartInstances[chartId]) {
+      try {
+        currentChartInstances[chartId].destroy();
+      } catch (e) {
+        console.warn(`Error destroying ${chartId}:`, e);
+      }
+      currentChartInstances[chartId] = null;
+    }
+  });
+  
+  // Show loading indicators
+  const loadingIndicators = ['gridChart1Container', 'gridChart2Container', 'gridChart3Container', 
+                             'gridChart4Container', 'gridChart5Container', 'gridChart6Container'];
+  loadingIndicators.forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (container) {
+      container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    }
   });
   
   // Fetch data for different chart types
   fetchGridChartData().then(gridData => {
-    // Chart 1: Check-ins per Tutor (Bar)
-    if (gridData.checkins_per_tutor) {
-      currentChartInstances.gridChart1 = createChartInstance(
-        gridCtx1, 'bar', gridData.checkins_per_tutor, 'Check-ins per Tutor', false
-      );
-    }
+    console.log('Grid data received:', gridData);
+    
+    // Helper function to render a chart
+    const renderGridChartItem = (chartId, chartType, data, title) => {
+      const container = document.getElementById(chartId + 'Container');
+      if (!container) {
+        console.error(`Container not found: ${chartId}Container`);
+        return null;
+      }
+      
+      if (!data || Object.keys(data).length === 0) {
+        container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted"><small>No data available</small></div>';
+        return null;
+      }
+      
+      // Ensure canvas exists
+      let canvas = document.getElementById(chartId);
+      if (!canvas) {
+        container.innerHTML = `<canvas id="${chartId}"></canvas>`;
+        canvas = document.getElementById(chartId);
+      }
+      
+      if (!canvas) {
+        console.error(`Canvas not found: ${chartId}`);
+        return null;
+      }
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error(`Context not available for: ${chartId}`);
+        return null;
+      }
+      
+      return createChartInstance(ctx, chartType, data, title, false);
+    };
+    
+    // Chart 1: Appointments per Tutor (Bar)
+    currentChartInstances.gridChart1 = renderGridChartItem(
+      'gridChart1', 'bar', 
+      gridData.appointments_per_tutor || {}, 
+      'Appointments per Tutor'
+    );
     
     // Chart 2: Hours per Tutor (Pie)
-    if (gridData.hours_per_tutor) {
-      currentChartInstances.gridChart2 = createChartInstance(
-        gridCtx2, 'pie', gridData.hours_per_tutor, 'Hours per Tutor', false
-      );
-    }
+    currentChartInstances.gridChart2 = renderGridChartItem(
+      'gridChart2', 'pie', 
+      gridData.hours_per_tutor || {}, 
+      'Scheduled Hours per Tutor'
+    );
     
-    // Chart 3: Daily Check-ins (Line)
-    if (gridData.daily_checkins) {
-      currentChartInstances.gridChart3 = createChartInstance(
-        gridCtx3, 'line', gridData.daily_checkins, 'Daily Check-ins', false
-      );
-    }
+    // Chart 3: Daily Appointments (Line)
+    currentChartInstances.gridChart3 = renderGridChartItem(
+      'gridChart3', 'line', 
+      gridData.daily_appointments || {}, 
+      'Daily Appointments'
+    );
     
-    // Chart 4: Hourly Distribution (Bar)
-    if (gridData.hourly_checkins_dist) {
-      currentChartInstances.gridChart4 = createChartInstance(
-        gridCtx4, 'bar', gridData.hourly_checkins_dist, 'Hourly Distribution', false
-      );
-    }
+    // Chart 4: Appointments by Status (Pie)
+    currentChartInstances.gridChart4 = renderGridChartItem(
+      'gridChart4', 'pie', 
+      gridData.appointments_by_status || {}, 
+      'Appointments by Status'
+    );
+    
+    // Chart 5: Course Popularity (Bar)
+    currentChartInstances.gridChart5 = renderGridChartItem(
+      'gridChart5', 'bar', 
+      gridData.course_popularity || {}, 
+      'Course Popularity'
+    );
+    
+    // Chart 6: Hourly Distribution (Bar)
+    currentChartInstances.gridChart6 = renderGridChartItem(
+      'gridChart6', 'bar', 
+      gridData.hourly_appointments_dist || {}, 
+      'Hourly Distribution'
+    );
+    
+    console.log('Grid charts rendered:', {
+      chart1: !!currentChartInstances.gridChart1,
+      chart2: !!currentChartInstances.gridChart2,
+      chart3: !!currentChartInstances.gridChart3,
+      chart4: !!currentChartInstances.gridChart4,
+      chart5: !!currentChartInstances.gridChart5,
+      chart6: !!currentChartInstances.gridChart6
+    });
+    
+  }).catch(error => {
+    console.error('Error fetching grid chart data:', error);
+    // Show error in all containers
+    ['gridChart1Container', 'gridChart2Container', 'gridChart3Container', 
+     'gridChart4Container', 'gridChart5Container', 'gridChart6Container'].forEach(containerId => {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-danger"><small>Error loading data</small></div>';
+      }
+    });
   });
 }
 
@@ -696,48 +786,79 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
   const datasets = [{
     label: title,
     data: values,
-    backgroundColor: chartType === 'pie' ? متنوعColors(values.length) : singleBackgroundColor,
-    borderColor: chartType === 'pie' ? متنوعColors(values.length, true) : singleBorderColor,
+    backgroundColor: chartType === 'pie' ? generateColors(values.length) : singleBackgroundColor,
+    borderColor: chartType === 'pie' ? generateColors(values.length, true) : singleBorderColor,
     borderWidth: 1,
     tension: 0.4
   }];
   
   const defaultConfig = getDefaultChartConfig();
+  
+  // Check if this is a grid chart (smaller, more compact)
+  const isGridChart = ctx.canvas.id && ctx.canvas.id.startsWith('gridChart');
+  
+  const chartOptions = {
+    ...defaultConfig,
+    maintainAspectRatio: true,
+    responsive: true,
+    scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
+      x: { 
+        ticks: { 
+          color: isDarkMode() ? '#f2f2f2' : '#111', 
+          font: { size: isGridChart ? 9 : 11 },
+          maxRotation: isGridChart ? 45 : 0,
+          autoSkip: isGridChart
+        },
+        grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+      },
+      y: { 
+        beginAtZero: true,
+        ticks: { 
+          color: isDarkMode() ? '#f2f2f2' : '#111', 
+          font: { size: isGridChart ? 9 : 11 }
+        },
+        grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+      }
+    },
+    plugins: {
+      ...defaultConfig.plugins,
+      legend: { 
+        position: chartType === 'pie' || chartType === 'doughnut' ? 'bottom' : 'top',
+        labels: { 
+          color: isDarkMode() ? '#f2f2f2' : '#111', 
+          boxWidth: isGridChart ? 10 : 12, 
+          padding: isGridChart ? 8 : 10, 
+          font: { size: isGridChart ? 9 : 11 },
+          usePointStyle: isGridChart
+        },
+        display: !isGridChart || chartType === 'pie' || chartType === 'doughnut'
+      },
+      tooltip: {
+        ...defaultConfig.plugins.tooltip,
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) label += ': ';
+            if (context.parsed.y !== null && context.parsed.y !== undefined) {
+              label += context.parsed.y.toFixed(2);
+            } else if (context.raw !== null && context.raw !== undefined) {
+              label += parseFloat(context.raw).toFixed(2);
+            }
+            return label;
+          }
+        }
+      },
+      zoom: isGridChart ? {} : { 
+        pan: { enabled: true, mode: 'xy' }, 
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' } 
+      }
+    }
+  };
+  
   const chartInstance = new Chart(ctx, {
     type: chartType === 'area' ? 'line' : chartType,
     data: { labels: labels, datasets: datasets },
-    options: {
-      ...defaultConfig,
-      scales: chartType === 'pie' ? {} : {
-        x: { 
-          ticks: { color: isDarkMode() ? '#f2f2f2' : '#111', font: { size: 10 } },
-          grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
-        },
-        y: { 
-          beginAtZero: true,
-          ticks: { color: isDarkMode() ? '#f2f2f2' : '#111', font: { size: 10 } },
-          grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
-        }
-      },
-      plugins: {
-        legend: { 
-          position: chartType === 'pie' ? 'bottom' : 'top',
-          labels: { color: isDarkMode() ? '#f2f2f2' : '#111', boxWidth: 8, padding: 5, font: { size: 10 } }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) label += ': ';
-              if (context.parsed.y !== null && context.parsed.y !== undefined) label += context.parsed.y.toFixed(2);
-              else if (context.raw !== null && context.raw !== undefined) label += parseFloat(context.raw).toFixed(2);
-              return label;
-            }
-          }
-        },
-        zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' } }
-      }
-    }
+    options: chartOptions
   });
   
   // Store chart instance in global variables for proper cleanup
@@ -785,7 +906,7 @@ async function fetchGridChartData() {
   }
 }
 
-function متنوعColors(num, border = false, index = -1) { /* ... same as before ... */
+function generateColors(num, border = false, index = -1) { /* ... same as before ... */
     // Improved palette: 20-color Set3-like with better contrast for doughnut/pie
     const baseColors = [
         'rgba(141, 211, 199, DYNAMIC_ALPHA)', 'rgba(255, 255, 179, DYNAMIC_ALPHA)',
@@ -978,15 +1099,29 @@ async function exportChartUnderlyingDataCSV() {
 }
 
 
-function toggleTheme() { /* ... same as before ... */
-  const html = document.documentElement;
-  html.classList.toggle('dark-mode');
-  document.body.classList.toggle('dark-mode'); 
-  const isDark = html.classList.contains('dark-mode');
-  document.getElementById('themeToggleBtn').innerHTML = isDark ? '<i class="fas fa-sun"></i> Light Mode' : '<i class="fas fa-moon"></i> Dark Mode';
-  localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
-  const form = document.getElementById('filterForm');
-  if (form) form.dispatchEvent(new Event('submit', {bubbles: true}));
+function toggleTheme() {
+  // Use the new theme switcher if available
+  if (window.themeSwitcher && typeof window.themeSwitcher.toggleTheme === 'function') {
+    window.themeSwitcher.toggleTheme();
+  } else {
+    // Fallback to data-theme attribute
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Update theme toggle button if exists
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (themeBtn) {
+      themeBtn.innerHTML = newTheme === 'dark' 
+        ? '<i class="fas fa-sun"></i> Light Mode' 
+        : '<i class="fas fa-moon"></i> Dark Mode';
+    }
+    
+    // Trigger theme change event
+    document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
+  }
 }
 
 async function initTutorAutocomplete() { /* ... same as before ... */
@@ -1290,12 +1425,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const datasetSelect = document.getElementById('dataset');
   const chartTypeSelect = document.getElementById('chartTypeSelect');
 
-  if (localStorage.getItem('darkMode') === 'enabled') {
-    document.documentElement.classList.add('dark-mode');
-    document.body.classList.add('dark-mode');
-    document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> Light Mode';
-  } else {
-    document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+  // Use data-theme attribute instead of dark-mode class
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  
+  // Update theme toggle button if exists
+  const themeBtn = document.getElementById('themeToggleBtn');
+  if (themeBtn) {
+    themeBtn.innerHTML = savedTheme === 'dark'
+      ? '<i class="fas fa-sun"></i> Light Mode'
+      : '<i class="fas fa-moon"></i> Dark Mode';
   }
 
   initTutorAutocomplete(); 

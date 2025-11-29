@@ -7,7 +7,8 @@ import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from app.legacy.analytics import TutorAnalytics
+# Legacy TutorAnalytics compatibility layer
+from app.core.legacy_compat import TutorAnalytics
 import shifts
 import logging
 from app.auth.service import role_required
@@ -17,7 +18,7 @@ from app.auth.utils import USERS_FILE, hash_password
 import simplejson as sjson
 from supabase import create_client
 from dotenv import load_dotenv
-from app.legacy.routes import legacy_bp
+from app.core.routes import analytics_bp
 from app.auth.routes import auth_bp
 
 load_dotenv()
@@ -46,9 +47,9 @@ try:
 except ImportError as e:
     logger.warning(f"Scheduling blueprint not available: {e}")
 
-# Register legacy blueprint (Charts & Calendar)
-app.register_blueprint(legacy_bp)
-logger.info("Legacy blueprint registered (Charts & Calendar enabled)")
+# Register analytics blueprint (Charts & Calendar)
+app.register_blueprint(analytics_bp)
+logger.info("Analytics blueprint registered (Charts & Calendar enabled)")
 
 # Register auth blueprint
 app.register_blueprint(auth_bp)

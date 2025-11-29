@@ -2,6 +2,10 @@
 // Injects the admin navbar instantly at the top of the body
 (function() {
   function injectNavbarIfMissing() {
+    // Check if page explicitly disables admin navbar
+    if (document.body && document.body.getAttribute('data-no-admin-navbar') === 'true') {
+      return; // Page has disabled admin navbar
+    }
     if (document.querySelector('nav.navbar')) {
       return; // A navbar already exists on this page
     }

@@ -542,7 +542,7 @@
         function loadCalendar() {
             showLoading();
 
-            fetch(`{{ url_for('legacy.api_calendar_data') }}?year=${currentYear}&month=${currentMonth + 1}`)
+            fetch(`{{ url_for('analytics.api_calendar_data') }}?year=${currentYear}&month=${currentMonth + 1}`)
                 .then(response => response.json())
                 .then(data => {
                     hideLoading();

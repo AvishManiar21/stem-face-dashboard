@@ -1,1 +1,26 @@
 course_id,course_code,course_name,department,description,is_active,created_at
+CRS0001,COM410,Python Programming,Computer Science,Introduction to Python Programming,True,2023-11-09T15:55:44.558402
+CRS0002,COM367,Data Structures,Computer Science,Introduction to Data Structures,True,2024-10-06T15:55:44.558531
+CRS0003,COM192,Algorithms,Computer Science,Introduction to Algorithms,True,2023-06-17T15:55:44.558560
+CRS0004,COM277,Web Development,Computer Science,Introduction to Web Development,True,2023-11-26T15:55:44.558567
+CRS0005,COM141,Database Systems,Computer Science,Introduction to Database Systems,True,2023-03-14T15:55:44.558574
+CRS0006,MAT258,Calculus I,Mathematics,Introduction to Calculus I,True,2023-04-25T15:55:44.558583
+CRS0007,MAT470,Calculus II,Mathematics,Introduction to Calculus II,True,2022-12-28T15:55:44.558589
+CRS0008,MAT457,Linear Algebra,Mathematics,Introduction to Linear Algebra,True,2023-10-16T15:55:44.558594
+CRS0009,MAT272,Statistics,Mathematics,Introduction to Statistics,True,2023-01-31T15:55:44.558690
+CRS0010,MAT140,Discrete Math,Mathematics,Introduction to Discrete Math,True,2024-09-16T15:55:44.558705
+CRS0011,PHY232,Physics I,Physics,Introduction to Physics I,True,2023-11-25T15:55:44.558710
+CRS0012,PHY237,Physics II,Physics,Introduction to Physics II,True,2024-08-15T15:55:44.558714
+CRS0013,PHY218,Quantum Mechanics,Physics,Introduction to Quantum Mechanics,True,2023-12-01T15:55:44.558718
+CRS0014,PHY406,Thermodynamics,Physics,Introduction to Thermodynamics,True,2023-06-14T15:55:44.558721
+CRS0015,CHE172,General Chemistry,Chemistry,Introduction to General Chemistry,True,2024-06-29T15:55:44.558726
+CRS0016,CHE117,Organic Chemistry,Chemistry,Introduction to Organic Chemistry,True,2024-04-05T15:55:44.558729
+CRS0017,CHE496,Physical Chemistry,Chemistry,Introduction to Physical Chemistry,True,2023-03-28T15:55:44.558732
+CRS0018,BIO230,Cell Biology,Biology,Introduction to Cell Biology,True,2023-12-24T15:55:44.558736
+CRS0019,BIO261,Genetics,Biology,Introduction to Genetics,True,2023-02-22T15:55:44.558739
+CRS0020,BIO222,Microbiology,Biology,Introduction to Microbiology,True,2023-12-28T15:55:44.558746
+CRS0021,BIO355,Biochemistry,Biology,Introduction to Biochemistry,True,2024-09-14T15:55:44.558749
+CRS0022,ENG232,Engineering Mechanics,Engineering,Introduction to Engineering Mechanics,True,2022-12-22T15:55:44.558752
+CRS0023,ENG454,Circuit Analysis,Engineering,Introduction to Circuit Analysis,True,2023-04-20T15:55:44.558755
+CRS0024,ENG117,Thermodynamics,Engineering,Introduction to Thermodynamics,True,2024-03-11T15:55:44.558758
+CRS0025,ENG378,Fluid Mechanics,Engineering,Introduction to Fluid Mechanics,True,2024-07-07T15:55:44.558761

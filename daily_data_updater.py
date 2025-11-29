@@ -106,7 +106,7 @@ class DailyDataUpdater:
         logger.info("Updating analytics...")
         try:
             # Import analytics module and update summaries
-            from app.legacy.analytics import TutorAnalytics
+            from app.core.legacy_compat import TutorAnalytics
             analytics = TutorAnalytics()
             
             # Update dashboard summary
@@ -168,7 +168,7 @@ class DailyDataUpdater:
         logger.info("Analyzing data patterns...")
         
         try:
-            from app.legacy.analytics import TutorAnalytics
+            from app.core.legacy_compat import TutorAnalytics
             analytics = TutorAnalytics()
             
             # Get various analytics
