@@ -7,7 +7,7 @@ from functools import wraps
 from typing import Dict, List, Optional, Callable, Any
 from flask import request, jsonify, session, g
 from permissions import Permission, PermissionManager, get_data_access_scope, filter_data_by_permissions
-from auth import get_current_user, get_user_role, get_user_tutor_id
+from app.auth.service import get_current_user, get_user_role, get_user_tutor_id, log_admin_action
 
 logger = logging.getLogger(__name__)
 
@@ -198,9 +198,8 @@ def audit_permission_action(action: str):
             
             # Log the action
             try:
-                from analytics import analytics as _analytics
-                if _analytics and context.user:
-                    _analytics.log_admin_action(
+                if context.user:
+                    log_admin_action(
                         action=f"PERMISSION_{action}",
                         target_user_email=context.user.get('email'),
                         details=f"Action: {action}, Role: {context.role}, Endpoint: {request.endpoint}"

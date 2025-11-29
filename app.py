@@ -10,14 +10,15 @@ from email.mime.multipart import MIMEMultipart
 from app.legacy.analytics import TutorAnalytics
 import shifts
 import logging
-from auth import authenticate_user, role_required
+from app.auth.service import role_required
 from permissions import Permission, PermissionManager, permission_required, permissions_required, role_required as new_role_required
 from permission_middleware import permission_context, api_permission_required, require_data_access, audit_permission_action, get_user_capabilities
-from auth_utils import USERS_FILE, hash_password
+from app.auth.utils import USERS_FILE, hash_password
 import simplejson as sjson
 from supabase import create_client
 from dotenv import load_dotenv
 from app.legacy.routes import legacy_bp
+from app.auth.routes import auth_bp
 
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -31,29 +32,11 @@ app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 from permission_middleware import init_permission_middleware
 init_permission_middleware(app)
 
-# Add feature flags to template context (for both apps)
-@app.context_processor
-def inject_feature_flags():
-    """Make feature flags available in templates"""
-    try:
-        from app.utils.feature_flags import is_feature_enabled, get_all_features
-        return dict(
-            is_feature_enabled=is_feature_enabled,
-            get_all_features=get_all_features
-        )
-    except ImportError:
-        # Fallback if feature flags not available
-        return dict(
-            is_feature_enabled=lambda x: False,
-            get_all_features=lambda: {}
-        )
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Register blueprints conditionally based on feature flags
-from app.utils.feature_flags import is_feature_enabled
 
 # Register scheduling blueprint (always available - WCOnline style)
 try:
@@ -63,14 +46,15 @@ try:
 except ImportError as e:
     logger.warning(f"Scheduling blueprint not available: {e}")
 
-# Only register legacy (face recognition) blueprint if feature is enabled
-if is_feature_enabled('face_recognition') or os.getenv('ENABLE_FACE_RECOGNITION', 'false').lower() == 'true':
-    app.register_blueprint(legacy_bp)
-    logger.info("Face Recognition (Legacy) module enabled")
-else:
-    logger.info("Face Recognition (Legacy) module disabled - using scheduling system")
+# Register legacy blueprint (Charts & Calendar)
+app.register_blueprint(legacy_bp)
+logger.info("Legacy blueprint registered (Charts & Calendar enabled)")
 
-# Register admin blueprint for feature toggles
+# Register auth blueprint
+app.register_blueprint(auth_bp)
+logger.info("Auth blueprint registered")
+
+# Register admin blueprint
 try:
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
@@ -255,32 +239,14 @@ def admin_shifts():
 
 
 @app.route('/login')
-def login_page():
-    """Serve the login page"""
-    # If already logged in and authorized, redirect to admin dashboard
-    user = get_current_user()
-    if user:
-        user_role = user.get('role', '')
-        # Check if user has admin access
-        if user_role in ['admin', 'system_admin', 'manager']:
-            return redirect(url_for('admin.dashboard'))
-        # Check if user is in allowed list
-        import os
-        allowed_users_env = os.getenv('FEATURE_TOGGLE_ALLOWED_USERS', '')
-        allowed_users = [u.strip().lower() for u in allowed_users_env.split(',') if u.strip()]
-        user_email = user.get('email', '').lower()
-        user_id = str(user.get('user_id') or user.get('id', '')).lower()
-        if allowed_users and (user_email in allowed_users or user_id in allowed_users):
-            return redirect(url_for('admin.dashboard'))
-    
-    # Render login.html with default email value
-    return render_template('login.html', default_email=request.args.get('email', ''))
+def login_redirect():
+    """Redirect legacy login route"""
+    return redirect(url_for('auth.login'))
 
 @app.route('/logout')
-def logout():
-    """Logout user"""
-    session.clear()
-    return redirect('/login')
+def logout_redirect():
+    """Redirect legacy logout route"""
+    return redirect(url_for('auth.logout'))
 
 # API Endpoints
 
@@ -304,7 +270,7 @@ def api_user_info():
 def api_dashboard_data():
     """Get dashboard data"""
     try:
-        from auth import filter_data_by_role, get_user_role, get_user_tutor_id
+        from app.auth.service import filter_data_by_role, get_user_role, get_user_tutor_id
         analytics = TutorAnalytics(face_log_file='data/legacy/face_log_with_expected.csv')
         # Scope data to current user if needed
         try:
@@ -802,7 +768,7 @@ def api_admin_user_activate():
         return jsonify({'error': 'Missing email or active'}), 400
     # Update CSV
     import pandas as pd
-    csv_path = 'logs/users.csv'
+    csv_path = 'data/legacy/users.csv'
     df = pd.read_csv(csv_path)
     if email not in df['email'].values:
         return jsonify({'error': 'User not found in CSV'}), 404
@@ -817,39 +783,12 @@ def api_admin_user_activate():
     # Optionally, disable in Supabase Auth (block login by checking active)
     # Log audit
     from datetime import datetime
-    with open('logs/audit_log.csv', 'a', encoding='utf-8') as f:
+    with open('data/legacy/audit_log.csv', 'a', encoding='utf-8') as f:
         f.write(f"{datetime.now().isoformat()},{user['email']},user_activate,Set active={active},,,,{email},\n")
     return jsonify({'success': True})
 
 # Authentication endpoint
-@app.route('/login', methods=['POST'])
-def login():
-    """Handle login"""
-    email = request.form.get('email')
-    password = request.form.get('password')
-    success, message = authenticate_user(email, password)
-    if success:
-        # Store user in session (already handled by authenticate_user)
-        # Check if user should be redirected to admin dashboard
-        user = get_current_user()
-        if user:
-            user_role = user.get('role', '')
-            # Check if user has admin access
-            if user_role in ['admin', 'system_admin', 'manager']:
-                return redirect(url_for('admin.dashboard'))
-            # Check if user is in allowed list
-            import os
-            allowed_users_env = os.getenv('FEATURE_TOGGLE_ALLOWED_USERS', '')
-            allowed_users = [u.strip().lower() for u in allowed_users_env.split(',') if u.strip()]
-            user_email = user.get('email', '').lower()
-            user_id = str(user.get('user_id') or user.get('id', '')).lower()
-            if allowed_users and (user_email in allowed_users or user_id in allowed_users):
-                return redirect(url_for('admin.dashboard'))
-        # Default redirect
-        return redirect('/')
-    # On failure, re-render login page with inline error and preserved email
-    flash(message or 'Invalid credentials', 'error')
-    return render_template('login.html', default_email=email), 400
+
 
 
 
@@ -967,7 +906,7 @@ def api_profile_update():
     if updated:
         # Log audit
         try:
-            from analytics import analytics as _analytics
+            _analytics = TutorAnalytics()
             if _analytics:
                 _analytics.log_admin_action('update_profile', target_user_email=user['email'], details='Updated profile fields')
         except Exception:

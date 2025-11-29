@@ -7,7 +7,7 @@ from functools import wraps
 from datetime import datetime
 import logging
 from models import db, Group, GroupMember, Permission, GroupPermission, User
-from auth import get_current_user, get_user_role
+from app.auth.service import get_current_user, get_user_role
 from permissions import Permission as PermissionEnum, PermissionManager, permission_required
 
 logger = logging.getLogger(__name__)

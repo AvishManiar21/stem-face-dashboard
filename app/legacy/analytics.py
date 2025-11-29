@@ -226,7 +226,7 @@ class TutorAnalytics:
         """Get paginated audit logs for admin view"""
         try:
             # Load audit logs from CSV
-            audit_file = 'logs/audit_log.csv'
+            audit_file = 'data/legacy/audit_log.csv'
             if not os.path.exists(audit_file):
                 return {'logs': [], 'total': 0}
             df = pd.read_csv(audit_file)
@@ -778,7 +778,7 @@ class TutorAnalytics:
             current_user = session.get('user')
             if not current_user:
                 return
-            audit_file = 'logs/audit_log.csv'
+            audit_file = 'data/legacy/audit_log.csv'
             os.makedirs(os.path.dirname(audit_file), exist_ok=True)
             audit_entry = {
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),

@@ -1,7 +1,7 @@
 """Flask application factory"""
 from flask import Flask, render_template, redirect, url_for
 from app.config import Config
-from app.utils.feature_flags import is_feature_enabled
+
 
 def create_app(config_class=Config):
     """Create and configure the Flask application"""
@@ -19,10 +19,9 @@ def create_app(config_class=Config):
     
     # Add template context processors
     @app.context_processor
-    def inject_feature_flags():
-        """Make feature flags available in templates"""
+    def inject_config():
+        """Make config available in templates"""
         return dict(
-            is_feature_enabled=is_feature_enabled,
             config=app.config
         )
     
@@ -61,16 +60,7 @@ def register_blueprints(app):
     except ImportError:
         print("Warning: API blueprint not found")
     
-    # Conditional blueprints (based on feature flags)
-    if app.config['ENABLE_FACE_RECOGNITION'] or is_feature_enabled('face_recognition'):
-        try:
-            from app.legacy.routes import legacy_bp
-            app.register_blueprint(legacy_bp, url_prefix='/legacy')
-            print("✓ Legacy (Face Recognition) module enabled")
-        except ImportError:
-            print("Warning: Legacy blueprint not found")
-    else:
-        print("✗ Legacy (Face Recognition) module disabled")
+
 
 def register_error_handlers(app):
     """Register error handlers"""

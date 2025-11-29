@@ -27,7 +27,7 @@ class DailyDataUpdater:
         self.logs_dir = 'logs'
         self.face_log_file = os.path.join(self.logs_dir, 'face_log.csv')
         self.schedule_file = os.path.join(self.logs_dir, 'expanded_schedules.csv')
-        self.audit_log_file = os.path.join(self.logs_dir, 'audit_log.csv')
+        self.audit_log_file = os.path.join('data', 'legacy', 'audit_log.csv')
         
         # Ensure logs directory exists
         os.makedirs(self.logs_dir, exist_ok=True)
@@ -106,7 +106,7 @@ class DailyDataUpdater:
         logger.info("Updating analytics...")
         try:
             # Import analytics module and update summaries
-            from analytics import TutorAnalytics
+            from app.legacy.analytics import TutorAnalytics
             analytics = TutorAnalytics()
             
             # Update dashboard summary
@@ -168,7 +168,7 @@ class DailyDataUpdater:
         logger.info("Analyzing data patterns...")
         
         try:
-            from analytics import TutorAnalytics
+            from app.legacy.analytics import TutorAnalytics
             analytics = TutorAnalytics()
             
             # Get various analytics

@@ -8,7 +8,7 @@ from enum import Enum
 from functools import wraps
 from typing import Dict, List, Set, Optional, Callable, Any
 from flask import session, request, jsonify, redirect, url_for, flash
-from auth import get_current_user, get_user_role, error_response
+from app.auth.service import get_current_user, get_user_role, error_response, log_admin_action
 
 logger = logging.getLogger(__name__)
 
@@ -318,13 +318,11 @@ def filter_data_by_permissions(df, user_role: str, user_tutor_id: str = None, us
 def log_permission_action(action: str, target: str = None, details: str = None):
     """Log permission-related actions for audit trail"""
     try:
-        from analytics import analytics as _analytics
-        if _analytics:
-            _analytics.log_admin_action(
-                action=f"PERMISSION_{action}",
-                target_user_email=target,
-                details=details
-            )
+        log_admin_action(
+            action=f"PERMISSION_{action}",
+            target_user_email=target,
+            details=details
+        )
     except Exception as e:
         logger.warning(f"Failed to log permission action: {e}")
 

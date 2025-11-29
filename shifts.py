@@ -6,7 +6,7 @@ Handles shift creation, assignment, and monitoring
 import os
 import pandas as pd
 from datetime import datetime, timedelta
-from auth import get_current_user
+from app.auth.service import get_current_user
 from app.legacy.analytics import TutorAnalytics
 
 # File paths
