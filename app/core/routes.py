@@ -171,13 +171,86 @@ def api_calendar_data():
         else:
             month_appointments = pd.DataFrame()
         
-        # Group by date
+        # Group by day of month (1-31)
         days_data = {}
         if not month_appointments.empty:
+            # Merge with tutors to get tutor names
+            if not analytics.tutors.empty:
+                month_appointments = month_appointments.merge(
+                    analytics.tutors[['tutor_id', 'full_name']], 
+                    on='tutor_id', 
+                    how='left'
+                )
+            
             for date, group in month_appointments.groupby(month_appointments['appointment_date'].dt.date):
-                days_data[str(date)] = {
-                    'count': len(group),
-                    'appointments': group.to_dict('records')[:10]  # Limit to 10 for performance
+                day_num = date.day
+                
+                # Calculate total hours from start_time and end_time
+                total_hours = 0
+                for _, appt in group.iterrows():
+                    try:
+                        if pd.notna(appt.get('start_time')) and pd.notna(appt.get('end_time')):
+                            # Parse time strings (format: HH:MM:SS)
+                            start_str = str(appt['start_time'])
+                            end_str = str(appt['end_time'])
+                            
+                            # Convert to datetime for calculation
+                            from datetime import datetime, timedelta
+                            start_time = datetime.strptime(start_str, '%H:%M:%S')
+                            end_time = datetime.strptime(end_str, '%H:%M:%S')
+                            
+                            # Calculate duration in hours
+                            duration = (end_time - start_time).total_seconds() / 3600
+                            total_hours += duration
+                    except Exception as e:
+                        logger.warning(f"Could not calculate duration for appointment: {e}")
+                        continue
+                
+                # Determine status based on appointments
+                status = 'normal'
+                cancelled_count = len(group[group['status'] == 'cancelled']) if 'status' in group.columns else 0
+                if cancelled_count > len(group) * 0.3:  # More than 30% cancelled
+                    status = 'danger'
+                elif cancelled_count > 0:
+                    status = 'warning'
+                
+                # Get unique tutors
+                unique_tutors = group['tutor_id'].nunique()
+                
+                # Prepare session data for modal
+                sessions_data = []
+                for _, appt in group.iterrows():
+                    # Calculate individual session duration
+                    duration_hours = 0
+                    try:
+                        if pd.notna(appt.get('start_time')) and pd.notna(appt.get('end_time')):
+                            start_str = str(appt['start_time'])
+                            end_str = str(appt['end_time'])
+                            from datetime import datetime
+                            start_time = datetime.strptime(start_str, '%H:%M:%S')
+                            end_time = datetime.strptime(end_str, '%H:%M:%S')
+                            duration_hours = (end_time - start_time).total_seconds() / 3600
+                    except:
+                        pass
+                    
+                    session = {
+                        'tutor_id': appt.get('tutor_id', 'Unknown'),
+                        'tutor_name': appt.get('full_name', 'Unknown Tutor'),
+                        'start_time': str(appt.get('start_time', '')),
+                        'end_time': str(appt.get('end_time', '')),
+                        'duration_hours': round(duration_hours, 1),
+                        'status': appt.get('status', 'scheduled'),
+                        'course_id': appt.get('course_id', ''),
+                    }
+                    sessions_data.append(session)
+                
+                days_data[day_num] = {
+                    'sessions': len(group),
+                    'total_hours': round(total_hours, 1),
+                    'status': status,
+                    'tutors': unique_tutors,
+                    'has_issues': status in ['warning', 'danger'],
+                    'sessions_data': sessions_data
                 }
         
         return jsonify({
