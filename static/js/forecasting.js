@@ -17,23 +17,23 @@ class ForecastingManager {
     async initialize() {
         try {
             console.log('Initializing forecasting functionality...');
-            
+
             // Load forecasting data
             await this.loadForecastingData();
-            
+
             // Load AI insights
             await this.loadAIInsights();
-            
+
             // Initialize charts
             this.initializeCharts();
-            
+
             // Update UI
             this.updateForecastingUI();
             this.updateAIInsightsUI();
-            
+
             this.isInitialized = true;
             console.log('Forecasting functionality initialized successfully');
-            
+
         } catch (error) {
             console.error('Error initializing forecasting functionality:', error);
             this.showForecastingError();
@@ -47,14 +47,14 @@ class ForecastingManager {
         try {
             console.log('Loading forecasting data...');
             const response = await fetch('/api/forecasting-data');
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             this.forecastingData = await response.json();
             console.log('Forecasting data loaded:', this.forecastingData);
-            
+
         } catch (error) {
             console.error('Error loading forecasting data:', error);
             this.forecastingData = null;
@@ -69,14 +69,14 @@ class ForecastingManager {
         try {
             console.log('Loading AI insights...');
             const response = await fetch('/api/ai-insights');
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             this.aiInsights = await response.json();
             console.log('AI insights loaded:', this.aiInsights);
-            
+
         } catch (error) {
             console.error('Error loading AI insights:', error);
             this.aiInsights = null;
@@ -233,7 +233,7 @@ class ForecastingManager {
         if (!opportunitiesElement) return;
 
         if (this.aiInsights.growth_opportunities && this.aiInsights.growth_opportunities.length > 0) {
-            const opportunitiesHtml = this.aiInsights.growth_opportunities.map(opp => 
+            const opportunitiesHtml = this.aiInsights.growth_opportunities.map(opp =>
                 `<li class="mb-1"><i class="fas fa-arrow-up text-success me-1"></i>${opp}</li>`
             ).join('');
             opportunitiesElement.innerHTML = opportunitiesHtml;
@@ -262,9 +262,9 @@ class ForecastingManager {
         for (let i = 0; i < 8; i++) {
             const h = (startHour + i) % 24;
             const d = data[h] || { predicted_hours: 0, predicted_sessions: 0, confidence: 0.1, trend: 'stable' };
-            rows.push({ 
-                hour: `${h.toString().padStart(2,'0')}:00`, 
-                ph: d.predicted_hours, 
+            rows.push({
+                hour: `${h.toString().padStart(2, '0')}:00`,
+                ph: d.predicted_hours,
                 ps: d.predicted_sessions,
                 confidence: d.confidence || 0.1,
                 trend: d.trend || 'stable'
@@ -276,7 +276,7 @@ class ForecastingManager {
         // Calculate average confidence
         const avgConfidence = validHours > 0 ? totalConfidence / validHours : 0;
         const confidenceClass = avgConfidence >= 0.7 ? 'confidence-high' : avgConfidence >= 0.4 ? 'confidence-medium' : 'confidence-low';
-        
+
         if (confidenceEl) {
             confidenceEl.innerHTML = `<span class="confidence-badge ${confidenceClass}">${Math.round(avgConfidence * 100)}% confidence</span>`;
         }
@@ -339,7 +339,7 @@ class ForecastingManager {
         // Calculate average confidence
         const avgConfidence = validDays > 0 ? totalConfidence / validDays : 0;
         const confidenceClass = avgConfidence >= 0.7 ? 'confidence-high' : avgConfidence >= 0.4 ? 'confidence-medium' : 'confidence-low';
-        
+
         if (confidenceEl) {
             confidenceEl.innerHTML = `<span class="confidence-badge ${confidenceClass}">${Math.round(avgConfidence * 100)}% confidence</span>`;
         }
@@ -381,7 +381,7 @@ class ForecastingManager {
         if (!this.forecastingData.scenario_simulation) return;
 
         const scenarios = this.forecastingData.scenario_simulation;
-        
+
         this.updateElement('simTutors2', scenarios['+2_tutors'] ? scenarios['+2_tutors'] + 'h' : '-');
         this.updateElement('simTutors5', scenarios['+5_tutors'] ? scenarios['+5_tutors'] + 'h' : '-');
         this.updateElement('simTutors10', scenarios['+10_tutors'] ? scenarios['+10_tutors'] + 'h' : '-');
@@ -422,7 +422,7 @@ class ForecastingManager {
     showAIInsightsError() {
         this.updateElement('aiConfidenceScore', 'Error');
         this.updateElement('forecastAccuracy', 'Error');
-        
+
         const summaryElement = document.getElementById('improvedNLSummary');
         if (summaryElement) {
             const spanElement = summaryElement.querySelector('span');
@@ -530,8 +530,8 @@ class ForecastingManager {
         if (!this.forecastingData || !this.forecastingData.hourly_forecast) return;
 
         const hourlyData = this.forecastingData.hourly_forecast;
-        const labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-        const data = Array.from({length: 24}, (_, i) => hourlyData[i]?.predicted_hours || 0);
+        const labels = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        const data = Array.from({ length: 24 }, (_, i) => hourlyData[i]?.predicted_hours || 0);
 
         new Chart(ctx, {
             type: 'line',
