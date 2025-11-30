@@ -45,7 +45,7 @@ def chart_data():
         # Initialize analytics
         analytics = SchedulingAnalytics(data_dir='data/core')
         
-        # Prepare filters
+        # Prepare filters - collect all filter parameters
         filters = {}
         if req.get('tutor_ids'):
             filters['tutor_ids'] = req.get('tutor_ids')
@@ -57,6 +57,16 @@ def chart_data():
             filters['status'] = req.get('status')
         if req.get('course_ids'):
             filters['course_ids'] = req.get('course_ids')
+        if req.get('duration'):
+            filters['duration'] = req.get('duration')
+        if req.get('day_type'):
+            filters['day_type'] = req.get('day_type')
+        if req.get('shift_start_hour'):
+            filters['shift_start_hour'] = req.get('shift_start_hour')
+        if req.get('shift_end_hour'):
+            filters['shift_end_hour'] = req.get('shift_end_hour')
+        
+        logger.info(f"Filters received: {filters}")
         
         # Handle grid mode - return multiple datasets for 6 charts
         if mode == 'grid':

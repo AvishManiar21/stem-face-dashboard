@@ -637,46 +637,68 @@ function renderSplitChart(chartType, rawData, title, isComparisonMode = false, f
 }
 
 function renderGridChart(chartType, rawData, title, isComparisonMode = false, forecastData = null) {
-  // For grid layout, render 4 different charts showing different metrics
+  // For grid layout, render 6 different charts showing different metrics
   const gridCtx1 = document.getElementById('gridChart1')?.getContext('2d');
   const gridCtx2 = document.getElementById('gridChart2')?.getContext('2d');
   const gridCtx3 = document.getElementById('gridChart3')?.getContext('2d');
   const gridCtx4 = document.getElementById('gridChart4')?.getContext('2d');
+  const gridCtx5 = document.getElementById('gridChart5')?.getContext('2d');
+  const gridCtx6 = document.getElementById('gridChart6')?.getContext('2d');
     
-  if (!gridCtx1 || !gridCtx2 || !gridCtx3 || !gridCtx4) return;
+  if (!gridCtx1 || !gridCtx2 || !gridCtx3 || !gridCtx4 || !gridCtx5 || !gridCtx6) return;
   
   // Clear existing charts
-  ['gridChart1', 'gridChart2', 'gridChart3', 'gridChart4'].forEach(chartId => {
+  ['gridChart1', 'gridChart2', 'gridChart3', 'gridChart4', 'gridChart5', 'gridChart6'].forEach(chartId => {
     if (currentChartInstances[chartId]) currentChartInstances[chartId].destroy();
   });
   
-  // Fetch data for different chart types
-  fetchGridChartData().then(gridData => {
-    // Chart 1: Check-ins per Tutor (Bar)
-    if (gridData.checkins_per_tutor) {
+  // If rawData contains grid datasets, use them directly; otherwise fetch
+  const hasGridData = rawData && (rawData.appointments_per_tutor || rawData.hours_per_tutor || rawData.daily_appointments);
+  
+  const dataPromise = hasGridData 
+    ? Promise.resolve(rawData)
+    : fetchGridChartData();
+  
+  dataPromise.then(gridData => {
+    // Chart 1: Appointments per Tutor (Bar)
+    if (gridData.appointments_per_tutor) {
       currentChartInstances.gridChart1 = createChartInstance(
-        gridCtx1, 'bar', gridData.checkins_per_tutor, 'Check-ins per Tutor', false
+        gridCtx1, 'bar', gridData.appointments_per_tutor, 'Appointments per Tutor', false
       );
     }
     
-    // Chart 2: Hours per Tutor (Pie)
+    // Chart 2: Scheduled Hours per Tutor (Pie)
     if (gridData.hours_per_tutor) {
       currentChartInstances.gridChart2 = createChartInstance(
-        gridCtx2, 'pie', gridData.hours_per_tutor, 'Hours per Tutor', false
+        gridCtx2, 'pie', gridData.hours_per_tutor, 'Scheduled Hours per Tutor', false
       );
     }
     
-    // Chart 3: Daily Check-ins (Line)
-    if (gridData.daily_checkins) {
+    // Chart 3: Daily Appointments (Line)
+    if (gridData.daily_appointments) {
       currentChartInstances.gridChart3 = createChartInstance(
-        gridCtx3, 'line', gridData.daily_checkins, 'Daily Check-ins', false
+        gridCtx3, 'line', gridData.daily_appointments, 'Daily Appointments', false
       );
     }
     
-    // Chart 4: Hourly Distribution (Bar)
-    if (gridData.hourly_checkins_dist) {
+    // Chart 4: Appointments by Status (Doughnut)
+    if (gridData.appointments_by_status) {
       currentChartInstances.gridChart4 = createChartInstance(
-        gridCtx4, 'bar', gridData.hourly_checkins_dist, 'Hourly Distribution', false
+        gridCtx4, 'doughnut', gridData.appointments_by_status, 'Appointments by Status', false
+      );
+    }
+    
+    // Chart 5: Course Popularity (Bar)
+    if (gridData.course_popularity) {
+      currentChartInstances.gridChart5 = createChartInstance(
+        gridCtx5, 'bar', gridData.course_popularity, 'Course Popularity', false
+      );
+    }
+    
+    // Chart 6: Hourly Distribution (Bar)
+    if (gridData.hourly_appointments_dist) {
+      currentChartInstances.gridChart6 = createChartInstance(
+        gridCtx6, 'bar', gridData.hourly_appointments_dist, 'Hourly Distribution', false
       );
     }
   });
@@ -696,8 +718,8 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
   const datasets = [{
     label: title,
     data: values,
-    backgroundColor: chartType === 'pie' ? متنوعColors(values.length) : singleBackgroundColor,
-    borderColor: chartType === 'pie' ? متنوعColors(values.length, true) : singleBorderColor,
+    backgroundColor: (chartType === 'pie' || chartType === 'doughnut') ? متنوعColors(values.length) : singleBackgroundColor,
+    borderColor: (chartType === 'pie' || chartType === 'doughnut') ? متنوعColors(values.length, true) : singleBorderColor,
     borderWidth: 1,
     tension: 0.4
   }];
@@ -708,7 +730,7 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
     data: { labels: labels, datasets: datasets },
     options: {
       ...defaultConfig,
-      scales: chartType === 'pie' ? {} : {
+      scales: (chartType === 'pie' || chartType === 'doughnut') ? {} : {
         x: { 
           ticks: { color: isDarkMode() ? '#f2f2f2' : '#111', font: { size: 10 } },
           grid: { color: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
@@ -721,7 +743,7 @@ function createChartInstance(ctx, chartType, data, title, isComparison = false) 
       },
       plugins: {
         legend: { 
-          position: chartType === 'pie' ? 'bottom' : 'top',
+          position: (chartType === 'pie' || chartType === 'doughnut') ? 'bottom' : 'top',
           labels: { color: isDarkMode() ? '#f2f2f2' : '#111', boxWidth: 8, padding: 5, font: { size: 10 } }
         },
         tooltip: {
@@ -754,22 +776,72 @@ async function fetchGridChartData() {
   // Get current form data
   const form = document.getElementById('filterForm');
   const formData = new FormData(form);
-  const params = new URLSearchParams();
+  const bodyObj = {};
   
-  // Add form data to params
+  // Add form data to bodyObj
   for (let [key, value] of formData.entries()) {
-    if (value.trim()) params.append(key, value.trim());
+    if (value && value.trim() !== '') {
+      bodyObj[key] = value.trim();
+    }
+  }
+  
+  // Explicitly add tutor_ids from multi-select
+  const tutorIdsInput = form.querySelector('input[name="tutor_ids"]');
+  const tutorIdsAttr = document.getElementById('tutor_id')?.getAttribute('data-selected-ids');
+  if (tutorIdsInput && tutorIdsInput.value) {
+    bodyObj.tutor_ids = tutorIdsInput.value;
+  } else if (tutorIdsAttr) {
+    bodyObj.tutor_ids = tutorIdsAttr;
+  }
+  
+  // Add date filters explicitly
+  if (form.start_date && form.start_date.value) {
+    bodyObj.start_date = form.start_date.value;
+  }
+  if (form.end_date && form.end_date.value) {
+    bodyObj.end_date = form.end_date.value;
+  }
+  
+  // Add other filters explicitly
+  if (form.duration && form.duration.value) {
+    bodyObj.duration = form.duration.value;
+  }
+  if (form.day_type && form.day_type.value) {
+    bodyObj.day_type = form.day_type.value;
+  }
+  
+  // Add shift hour filters
+  const shiftStartHour = document.getElementById('shift_start_hour');
+  const shiftEndHour = document.getElementById('shift_end_hour');
+  if (shiftStartHour && shiftStartHour.value !== '0') {
+    bodyObj.shift_start_hour = shiftStartHour.value;
+  }
+  if (shiftEndHour && shiftEndHour.value !== '23') {
+    bodyObj.shift_end_hour = shiftEndHour.value;
   }
   
   // Add advanced filters
   const advancedFilters = JSON.parse(sessionStorage.getItem('advancedFilters') || '{}');
   Object.entries(advancedFilters).forEach(([key, value]) => {
-    if (value && value !== '') params.append(key, value);
+    if (value && value !== '' && value !== false) {
+      bodyObj[key] = value;
+    }
   });
 
-  // --- FIX: Always send grid mode for grid chart ---
-  const bodyObj = Object.fromEntries(params);
+  // Always send grid mode for grid chart
   bodyObj.mode = 'grid';
+  
+  // Add dataset and chart_type if available
+  const datasetEl = document.getElementById('dataset');
+  const chartTypeEl = document.getElementById('chartTypeSelect');
+  if (datasetEl && datasetEl.value) {
+    bodyObj.dataset = datasetEl.value;
+  }
+  if (chartTypeEl && chartTypeEl.value) {
+    bodyObj.chart_type = chartTypeEl.value;
+  }
+
+  console.log('Fetching grid chart data with filters:', bodyObj);
 
   try {
     const response = await fetch('/chart-data', {
@@ -819,14 +891,60 @@ function updateChartTypeOptions(selectedDataset) { /* ... same as before ... */
 }
 
 function fetchChartData(query = '', chartType = 'bar', chartKey = 'checkins_per_tutor') {
-  const payload = Object.fromEntries(new URLSearchParams(query));
-  payload.dataset = chartKey; // Use 'dataset' to match backend expectation 
-  // Include the currently selected chart type so backend can echo it back
+  // Start with query params if provided
+  const payload = query ? Object.fromEntries(new URLSearchParams(query)) : {};
+  
+  // Get form and collect all filters explicitly
+  const form = document.getElementById('filterForm');
+  if (form) {
+    // Add tutor_ids from multi-select
+    const tutorIdsInput = form.querySelector('input[name="tutor_ids"]');
+    const tutorIdsAttr = document.getElementById('tutor_id')?.getAttribute('data-selected-ids');
+    if (tutorIdsInput && tutorIdsInput.value) {
+      payload.tutor_ids = tutorIdsInput.value;
+    } else if (tutorIdsAttr) {
+      payload.tutor_ids = tutorIdsAttr;
+    }
+    
+    // Add date filters
+    if (form.start_date && form.start_date.value) {
+      payload.start_date = form.start_date.value;
+    }
+    if (form.end_date && form.end_date.value) {
+      payload.end_date = form.end_date.value;
+    }
+    
+    // Add other filters
+    if (form.duration && form.duration.value) {
+      payload.duration = form.duration.value;
+    }
+    if (form.day_type && form.day_type.value) {
+      payload.day_type = form.day_type.value;
+    }
+    
+    // Add shift hour filters
+    const shiftStartHour = document.getElementById('shift_start_hour');
+    const shiftEndHour = document.getElementById('shift_end_hour');
+    if (shiftStartHour && shiftStartHour.value !== '0') {
+      payload.shift_start_hour = shiftStartHour.value;
+    }
+    if (shiftEndHour && shiftEndHour.value !== '23') {
+      payload.shift_end_hour = shiftEndHour.value;
+    }
+  }
+  
+  // Set dataset and chart type
+  payload.dataset = chartKey;
   const chartTypeSelectEl = document.getElementById('chartTypeSelect');
   if (chartTypeSelectEl && chartTypeSelectEl.value) {
     payload.chart_type = chartTypeSelectEl.value;
   } else if (chartType) {
     payload.chart_type = chartType;
+  }
+  
+  // Add mode based on current layout
+  if (typeof currentChartLayout !== 'undefined') {
+    payload.mode = currentChartLayout;
   }
   
   // Include advanced filters from sessionStorage
@@ -1290,12 +1408,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const datasetSelect = document.getElementById('dataset');
   const chartTypeSelect = document.getElementById('chartTypeSelect');
 
-  if (localStorage.getItem('darkMode') === 'enabled') {
-    document.documentElement.classList.add('dark-mode');
-    document.body.classList.add('dark-mode');
-    document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> Light Mode';
-  } else {
-    document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    if (localStorage.getItem('darkMode') === 'enabled') {
+      document.documentElement.classList.add('dark-mode');
+      document.body.classList.add('dark-mode');
+      themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+    } else {
+      themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+    }
   }
 
   initTutorAutocomplete(); 

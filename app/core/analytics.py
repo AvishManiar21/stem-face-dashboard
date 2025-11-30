@@ -110,7 +110,8 @@ class SchedulingAnalytics:
             logger.error(f"Error loading availability: {e}")
             return pd.DataFrame()
     
-    def filter_data(self, start_date=None, end_date=None, tutor_ids=None, course_ids=None, status=None):
+    def filter_data(self, start_date=None, end_date=None, tutor_ids=None, course_ids=None, status=None, 
+                    duration=None, day_type=None, shift_start_hour=None, shift_end_hour=None, **kwargs):
         """Filter appointments based on criteria"""
         df = self.appointments.copy()
         
@@ -123,14 +124,58 @@ class SchedulingAnalytics:
             df = df[df['appointment_date'] <= pd.to_datetime(end_date)]
         if tutor_ids:
             if isinstance(tutor_ids, str):
-                tutor_ids = [tid.strip() for tid in tutor_ids.split(',')]
-            df = df[df['tutor_id'].isin(tutor_ids)]
+                tutor_ids = [tid.strip() for tid in tutor_ids.split(',') if tid.strip()]
+            if tutor_ids:
+                df = df[df['tutor_id'].isin(tutor_ids)]
         if course_ids:
             if isinstance(course_ids, str):
-                course_ids = [cid.strip() for cid in course_ids.split(',')]
-            df = df[df['course_id'].isin(course_ids)]
+                course_ids = [cid.strip() for cid in course_ids.split(',') if cid.strip()]
+            if course_ids:
+                df = df[df['course_id'].isin(course_ids)]
         if status:
             df = df[df['status'] == status]
+        
+        # Filter by duration if provided
+        if duration:
+            if isinstance(duration, str):
+                # Parse duration range (e.g., "1-2" for 1-2 hours)
+                if '-' in duration:
+                    min_dur, max_dur = map(float, duration.split('-'))
+                    df = df[(df['duration_hours'] >= min_dur) & (df['duration_hours'] <= max_dur)]
+                else:
+                    # Exact duration
+                    target_dur = float(duration)
+                    df = df[df['duration_hours'] == target_dur]
+        
+        # Filter by day type (weekday/weekend)
+        if day_type:
+            if day_type.lower() == 'weekday':
+                df = df[df['appointment_date'].dt.dayofweek < 5]
+            elif day_type.lower() == 'weekend':
+                df = df[df['appointment_date'].dt.dayofweek >= 5]
+        
+        # Filter by shift hours if provided
+        if shift_start_hour is not None or shift_end_hour is not None:
+            if 'start_time' in df.columns:
+                # Convert time to hour (handle both time objects and strings)
+                def get_hour(time_val):
+                    if pd.isna(time_val):
+                        return None
+                    if isinstance(time_val, str):
+                        try:
+                            return pd.to_datetime(time_val, format='%H:%M:%S').hour
+                        except:
+                            return None
+                    elif hasattr(time_val, 'hour'):
+                        return time_val.hour
+                    return None
+                
+                df['_hour'] = df['start_time'].apply(get_hour)
+                if shift_start_hour is not None:
+                    df = df[df['_hour'] >= int(shift_start_hour)]
+                if shift_end_hour is not None:
+                    df = df[df['_hour'] <= int(shift_end_hour)]
+                df = df.drop(columns=['_hour'], errors='ignore')
         
         return df
     
