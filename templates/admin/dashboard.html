@@ -224,6 +224,18 @@
                     </div>
                 </div>
             </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Available Slots</div>
+                    </div>
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="quick-actions">
@@ -254,6 +266,10 @@
             <a href="/calendar" class="action-btn">
                 <i class="bi bi-calendar-event-fill"></i>
                 <div>View Calendar</div>
+            </a>
+            <a href="/scheduling/schedule-grid" class="action-btn">
+                <i class="bi bi-grid-3x3-gap"></i>
+                <div>Schedule Grid</div>
             </a>
 
         </div>
@@ -309,6 +325,7 @@
                     statCards[1].querySelector('.stat-value').textContent = stats.active_courses || 0;
                     statCards[2].querySelector('.stat-value').textContent = stats.appointments_today || 0;
                     statCards[3].querySelector('.stat-value').textContent = stats.total_users || 0;
+                    statCards[4].querySelector('.stat-value').textContent = stats.available_slots || 0;
                 }
             } catch (error) {
                 console.error('Failed to load dashboard stats:', error);

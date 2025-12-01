@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,22 +7,149 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/static/css/unified-theme.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .appointment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-scheduled { background: #3b82f6; color: white; }
+        .status-completed { background: #10b981; color: white; }
+        .status-cancelled { background: #ef4444; color: white; }
+        .status-pending { background: #f59e0b; color: white; }
+    </style>
 </head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/admin/dashboard">
+                <i class="bi bi-mortarboard-fill"></i> STEM Tutor Scheduling
+            </a>
+            <a href="/admin/dashboard" class="btn btn-sm btn-light">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </nav>
 
-<body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
     <div class="container mt-4">
-        <h1><i class="bi bi-calendar-event"></i> Appointments</h1>
-        <p class="text-muted">Manage student appointments with tutors</p>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="text-white"><i class="bi bi-calendar-event"></i> Appointments</h1>
+                <p class="text-white-50">View and manage student appointments with tutors</p>
+            </div>
+        </div>
 
         <div class="card">
             <div class="card-body">
-                <p>Appointments management interface coming soon...</p>
-                <a href="/admin/dashboard" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
+                <div id="appointmentsContainer">
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading appointments...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</body>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function loadAppointments() {
+            try {
+                const response = await fetch('/scheduling/api/appointments');
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const container = document.getElementById('appointmentsContainer');
+                
+                // Check for error in response
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.appointments || data.appointments.length === 0) {
+                    container.innerHTML = '<div class="text-center p-4"><p class="text-muted">No appointments found.</p></div>';
+                    return;
+                }
+                
+                // Sort by date (most recent first)
+                const sorted = data.appointments.sort((a, b) => {
+                    const dateA = new Date(a.appointment_date || a.created_at);
+                    const dateB = new Date(b.appointment_date || b.created_at);
+                    return dateB - dateA;
+                });
+                
+                let html = '';
+                sorted.forEach(apt => {
+                    const status = apt.status || 'scheduled';
+                    const confirmation = apt.confirmation_status || 'pending';
+                    const bookingType = apt.booking_type || 'admin_scheduled';
+                    
+                    html += `
+                        <div class="appointment-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5><i class="bi bi-calendar-check text-primary"></i> ${apt.appointment_id || 'N/A'}</h5>
+                                    <p class="mb-1"><strong>Student:</strong> ${apt.student_name || apt.student_email || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Tutor ID:</strong> ${apt.tutor_id || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Course ID:</strong> ${apt.course_id || 'N/A'}</p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                                    ${confirmation !== status ? `<br><span class="status-badge status-${confirmation}" style="margin-top: 0.5rem;">${confirmation.toUpperCase()}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Date:</strong> ${apt.appointment_date || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Time:</strong> ${apt.start_time || apt.appointment_time || 'N/A'} - ${apt.end_time || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Booking Type:</strong> ${bookingType.replace('_', ' ').toUpperCase()}</p>
+                                    ${apt.notes ? `<p class="mb-0"><strong>Notes:</strong> ${apt.notes}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading appointments:', error);
+                const container = document.getElementById('appointmentsContainer');
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="bi bi-exclamation-triangle"></i> Error Loading Appointments</h5>
+                        <p class="mb-1"><strong>Error:</strong> ${error.message || 'Unknown error occurred'}</p>
+                        <p class="mb-0"><small>Please check the browser console for more details or contact support.</small></p>
+                        <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadAppointments()">
+                            <i class="bi bi-arrow-clockwise"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        loadAppointments();
+    </script>
+</body>
 </html>

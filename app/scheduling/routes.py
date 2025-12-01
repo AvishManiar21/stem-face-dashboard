@@ -2,7 +2,7 @@
 WCOnline-style Scheduling System
 Main scheduling module when face recognition is disabled
 """
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, redirect
 from datetime import datetime, timedelta
 import pandas as pd
 import os
@@ -89,22 +89,76 @@ def availability():
     ensure_data_files()
     return render_template('scheduling/availability.html')
 
+@scheduling_bp.route('/schedule-grid')
+def schedule_grid():
+    """View weekly schedule grid - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
+    ensure_data_files()
+    return render_template('scheduling/schedule_grid.html')
+
+@scheduling_bp.route('/my-appointments')
+def my_appointments():
+    """Student view of their appointments - requires authentication"""
+    if 'user' not in session and 'user_email' not in session:
+        return redirect('/login')
+    ensure_data_files()
+    return render_template('scheduling/my_appointments.html')
+
 # API Routes
 @scheduling_bp.route('/api/appointments', methods=['GET'])
 def get_appointments():
     """Get all appointments"""
     try:
         ensure_data_files()
-        df = pd.read_csv(APPOINTMENTS_FILE)
-        if df.empty:
+        
+        # Check if file exists
+        if not os.path.exists(APPOINTMENTS_FILE):
+            logger.warning(f"Appointments file not found: {APPOINTMENTS_FILE}")
             return jsonify({'appointments': []})
+        
+        df = pd.read_csv(APPOINTMENTS_FILE)
+        
+        if df.empty:
+            logger.info("Appointments CSV is empty")
+            return jsonify({'appointments': []})
+        
+        # Replace NaN values with None for JSON serialization
+        df = df.where(pd.notnull(df), None)
         
         # Convert to list of dicts
         appointments = df.to_dict('records')
+        
+        # Convert any remaining pandas/numpy types to native Python types
+        import numpy as np
+        for apt in appointments:
+            for key, value in apt.items():
+                if value is None:
+                    continue
+                elif pd.isna(value):
+                    apt[key] = None
+                elif isinstance(value, (np.integer, np.int64)):
+                    apt[key] = int(value)
+                elif isinstance(value, (np.floating, np.float64)):
+                    apt[key] = float(value)
+                elif isinstance(value, np.bool_):
+                    apt[key] = bool(value)
+                elif isinstance(value, (pd.Timestamp, pd.Timedelta)):
+                    apt[key] = str(value)
+                elif hasattr(value, 'item'):  # numpy scalar
+                    try:
+                        apt[key] = value.item()
+                    except:
+                        apt[key] = str(value)
+        
+        logger.info(f"Returning {len(appointments)} appointments")
         return jsonify({'appointments': appointments})
     except Exception as e:
-        logger.error(f"Error getting appointments: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting appointments: {e}", exc_info=True)
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Traceback: {error_details}")
+        return jsonify({'error': str(e), 'details': error_details}), 500
 
 @scheduling_bp.route('/api/appointments', methods=['POST'])
 def create_appointment():
@@ -171,5 +225,20 @@ def get_courses():
         return jsonify({'courses': courses})
     except Exception as e:
         logger.error(f"Error getting courses: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@scheduling_bp.route('/api/availability', methods=['GET'])
+def get_availability():
+    """Get all tutor availability"""
+    try:
+        ensure_data_files()
+        df = pd.read_csv(AVAILABILITY_FILE)
+        if df.empty:
+            return jsonify({'availability': []})
+        
+        availability = df.to_dict('records')
+        return jsonify({'availability': availability})
+    except Exception as e:
+        logger.error(f"Error getting availability: {e}")
         return jsonify({'error': str(e)}), 500
 

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,22 +7,209 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/static/css/unified-theme.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .availability-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 4px solid #10b981;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-available { background: #10b981; color: white; }
+        .status-booked { background: #3b82f6; color: white; }
+        .status-blocked { background: #ef4444; color: white; }
+        .day-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+        }
+        .day-monday { background: #667eea; color: white; }
+        .day-tuesday { background: #764ba2; color: white; }
+        .day-wednesday { background: #f093fb; color: white; }
+        .day-thursday { background: #4facfe; color: white; }
+        .day-friday { background: #43e97b; color: white; }
+        .day-saturday { background: #fee140; color: #1e293b; }
+        .day-sunday { background: #fa709a; color: white; }
+    </style>
 </head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/admin/dashboard">
+                <i class="bi bi-mortarboard-fill"></i> STEM Tutor Scheduling
+            </a>
+            <a href="/admin/dashboard" class="btn btn-sm btn-light">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </nav>
 
-<body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
     <div class="container mt-4">
-        <h1><i class="bi bi-clock"></i> Availability</h1>
-        <p class="text-muted">Manage tutor availability schedules</p>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="text-white"><i class="bi bi-clock"></i> Availability</h1>
+                <p class="text-white-50">Manage tutor availability schedules</p>
+            </div>
+        </div>
 
         <div class="card">
             <div class="card-body">
-                <p>Availability management interface coming soon...</p>
-                <a href="/admin/dashboard" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
+                <div id="availabilityContainer">
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading availability...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</body>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function loadAvailability() {
+            try {
+                const response = await fetch('/scheduling/api/availability');
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const container = document.getElementById('availabilityContainer');
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.availability || data.availability.length === 0) {
+                    container.innerHTML = '<div class="text-center p-4"><p class="text-muted">No availability records found.</p></div>';
+                    return;
+                }
+                
+                // Get tutor names
+                let tutorsMap = {};
+                try {
+                    const tutorsResponse = await fetch('/scheduling/api/tutors');
+                    const tutorsData = await tutorsResponse.json();
+                    if (tutorsData.tutors) {
+                        tutorsData.tutors.forEach(tutor => {
+                            tutorsMap[tutor.tutor_id] = tutor;
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Could not load tutor names:', e);
+                }
+                
+                // Get user data for tutor names
+                try {
+                    const usersResponse = await fetch('/api/admin/users');
+                    const usersData = await usersResponse.json();
+                    if (usersData.users) {
+                        usersData.users.forEach(user => {
+                            if (user.user_id && tutorsMap[user.user_id]) {
+                                tutorsMap[user.user_id].name = user.full_name;
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Could not load user names:', e);
+                }
+                
+                // Group by tutor
+                const groupedByTutor = {};
+                data.availability.forEach(avail => {
+                    if (!groupedByTutor[avail.tutor_id]) {
+                        groupedByTutor[avail.tutor_id] = [];
+                    }
+                    groupedByTutor[avail.tutor_id].push(avail);
+                });
+                
+                let html = '';
+                Object.keys(groupedByTutor).sort().forEach(tutorId => {
+                    const tutor = tutorsMap[tutorId];
+                    const tutorName = tutor ? (tutor.name || tutor.full_name || tutorId) : tutorId;
+                    const availabilities = groupedByTutor[tutorId];
+                    
+                    html += `
+                        <div class="availability-card">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5><i class="bi bi-person-circle text-primary"></i> ${tutorName}</h5>
+                                    <p class="text-muted mb-0"><strong>Tutor ID:</strong> ${tutorId}</p>
+                                </div>
+                                <div>
+                                    <span class="badge bg-info">${availabilities.length} Time Slots</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                    `;
+                    
+                    availabilities.forEach(avail => {
+                        const day = avail.day_of_week || 'Unknown';
+                        const dayClass = `day-${day.toLowerCase()}`;
+                        const status = avail.slot_status || 'available';
+                        const isRecurring = avail.is_recurring === true || avail.is_recurring === 'True' || avail.is_recurring === 'true';
+                        
+                        html += `
+                            <div class="col-md-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="day-badge ${dayClass}">${day}</span>
+                                        <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                                    </div>
+                                    <p class="mb-1"><strong>Time:</strong> ${avail.start_time || 'N/A'} - ${avail.end_time || 'N/A'}</p>
+                                    ${isRecurring ? '<p class="mb-1"><span class="badge bg-secondary">Recurring</span></p>' : ''}
+                                    ${avail.effective_date ? `<p class="mb-1"><small><strong>From:</strong> ${avail.effective_date}</small></p>` : ''}
+                                    ${avail.end_date ? `<p class="mb-0"><small><strong>Until:</strong> ${avail.end_date}</small></p>` : ''}
+                                    <p class="mb-0 mt-1"><small class="text-muted">ID: ${avail.availability_id || 'N/A'}</small></p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading availability:', error);
+                const container = document.getElementById('availabilityContainer');
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="bi bi-exclamation-triangle"></i> Error Loading Availability</h5>
+                        <p class="mb-1"><strong>Error:</strong> ${error.message || 'Unknown error occurred'}</p>
+                        <p class="mb-0"><small>Please check the browser console for more details or contact support.</small></p>
+                        <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadAvailability()">
+                            <i class="bi bi-arrow-clockwise"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        loadAvailability();
+    </script>
+</body>
 </html>

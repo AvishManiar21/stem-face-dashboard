@@ -7,7 +7,7 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 from app.auth.service import get_current_user
-from app.core.legacy_compat import TutorAnalytics
+from app.core.audit_logger import log_admin_action
 
 # File paths
 SHIFTS_FILE = 'data/core/shifts.csv'
@@ -98,7 +98,7 @@ def create_shift(shift_name, start_time, end_time, days_of_week):
         shifts_df.to_csv(SHIFTS_FILE, index=False)
         
         # Log admin action
-        TutorAnalytics().log_admin_action(
+        log_admin_action(
             action="CREATE_SHIFT",
             details=f"Created shift '{shift_name}' ({start_time}-{end_time}) for {days_of_week}"
         )
@@ -141,7 +141,7 @@ def assign_tutor_to_shift(shift_id, tutor_id, tutor_name, start_date, end_date=N
         assignments_df.to_csv(SHIFT_ASSIGNMENTS_FILE, index=False)
         
         # Log admin action
-        TutorAnalytics().log_admin_action(
+        log_admin_action(
             action="ASSIGN_SHIFT",
             target_user_email=tutor_name,
             details=f"Assigned tutor {tutor_name} (ID: {tutor_id}) to shift {shift_id} from {start_date} to {end_date or 'ongoing'}"
@@ -398,7 +398,7 @@ def deactivate_shift(shift_id):
         assignments_df.to_csv(SHIFT_ASSIGNMENTS_FILE, index=False)
         
         # Log admin action
-        TutorAnalytics().log_admin_action(
+        log_admin_action(
             action="DEACTIVATE_SHIFT",
             details=f"Deactivated shift {shift_id} and all its assignments"
         )
@@ -423,7 +423,7 @@ def remove_tutor_assignment(assignment_id):
         # Log admin action
         tutor_name = assignment.iloc[0]['tutor_name']
         shift_id = assignment.iloc[0]['shift_id']
-        TutorAnalytics().log_admin_action(
+        log_admin_action(
             action="REMOVE_SHIFT_ASSIGNMENT",
             target_user_email=tutor_name,
             details=f"Removed tutor {tutor_name} from shift {shift_id}"

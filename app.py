@@ -7,8 +7,8 @@ import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-# Legacy TutorAnalytics compatibility layer
-from app.core.legacy_compat import TutorAnalytics
+# Audit logging (replaces legacy TutorAnalytics)
+from app.core.audit_logger import log_admin_action, get_audit_logs
 import shifts
 import logging
 from app.auth.service import role_required
@@ -269,23 +269,88 @@ def api_user_info():
 
 @app.route('/api/dashboard-data')
 def api_dashboard_data():
-    """Get dashboard data"""
+    """Get dashboard data - Updated to use SchedulingAnalytics (Phase 1 & 2)"""
     try:
+        from app.core.analytics import SchedulingAnalytics
         from app.auth.service import filter_data_by_role, get_user_role, get_user_tutor_id
-        analytics = TutorAnalytics(face_log_file='data/legacy/face_log_with_expected.csv')
-        # Scope data to current user if needed
+        
+        # Use new SchedulingAnalytics instead of legacy TutorAnalytics
+        analytics = SchedulingAnalytics(data_dir='data/core')
+        
+        # Apply role-based filtering if needed
+        filters = {}
         try:
             role = get_user_role()
             tid = get_user_tutor_id()
-            analytics.data = filter_data_by_role(analytics.data, role, tid)
+            if role == 'tutor' and tid:
+                # Filter appointments for this tutor only
+                filters['tutor_ids'] = tid
         except Exception:
             pass
-        # Get logs for collapsible view
-        logs_for_collapsible_view = analytics.get_logs_for_collapsible_view()
-        # Get summary data
-        summary = analytics.get_dashboard_summary()
-        # Get alerts
-        alerts = analytics.generate_alerts()
+        
+        # Get summary statistics (includes both new and legacy format for compatibility)
+        summary = analytics.get_summary_stats(**filters)
+        
+        # Get logs for collapsible view (use appointments as logs)
+        logs_for_collapsible_view = []
+        try:
+            # Convert recent appointments to log format for compatibility
+            appointments_df = analytics.appointments.copy()
+            if not appointments_df.empty and len(appointments_df) > 0:
+                # Get last 50 appointments, sorted by date
+                recent = appointments_df.sort_values('appointment_date', ascending=False).head(50)
+                for _, apt in recent.iterrows():
+                    log_entry = {
+                        'date': str(apt['appointment_date']),
+                        'tutor_id': apt.get('tutor_id', ''),
+                        'tutor_name': '',
+                        'student_name': apt.get('student_name', ''),
+                        'start_time': str(apt.get('start_time', '')),
+                        'end_time': str(apt.get('end_time', '')),
+                        'status': apt.get('status', 'scheduled'),
+                        'course_id': apt.get('course_id', '')
+                    }
+                    # Get tutor name
+                    tutor = analytics.tutors[analytics.tutors['tutor_id'] == apt['tutor_id']]
+                    if not tutor.empty:
+                        log_entry['tutor_name'] = tutor.iloc[0].get('full_name', apt['tutor_id'])
+                    logs_for_collapsible_view.append(log_entry)
+        except Exception as e:
+            logger.warning(f"Error generating logs view: {e}")
+            logs_for_collapsible_view = []
+        
+        # Generate alerts based on scheduling data
+        alerts = []
+        try:
+            # Check for pending confirmations
+            if summary.get('pending_confirmations', 0) > 10:
+                alerts.append({
+                    'type': 'warning',
+                    'title': 'High Pending Confirmations',
+                    'message': f"{summary['pending_confirmations']} appointments are pending confirmation"
+                })
+            
+            # Check for high cancellation rate
+            total = summary.get('total_checkins', 0)
+            cancelled = summary.get('cancelled_count', 0)
+            if total > 0 and (cancelled / total) > 0.2:  # More than 20% cancelled
+                alerts.append({
+                    'type': 'danger',
+                    'title': 'High Cancellation Rate',
+                    'message': f"{(cancelled/total*100):.1f}% of appointments have been cancelled"
+                })
+            
+            # Check for low active tutors
+            if summary.get('active_tutors', 0) < 3:
+                alerts.append({
+                    'type': 'info',
+                    'title': 'Low Tutor Activity',
+                    'message': f"Only {summary['active_tutors']} active tutors this period"
+                })
+        except Exception as e:
+            logger.warning(f"Error generating alerts: {e}")
+            alerts = []
+        
         return jsonify({
             'logs_for_collapsible_view': logs_for_collapsible_view,
             'summary': summary,
@@ -293,7 +358,7 @@ def api_dashboard_data():
         })
     except Exception as e:
         print("DASHBOARD ERROR:", e)
-        logger.error(f"Error getting dashboard data: {e}")
+        logger.error(f"Error getting dashboard data: {e}", exc_info=True)
         return jsonify({'error': 'Failed to load dashboard data'}), 500
 
 @app.route('/dashboard-data')
@@ -451,8 +516,7 @@ def api_admin_audit_logs():
     try:
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 25))
-        analytics = TutorAnalytics()
-        logs_result = analytics.get_audit_logs(page, per_page)
+        logs_result = get_audit_logs(page, per_page)
         logs = logs_result.get('logs', [])
         total = logs_result.get('total', len(logs))
         total_pages = (total + per_page - 1) // per_page if per_page else 1
@@ -546,8 +610,8 @@ def api_admin_create_user():
     }
     df = pd.concat([df, pd.DataFrame([new_user])], ignore_index=True)
     df.to_csv(USERS_FILE, index=False)
-    analytics = TutorAnalytics()
-    analytics.log_admin_action('create_user', target_user_email=data.get('email'), details=f"Created user with role {data.get('role')}")
+    user_email = user.get('email', 'system') if user else 'system'
+    log_admin_action('create_user', target_user_email=data.get('email'), details=f"Created user with role {data.get('role')}", user_email=user_email)
     return jsonify({'message': 'User created successfully'})
 
 @app.route('/api/admin/edit-user', methods=['POST'])
@@ -569,8 +633,8 @@ def api_admin_edit_user():
         if data.get('password'):
             df.at[i, 'password_hash'] = hash_password(data['password'])
         df.to_csv(USERS_FILE, index=False)
-        analytics = TutorAnalytics()
-        analytics.log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Edited user info for {data.get('user_id')}")
+        user_email = user.get('email', 'system') if user else 'system'
+        log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Edited user info for {data.get('user_id')}", user_email=user_email)
         return jsonify({'message': 'User updated successfully'})
     # Tutor can only edit their own info (password, maybe name)
     elif user and user['role'] == 'tutor' and df.at[i, 'email'] == user['email']:
@@ -579,8 +643,8 @@ def api_admin_edit_user():
         if data.get('password'):
             df.at[i, 'password_hash'] = hash_password(data['password'])
         df.to_csv(USERS_FILE, index=False)
-        analytics = TutorAnalytics()
-        analytics.log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Tutor edited own info for {data.get('user_id')}")
+        user_email = user.get('email', 'system') if user else 'system'
+        log_admin_action('edit_user', target_user_email=data.get('email'), details=f"Tutor edited own info for {data.get('user_id')}", user_email=user_email)
         return jsonify({'message': 'User updated successfully'})
     else:
         return jsonify({'error': 'Unauthorized'}), 403
@@ -599,8 +663,8 @@ def api_admin_delete_user():
     email = df.at[idx[0], 'email']
     df = df.drop(idx)
     df.to_csv(USERS_FILE, index=False)
-    analytics = TutorAnalytics()
-    analytics.log_admin_action('delete_user', target_user_email=email, details=f"Deleted user")
+    user_email = user.get('email', 'system') if user else 'system'
+    log_admin_action('delete_user', target_user_email=email, details=f"Deleted user", user_email=user_email)
     return jsonify({'message': 'User deleted successfully'})
 
 @app.route('/api/admin/change-role', methods=['POST'])
@@ -662,9 +726,8 @@ def api_admin_change_role():
             print(f"[Supabase DB] Failed to update user role: {e}")
 
     # Log admin action with more details
-    analytics = TutorAnalytics()
     details = f"Changed role from {old_role} to {new_role} for user {target_email}"
-    analytics.log_admin_action('change_role', target_user_email=target_email, details=details)
+    log_admin_action('change_role', target_user_email=target_email, details=details, user_email=user.get('email', 'system'))
     
     return jsonify({
         'message': 'Role updated successfully',
@@ -769,7 +832,7 @@ def api_admin_user_activate():
         return jsonify({'error': 'Missing email or active'}), 400
     # Update CSV
     import pandas as pd
-    csv_path = 'data/legacy/users.csv'
+    csv_path = 'data/core/users.csv'
     df = pd.read_csv(csv_path)
     if email not in df['email'].values:
         return jsonify({'error': 'User not found in CSV'}), 404
@@ -781,11 +844,8 @@ def api_admin_user_activate():
             supabase.table('users').update({'active': bool(active)}).eq('email', email).execute()
         except Exception as e:
             print(f"[Supabase DB] Failed to update user active status: {e}")
-    # Optionally, disable in Supabase Auth (block login by checking active)
     # Log audit
-    from datetime import datetime
-    with open('data/legacy/audit_log.csv', 'a', encoding='utf-8') as f:
-        f.write(f"{datetime.now().isoformat()},{user['email']},user_activate,Set active={active},,,,{email},\n")
+    log_admin_action('user_activate', target_user_email=email, details=f"Set active={active}", user_email=user.get('email', 'system'))
     return jsonify({'success': True})
 
 # Authentication endpoint
@@ -907,9 +967,7 @@ def api_profile_update():
     if updated:
         # Log audit
         try:
-            _analytics = TutorAnalytics()
-            if _analytics:
-                _analytics.log_admin_action('update_profile', target_user_email=user['email'], details='Updated profile fields')
+            log_admin_action('update_profile', target_user_email=user['email'], details='Updated profile fields', user_email=user.get('email', 'system'))
         except Exception:
             pass
         # Return fresh session user so UI reflects immediately
@@ -923,116 +981,12 @@ def api_dashboard_alerts():
     if not user:
         return jsonify({'alerts': []})
 
-    import pandas as pd
-    from datetime import datetime, timedelta
+    # Legacy face log system removed - using appointment-based alerts instead
+    # Alerts are now generated from appointments data in the dashboard-data endpoint
     alerts = []
-    face_log_path = 'data/legacy/face_log_with_expected.csv'
-    shifts_path = 'data/legacy/shifts.csv'
-    assignments_path = 'data/legacy/shift_assignments.csv'
-
-    try:
-        face_log = pd.read_csv(face_log_path)
-        shifts_df = pd.read_csv(shifts_path)
-        assignments_df = pd.read_csv(assignments_path)
-    except Exception as e:
-        return jsonify({'alerts': [f'Error loading logs: {e}']})
-
-    today = datetime.now().date()
-    # Filter logs for today - use check_in column instead of timestamp
-    today_logs = face_log[pd.to_datetime(face_log['check_in']).dt.date == today]
-
-    # Scope dashboard alerts by role
-    current_user = get_current_user()
-    if current_user and current_user.get('user_metadata', {}).get('role') == 'tutor':
-        tutor_id = current_user.get('user_metadata', {}).get('tutor_id')
-        if tutor_id is not None:
-            today_logs = today_logs[today_logs['tutor_id'].astype(str) == str(tutor_id)]
-            assignments_df = assignments_df[assignments_df['tutor_id'].astype(str) == str(tutor_id)]
-
-    # Only show relevant logs for non-admins
-    if user['role'] not in ['admin', 'manager']:
-        # Filter by tutor_id instead of user_email since we don't have user_email in this format
-        today_logs = today_logs[today_logs['tutor_id'] == user.get('tutor_id', 0)]
-        assignments_df = assignments_df[assignments_df['tutor_email'] == user['email']]
-
-    # Late check-in: checked in after expected start time
-    for _, row in today_logs.iterrows():
-        if pd.notnull(row.get('expected_check_in')):
-            try:
-                checkin_time = datetime.strptime(row['check_in'], '%Y-%m-%d %H:%M:%S')
-                expected_time = datetime.strptime(row['expected_check_in'], '%Y-%m-%d %H:%M:%S')
-                if checkin_time > expected_time:
-                    time_diff = (checkin_time - expected_time).total_seconds() / 60  # minutes
-                    alert_msg = f"Late check-in: {row.get('tutor_name', 'Tutor')} (Expected {expected_time.strftime('%H:%M')}, Checked in {checkin_time.strftime('%H:%M')}, {time_diff:.0f} min late)"
-                    alerts.append(alert_msg)
-                    
-                    # Send email notification for late check-in
-                    if user['role'] in ['admin', 'manager']:
-                        send_shift_alert_email(
-                            f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
-                            row.get('tutor_name', 'Tutor'),
-                            'late_checkin',
-                            alert_msg
-                        )
-            except Exception as e:
-                continue
-    # Early check-out: checked out before expected end time
-    for _, row in today_logs.iterrows():
-        if pd.notnull(row.get('expected_check_out')) and pd.notnull(row.get('check_out')):
-            try:
-                checkout_time = datetime.strptime(row['check_out'], '%Y-%m-%d %H:%M:%S')
-                expected_time = datetime.strptime(row['expected_check_out'], '%Y-%m-%d %H:%M:%S')
-                if checkout_time < expected_time:
-                    time_diff = (expected_time - checkout_time).total_seconds() / 60  # minutes
-                    alert_msg = f"Early check-out: {row.get('tutor_name', 'Tutor')} (Expected {expected_time.strftime('%H:%M')}, Checked out {checkout_time.strftime('%H:%M')}, {time_diff:.0f} min early)"
-                    alerts.append(alert_msg)
-                    
-                    # Send email notification for early check-out
-                    if user['role'] in ['admin', 'manager']:
-                        send_shift_alert_email(
-                            f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
-                            row.get('tutor_name', 'Tutor'),
-                            'early_checkout',
-                            alert_msg
-                        )
-            except Exception as e:
-                continue
-    # Short shift: duration < 1 hour
-    for _, row in today_logs.iterrows():
-        if pd.notnull(row.get('check_out')) and row.get('shift_hours', 0) < 1.0:
-            alert_msg = f"Short shift: {row.get('tutor_name', 'Tutor')} (Duration: {row.get('shift_hours', 0):.1f}h)"
-            alerts.append(alert_msg)
-            
-            # Send email notification for short shift
-            if user['role'] in ['admin', 'manager']:
-                send_shift_alert_email(
-                    f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
-                    row.get('tutor_name', 'Tutor'),
-                    'short_shift',
-                    alert_msg
-                )
     
-    # Missing check-outs: tutors who checked in but didn't check out
-    for _, row in today_logs.iterrows():
-        if pd.isna(row.get('check_out')):
-            checkin_time = datetime.strptime(row['check_in'], '%Y-%m-%d %H:%M:%S')
-            alert_msg = f"Missing check-out: {row.get('tutor_name', 'Tutor')} (Checked in at {checkin_time.strftime('%H:%M')})"
-            alerts.append(alert_msg)
-            
-            # Send email notification for missing check-out
-            if user['role'] in ['admin', 'manager']:
-                send_shift_alert_email(
-                    f"{row.get('tutor_id', '')}@example.com",  # Generate email from tutor_id
-                    row.get('tutor_name', 'Tutor'),
-                    'no_checkout',
-                    alert_msg
-                )
-    
-    # Overlapping sessions: check for overlapping assignments (simplified)
-    # This would require more complex logic with shift assignments
-    # For now, we'll skip this check as it's not critical for calendar functionality
-    pass
-    
+    # Return empty alerts - alerts are now handled by SchedulingAnalytics
+    # in the /api/dashboard-data endpoint using appointment data
     return jsonify({'alerts': alerts})
 
 @app.route('/api/notification-settings', methods=['GET'])
@@ -1078,10 +1032,10 @@ def api_update_notification_settings():
     }
     
     # Log the settings update
-    analytics = TutorAnalytics()
-    analytics.log_admin_action('update_notification_settings', 
-                              target_user_email=user['email'], 
-                              details=f"Updated notification settings: {updated_settings}")
+    log_admin_action('update_notification_settings', 
+                     target_user_email=user['email'], 
+                     details=f"Updated notification settings: {updated_settings}",
+                     user_email=user.get('email', 'system'))
     
     return jsonify({'message': 'Notification settings updated successfully', 'settings': updated_settings})
 
@@ -1094,7 +1048,6 @@ def api_update_notification_settings():
 if __name__ == '__main__':
     # Ensure data directories exist
     data_dirs = [
-        'data/legacy',
         'data/core',
         'logs',
         'static/snapshots'

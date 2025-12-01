@@ -104,61 +104,91 @@ def api_current_user():
 
 @admin_bp.route('/api/dashboard-stats')
 def api_dashboard_stats():
-    """Get dashboard statistics"""
+    """Get dashboard statistics - Updated to use Phase 1 & 2 SchedulingAnalytics"""
     user, redirect_response = require_admin_access()
     if redirect_response or not user:
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
+        from app.core.analytics import SchedulingAnalytics
+        from app.core.scheduling_manager import SchedulingManager
+        from datetime import datetime
         import pandas as pd
         import os
-        from datetime import datetime
         
-        stats = {
-            'total_tutors': 0,
-            'active_courses': 0,
-            'appointments_today': 0,
-            'total_users': 0
-        }
+        # Use SchedulingAnalytics for appointment-based stats (Phase 1 & 2)
+        analytics = SchedulingAnalytics(data_dir='data/core')
+        manager = SchedulingManager(data_dir='data/core')
         
-        # Count tutors
-        tutors_file = 'data/core/tutors.csv'
-        if os.path.exists(tutors_file):
-            try:
-                df = pd.read_csv(tutors_file)
-                stats['total_tutors'] = len(df)
-            except:
-                pass
+        # Get today's date for filtering
+        today = datetime.now().strftime('%Y-%m-%d')
         
-        # Count courses
-        courses_file = 'data/core/courses.csv'
-        if os.path.exists(courses_file):
-            try:
-                df = pd.read_csv(courses_file)
-                stats['active_courses'] = len(df)
-            except:
-                pass
+        # Count tutors (from SchedulingManager)
+        total_tutors = len(manager.tutors) if not manager.tutors.empty else 0
         
-        # Count today's appointments
-        appointments_file = 'data/core/appointments.csv'
-        if os.path.exists(appointments_file):
-            try:
-                df = pd.read_csv(appointments_file)
-                if not df.empty and 'appointment_date' in df.columns:
-                    today = datetime.now().strftime('%Y-%m-%d')
-                    stats['appointments_today'] = len(df[df['appointment_date'] == today])
-            except:
-                pass
+        # Count active courses (from SchedulingManager)
+        courses_df = manager.courses if hasattr(manager, 'courses') else pd.DataFrame()
+        if not courses_df.empty and 'active' in courses_df.columns:
+            active_courses = len(courses_df[courses_df['active'] == True])
+        else:
+            active_courses = len(courses_df) if not courses_df.empty else 0
         
-        # Count users
+        # Count today's appointments (using Phase 1 & 2 data)
+        appointments_df = analytics.appointments
+        appointments_today = 0
+        if not appointments_df.empty and 'appointment_date' in appointments_df.columns:
+            # Convert appointment_date to string for comparison
+            appointments_df['date_str'] = pd.to_datetime(appointments_df['appointment_date']).dt.strftime('%Y-%m-%d')
+            appointments_today = len(appointments_df[appointments_df['date_str'] == today])
+        
+        # Count total users
         users_file = 'data/core/users.csv'
+        total_users = 0
         if os.path.exists(users_file):
             try:
-                df = pd.read_csv(users_file)
-                stats['total_users'] = len(df)
+                users_df = pd.read_csv(users_file)
+                total_users = len(users_df)
             except:
                 pass
+        
+        # Count available slots (Phase 1 & 2 - using availability.csv with slot_status)
+        available_slots = 0
+        availability_file = 'data/core/availability.csv'
+        if os.path.exists(availability_file):
+            try:
+                availability_df = pd.read_csv(availability_file)
+                if not availability_df.empty:
+                    # Count slots with status 'available' (Phase 1 field)
+                    if 'slot_status' in availability_df.columns:
+                        available_slots = len(availability_df[availability_df['slot_status'] == 'available'])
+                    else:
+                        # Fallback: count all if slot_status doesn't exist
+                        available_slots = len(availability_df)
+            except Exception as e:
+                logger.warning(f"Error counting availability slots: {e}")
+        
+        # Phase 1 & 2 Enhanced Stats (optional - can be added to dashboard later)
+        summary = analytics.get_summary_stats()
+        pending_confirmations = summary.get('pending_confirmations', 0)
+        student_booked = summary.get('student_booked_count', 0)
+        admin_scheduled = summary.get('admin_scheduled_count', 0)
+        
+        stats = {
+            'total_tutors': total_tutors,
+            'active_courses': active_courses,
+            'appointments_today': appointments_today,
+            'total_users': total_users,
+            'available_slots': available_slots,  # New KPI card
+            # Phase 1 & 2 enhanced metrics (for future use)
+            'pending_confirmations': pending_confirmations,
+            'student_booked': student_booked,
+            'admin_scheduled': admin_scheduled,
+            'total_appointments': summary.get('total_checkins', 0)
+        }
         
         return jsonify(stats)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error getting dashboard stats: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500

@@ -33,16 +33,15 @@ def error_response(message, status_code=400, code=None, details=None):
 
 # Bridge to analytics audit logger
 try:
-    from app.core.legacy_compat import TutorAnalytics
-    _analytics = TutorAnalytics()
+    from app.core.audit_logger import log_admin_action as _log_admin_action
 except Exception:
-    _analytics = None
+    _log_admin_action = None
 
-def log_admin_action(action, target_user_email=None, details=""):
-    """Proxy to analytics.log_admin_action; fail-safe if analytics not available."""
+def log_admin_action(action, target_user_email=None, details="", user_email=None):
+    """Proxy to audit_logger.log_admin_action; fail-safe if audit logger not available."""
     try:
-        if _analytics:
-            _analytics.log_admin_action(action, target_user_email=target_user_email, details=details)
+        if _log_admin_action:
+            _log_admin_action(action, target_user_email=target_user_email, details=details, user_email=user_email)
     except Exception as e:
         logger.error(f"Failed to log admin action '{action}': {e}")
 

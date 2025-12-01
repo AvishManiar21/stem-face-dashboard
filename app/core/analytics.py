@@ -496,24 +496,124 @@ class SchedulingAnalytics:
         return {str(k): int(v) for k, v in result.items()}
     
     def get_summary_stats(self, **filters):
-        """Get summary statistics"""
+        """
+        Get summary statistics for dashboard KPIs
+        Returns both new format (appointment-based) and legacy format (check-in based) for compatibility
+        """
         df = self.filter_data(**filters)
         
         if df.empty:
             return {
+                # New format (appointment-based)
                 'total_appointments': 0,
                 'total_hours': 0,
                 'active_tutors': 0,
                 'active_courses': 0,
-                'avg_duration': 0
+                'avg_duration': 0,
+                # Legacy format (for dashboard compatibility)
+                'total_checkins': 0,
+                'total_tutors': 0,
+                'active_tutors': 0,
+                'avg_session_duration': '—',
+                'total_hours': '0',
+                'avg_daily_hours': '—',
+                'peak_checkin_hour': '—',
+                'top_day': '—',
+                'top_tutor_current_month': '—',
+                # Phase 1 enhanced metrics
+                'pending_confirmations': 0,
+                'student_booked_count': 0,
+                'admin_scheduled_count': 0,
+                'cancelled_count': 0
             }
         
+        # Calculate basic stats
+        total_appointments = int(len(df))
+        total_hours = round(float(df['duration_hours'].sum()), 2)
+        active_tutors = int(df['tutor_id'].nunique())
+        active_courses = int(df['course_id'].nunique())
+        avg_duration = round(float(df['duration_hours'].mean()), 2)
+        
+        # Calculate daily average hours
+        if not df.empty:
+            df['date'] = pd.to_datetime(df['appointment_date']).dt.date
+            daily_hours = df.groupby('date')['duration_hours'].sum()
+            avg_daily_hours = round(float(daily_hours.mean()), 2) if not daily_hours.empty else 0
+        else:
+            avg_daily_hours = 0
+        
+        # Calculate peak hour
+        if 'start_time' in df.columns and not df.empty:
+            df['hour'] = df['start_time'].apply(lambda x: x.hour if pd.notna(x) and hasattr(x, 'hour') else 0)
+            hour_counts = df['hour'].value_counts()
+            peak_hour = f"{hour_counts.idxmax():02d}:00" if not hour_counts.empty else '—'
+        else:
+            peak_hour = '—'
+        
+        # Calculate most active day
+        if not df.empty:
+            df['day_name'] = pd.to_datetime(df['appointment_date']).dt.day_name()
+            day_counts = df['day_name'].value_counts()
+            top_day = day_counts.idxmax()[:3] if not day_counts.empty else '—'  # First 3 letters
+        else:
+            top_day = '—'
+        
+        # Calculate top tutor this month
+        if not df.empty:
+            current_month = pd.Timestamp.now().to_period('M')
+            df['month'] = pd.to_datetime(df['appointment_date']).dt.to_period('M')
+            month_df = df[df['month'] == current_month]
+            if not month_df.empty:
+                tutor_hours = month_df.groupby('tutor_id')['duration_hours'].sum()
+                top_tutor_id = tutor_hours.idxmax() if not tutor_hours.empty else None
+                if top_tutor_id:
+                    top_tutor = self.tutors[self.tutors['tutor_id'] == top_tutor_id]
+                    top_tutor_name = top_tutor.iloc[0].get('full_name', top_tutor_id) if not top_tutor.empty else top_tutor_id
+                else:
+                    top_tutor_name = '—'
+            else:
+                top_tutor_name = '—'
+        else:
+            top_tutor_name = '—'
+        
+        # Phase 1 enhanced metrics
+        pending_confirmations = 0
+        student_booked_count = 0
+        admin_scheduled_count = 0
+        cancelled_count = 0
+        
+        if 'confirmation_status' in df.columns:
+            pending_confirmations = int(len(df[df['confirmation_status'] == 'pending']))
+        
+        if 'booking_type' in df.columns:
+            student_booked_count = int(len(df[df['booking_type'] == 'student_booked']))
+            admin_scheduled_count = int(len(df[df['booking_type'] == 'admin_scheduled']))
+        
+        if 'status' in df.columns:
+            cancelled_count = int(len(df[df['status'] == 'cancelled']))
+        
         return {
-            'total_appointments': int(len(df)),
-            'total_hours': round(float(df['duration_hours'].sum()), 2),
-            'active_tutors': int(df['tutor_id'].nunique()),
-            'active_courses': int(df['course_id'].nunique()),
-            'avg_duration': round(float(df['duration_hours'].mean()), 2)
+            # New format (appointment-based)
+            'total_appointments': total_appointments,
+            'total_hours': total_hours,
+            'active_tutors': active_tutors,
+            'active_courses': active_courses,
+            'avg_duration': avg_duration,
+            # Legacy format (for dashboard KPI compatibility)
+            'total_checkins': total_appointments,  # Map appointments to check-ins
+            'total_tutors': active_tutors,
+            'active_tutors': active_tutors,
+            'avg_session_duration': f"{avg_duration:.1f}" if avg_duration > 0 else '—',
+            'total_hours': str(total_hours),
+            'avg_daily_hours': f"{avg_daily_hours:.1f}" if avg_daily_hours > 0 else '—',
+            'peak_checkin_hour': peak_hour,
+            'top_day': top_day,
+            'top_tutor_current_month': top_tutor_name,
+            # Phase 1 enhanced metrics
+            'pending_confirmations': pending_confirmations,
+            'student_booked_count': student_booked_count,
+            'admin_scheduled_count': admin_scheduled_count,
+            'cancelled_count': cancelled_count
         }
     
     def _convert_numpy_types(self, obj):

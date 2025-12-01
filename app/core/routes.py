@@ -5,11 +5,49 @@ import pandas as pd
 
 # Import new core analytics
 from app.core.analytics import SchedulingAnalytics
+from app.core.scheduling_manager import SchedulingManager
 
 from app.auth.service import login_required 
 
 analytics_bp = Blueprint('analytics', __name__)
 logger = logging.getLogger(__name__)
+
+# Initialize SchedulingManager (singleton instance)
+_scheduling_manager = None
+_csv_watcher = None
+
+def get_scheduling_manager():
+    """Get or create SchedulingManager instance"""
+    global _scheduling_manager, _csv_watcher
+    if _scheduling_manager is None:
+        _scheduling_manager = SchedulingManager(data_dir='data/core')
+        
+        # Initialize CSV watcher (optional - requires watchdog library)
+        try:
+            from app.core.csv_watcher import CSVWatcher
+            if _csv_watcher is None:
+                def reload_callback():
+                    """Callback to reload data when CSV files change"""
+                    global _scheduling_manager
+                    logger.info("Auto-reloading data due to CSV file change...")
+                    _scheduling_manager.load_data()
+                
+                _csv_watcher = CSVWatcher(
+                    data_dir='data/core',
+                    reload_callback=reload_callback
+                )
+                
+                # Start watching (only if watchdog is available)
+                if _csv_watcher.start_watching():
+                    logger.info("CSV file watcher started")
+                else:
+                    logger.info("CSV file watcher not available (install watchdog for auto-reload)")
+        except ImportError:
+            logger.debug("CSV watcher not available - install watchdog library for auto-reload")
+        except Exception as e:
+            logger.warning(f"Could not initialize CSV watcher: {e}")
+    
+    return _scheduling_manager
 
 @analytics_bp.route('/charts')
 @login_required
@@ -271,4 +309,183 @@ def api_calendar_data():
     except Exception as e:
         logger.error(f"Error getting calendar data: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+# ============================================================================
+# Phase 2: Scheduling API Routes
+# ============================================================================
+
+@analytics_bp.route('/api/schedule/week', methods=['GET'])
+@login_required
+def get_week_schedule():
+    """Get weekly schedule grid"""
+    try:
+        start_date = request.args.get('start_date')
+        tutor_ids = request.args.get('tutor_ids')
+        
+        if not start_date:
+            return jsonify({'error': 'start_date parameter is required'}), 400
+        
+        # Parse tutor_ids if provided (comma-separated)
+        tutor_list = None
+        if tutor_ids:
+            tutor_list = [tid.strip() for tid in tutor_ids.split(',') if tid.strip()]
+        
+        manager = get_scheduling_manager()
+        schedule_data = manager.get_week_schedule(start_date, tutor_list)
+        
+        return jsonify(schedule_data)
+    except Exception as e:
+        logger.error(f"Error getting week schedule: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@analytics_bp.route('/api/schedule/available-slots', methods=['GET'])
+@login_required
+def get_available_slots():
+    """Get available time slots for booking"""
+    try:
+        tutor_id = request.args.get('tutor_id')
+        date = request.args.get('date')
+        duration = request.args.get('duration', type=float, default=1.0)
+        
+        if not tutor_id or not date:
+            return jsonify({'error': 'tutor_id and date parameters are required'}), 400
+        
+        manager = get_scheduling_manager()
+        slots = manager.get_available_slots(tutor_id, date, duration)
+        
+        return jsonify({
+            'tutor_id': tutor_id,
+            'date': date,
+            'duration_hours': duration,
+            'available_slots': slots
+        })
+    except Exception as e:
+        logger.error(f"Error getting available slots: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@analytics_bp.route('/api/appointments/book', methods=['POST'])
+@login_required
+def book_appointment():
+    """Student books an appointment"""
+    try:
+        data = request.json or {}
+        
+        # Required fields
+        tutor_id = data.get('tutor_id')
+        student_email = data.get('student_email')
+        course_id = data.get('course_id')
+        date = data.get('date')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        
+        if not all([tutor_id, student_email, course_id, date, start_time, end_time]):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: tutor_id, student_email, course_id, date, start_time, end_time'
+            }), 400
+        
+        # Optional fields
+        student_name = data.get('student_name')
+        notes = data.get('notes', '')
+        booking_type = data.get('booking_type', 'student_booked')
+        
+        manager = get_scheduling_manager()
+        result = manager.book_appointment(
+            tutor_id=tutor_id,
+            student_email=student_email,
+            course_id=course_id,
+            date=date,
+            start_time=start_time,
+            end_time=end_time,
+            student_name=student_name,
+            notes=notes,
+            booking_type=booking_type
+        )
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error booking appointment: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@analytics_bp.route('/api/appointments/cancel', methods=['POST'])
+@login_required
+def cancel_appointment():
+    """Cancel an appointment"""
+    try:
+        data = request.json or {}
+        appointment_id = data.get('appointment_id')
+        
+        if not appointment_id:
+            return jsonify({
+                'success': False,
+                'error': 'appointment_id is required'
+            }), 400
+        
+        manager = get_scheduling_manager()
+        result = manager.cancel_appointment(appointment_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error cancelling appointment: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@analytics_bp.route('/api/appointments/my-appointments', methods=['GET'])
+@login_required
+def get_my_appointments():
+    """Get appointments for logged-in student"""
+    try:
+        student_email = request.args.get('student_email')
+        upcoming_only = request.args.get('upcoming_only', 'true').lower() == 'true'
+        
+        if not student_email:
+            return jsonify({'error': 'student_email parameter is required'}), 400
+        
+        manager = get_scheduling_manager()
+        appointments = manager.get_my_appointments(student_email, upcoming_only)
+        
+        return jsonify({
+            'student_email': student_email,
+            'upcoming_only': upcoming_only,
+            'appointments': appointments,
+            'count': len(appointments)
+        })
+    except Exception as e:
+        logger.error(f"Error getting student appointments: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@analytics_bp.route('/api/admin/reload-data', methods=['POST'])
+@login_required
+def reload_csv_data():
+    """Admin triggers data reload (Option B: Manual Reload)"""
+    try:
+        global _scheduling_manager
+        _scheduling_manager = None  # Reset singleton
+        
+        manager = get_scheduling_manager()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Data reloaded successfully',
+            'appointments_count': len(manager.appointments),
+            'tutors_count': len(manager.tutors),
+            'auto_reload_enabled': _csv_watcher.is_active() if _csv_watcher else False
+        })
+    except Exception as e:
+        logger.error(f"Error reloading data: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
